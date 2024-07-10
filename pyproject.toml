@@ -4,8 +4,9 @@ authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 dynamic = ["version", "description"]
-# PySide6 6.7.2 requires python >= 3.6, < 3.13
-requires-python = ">= 3.10,<3.13"
+# PySide6 6.7.2 requires python>=3.6,<3.13
+# Python 3.10 introduced Structural Pattern Matching
+requires-python = ">=3.10,<3.13"
 dependencies = [
   "PySide6>=6.7.2,<7",
 ]
@@ -20,3 +21,10 @@ dev = [
 
 [project.urls]
 Home = "https://github.com/kalanzun/lenlab_mspm0"
+
+[build-system]
+requires = ["hatchling>=1.12.0,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "lenlab/__init__.py"
