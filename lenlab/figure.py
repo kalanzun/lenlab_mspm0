@@ -1,8 +1,9 @@
 from contextlib import contextmanager
+from dataclasses import dataclass
 
-from PySide6.QtCore import QPoint, QPointF, QSize
+from PySide6.QtCore import QPoint, QPointF, QRect, QSize
 from PySide6.QtGui import QColor, QPainter, QPen, Qt
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 
 white = QColor(0xF0, 0xF0, 0xF0)
 black = QColor(0x10, 0x10, 0x10)
@@ -171,11 +172,103 @@ class LaunchpadFigure(QWidget):
         self.draw_label(painter, -22 * 2, (46 - 6) * 2, "S1")
 
 
+@dataclass
+class Pin:
+    index: int
+    label: str = ""
+    color: QColor | None = None
+
+
+class PinAssignmentFigure(QWidget):
+    unit = 32
+
+    pins = {
+        1: Pin(1, "3V3", QColor(0xC0, 0, 0)),
+        21: Pin(21, "5V", QColor(0xC0, 0, 0)),
+        22: Pin(22, "GND", black),
+        26: Pin(26, "ADC1", QColor(0, 0xC0, 0)),
+        27: Pin(27, "ADC0", QColor(0xC0, 0xC0, 0)),
+        30: Pin(30, "DAC", QColor(0, 0, 0xC0)),
+    }
+
+    def get_pin(self, index):
+        return self.pins.get(index, Pin(index))
+
+    def sizeHint(self):
+        return QSize(10 * self.unit, 12 * self.unit)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        font = painter.font()
+        font.setPointSize(16)
+        painter.setFont(font)
+
+        painter.translate(4.5 * self.unit, 1.5 * self.unit)
+        self.draw_pin_header(painter)
+
+        painter.setPen(white)
+        with save_and_restore(painter):
+            self.draw_labels(painter)
+
+        with save_and_restore(painter):
+            painter.translate(self.unit, 0)
+            self.draw_labels(painter, right=True)
+
+    def draw_pin_header(self, painter: QPainter):
+        painter.setPen(white)
+        margin = self.unit // 2
+        painter.drawRect(
+            -margin, -margin, self.unit + 2 * margin, 9 * self.unit + 2 * margin
+        )
+
+        painter.setPen(QPen(QColor(0xA0, 0xA0, 0xA0), 16))
+        points = [
+            QPoint(x * self.unit, y * self.unit) for x in range(2) for y in range(10)
+        ]
+        painter.drawPoints(points)
+
+    def draw_labels(self, painter: QPainter, right=False):
+        for i in range(10):
+            pin = self.get_pin(i + (21 if right else 1))
+            if pin.color:
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(pin.color or white)
+
+                rect = QRect(QPoint(0, 0), QSize(64, 24))
+                rect.moveCenter(QPoint(96 if right else -96, 0))
+                painter.drawRect(rect)
+
+            painter.setPen(white)
+            self.draw_text_center(painter, 36 if right else -36, 0, str(pin.index))
+            self.draw_text_center(painter, 96 if right else -96, 0, pin.label)
+
+            painter.translate(0, self.unit)
+
+    @staticmethod
+    def draw_text_center(painter: QPainter, x: int, y: int, text: str):
+        rect = painter.fontMetrics().tightBoundingRect(text)
+        rect.moveCenter(QPoint(x, y))
+        # painter.drawRect(rect)
+        painter.drawText(rect.bottomLeft(), text)
+
+
 def main():
+    from PySide6.QtWidgets import QApplication, QHBoxLayout
+
     app = QApplication([])
 
-    figure = LaunchpadFigure()
-    figure.show()
+    figure1 = LaunchpadFigure()
+    figure2 = PinAssignmentFigure()
+
+    layout = QHBoxLayout()
+    layout.addWidget(figure1)
+    layout.addWidget(figure2)
+
+    window = QWidget()
+    window.setLayout(layout)
+    window.show()
 
     app.exec()
 
