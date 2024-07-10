@@ -22,6 +22,9 @@ dev = [
 [project.urls]
 Home = "https://github.com/kalanzun/lenlab_mspm0"
 
+[project.gui-scripts]
+lenlab = "lenlab.app:main"
+
 [build-system]
 requires = ["hatchling>=1.12.0,<2"]
 build-backend = "hatchling.build"

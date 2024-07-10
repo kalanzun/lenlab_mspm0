@@ -14,7 +14,7 @@ python -m pip install lenlab
 ## Startup
 
 ```shell
-lenlab/Scripts/lenlab
+lenlab/Scripts/lenlab.exe
 ```
 
 ## Development
@@ -33,7 +33,7 @@ python -m venv .venv
 python -m pip install -e .[dev]
 ```
 
-With uv:
+With "uv":
 
 ```shell
 uv venv
