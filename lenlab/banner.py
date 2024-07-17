@@ -48,5 +48,7 @@ class MessageBanner(QWidget):
         self.symbol_widget.load(symbol)
         self.setPalette(palette)
 
-        self.text_label.setText(message.get_message())
-        self.help_label.setText(message.get_help())
+        text, *help = [line.strip() for line in message.get_text().splitlines()]
+        self.text_label.setText(text)
+        self.help_label.setText("\n".join(help))
+        self.show()
