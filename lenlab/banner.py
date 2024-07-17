@@ -1,4 +1,4 @@
-from PySide6.QtCore import Slot, QLocale
+from PySide6.QtCore import QLocale, Slot
 from PySide6.QtGui import QColor, QPalette, Qt
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
