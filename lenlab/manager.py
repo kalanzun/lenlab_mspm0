@@ -66,9 +66,14 @@ class PortManager(QObject):
 
     @Slot(QSerialPort.SerialPortError)
     def on_error_occurred(self, error):
+        if self.port.isOpen():
+            self.port.close()
+
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.PermissionError:
             self.error.emit(messages.PERMISSION_ERROR)
+        elif error is QSerialPort.SerialPortError.ResourceError:
+            self.error.emit(messages.RESOURCE_ERROR)
         else:
-            self.error.emit(Message(Category.ERROR, str(error)))
+            self.error.emit(Message(Category.ERROR, f"{error}\n"))

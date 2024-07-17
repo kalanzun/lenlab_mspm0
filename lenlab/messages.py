@@ -61,3 +61,11 @@ PERMISSION_ERROR = Message(
     Lenlab braucht alleinigen Zugriff auf die serielle Kommunikation mit dem Launchpad.
     Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Zugriff?""",
 )
+
+RESOURCE_ERROR = Message(
+    Category.ERROR,
+    en="""Connection lost
+    The Launchpad vanished. Please reconnect it to the computer.""",
+    de="""Verbindung verloren
+    Das Lanuchpad ist verschwunden. Bitte wieder mit dem Computer verbinden.""",
+)
