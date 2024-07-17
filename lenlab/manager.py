@@ -35,7 +35,7 @@ def find_launchpad(port_infos: list[PortInfo]) -> QSerialPortInfo:
 
 
 class PortManager(QObject):
-    error = Signal(Message)
+    message = Signal(Message)
     ready = Signal()
 
     def __init__(self):
@@ -59,10 +59,11 @@ class PortManager(QObject):
             # in case of an error, it emits errorOccurred a second time with the error
             # on_error_occurred handles the error case
             if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+                self.message.emit(messages.CONNECTED)
                 self.ready.emit()
 
         except AssertionError as error:
-            self.error.emit(error.args[0])
+            self.message.emit(error.args[0])
 
     @Slot(QSerialPort.SerialPortError)
     def on_error_occurred(self, error):
@@ -72,8 +73,8 @@ class PortManager(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.PermissionError:
-            self.error.emit(messages.PERMISSION_ERROR)
+            self.message.emit(messages.PERMISSION_ERROR)
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(messages.RESOURCE_ERROR)
+            self.message.emit(messages.RESOURCE_ERROR)
         else:
-            self.error.emit(Message(Category.ERROR, f"{error}\n"))
+            self.message.emit(Message(Category.ERROR, f"{error}\n"))

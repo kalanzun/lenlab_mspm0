@@ -20,9 +20,9 @@ class MainWindow(QMainWindow):
         bode = BodePlotter()
 
         self.port_manager = PortManager()
-        self.port_manager.ready.connect(message_banner.hide)
-        self.port_manager.error.connect(message_banner.set_message)
-        message_banner.retry.clicked.connect(self.port_manager.retry)
+        # self.port_manager.ready.connect(message_banner.hide)
+        self.port_manager.message.connect(message_banner.set_message)
+        message_banner.retry_button.clicked.connect(self.port_manager.retry)
         self.port_manager.open_launchpad()
 
         tab_widget = QTabWidget()
