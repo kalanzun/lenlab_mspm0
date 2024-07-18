@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
@@ -7,30 +5,24 @@ from . import messages
 from .messages import Category, Message
 
 
-@dataclass(frozen=True)
-class PortInfo:
-    vid: int = 0
-    pid: int = 0
-    port_info: QSerialPortInfo | None = None
-
-    @classmethod
-    def available_ports(cls):
-        return [
-            cls(port_info.vendorIdentifier(), port_info.productIdentifier(), port_info)
-            for port_info in QSerialPortInfo.availablePorts()
-        ]
+def find_vid_pid(
+    port_infos: list[QSerialPortInfo], vid: int, pid: int
+) -> list[QSerialPortInfo]:
+    return [
+        port_info
+        for port_info in port_infos
+        if port_info.vendorIdentifier() == vid and port_info.productIdentifier() == pid
+    ]
 
 
-def find_launchpad(port_infos: list[PortInfo]) -> QSerialPortInfo:
-    matches = [x for x in port_infos if x.vid == 0x0451 and x.pid == 0xBEF3]
+def find_launchpad(port_infos: list[QSerialPortInfo]) -> QSerialPortInfo:
+    matches = find_vid_pid(port_infos, 0x0451, 0xBEF3)
     if len(matches) == 2:
         aux_port_info, app_port_info = matches
-        return app_port_info.port_info
+        return app_port_info
 
     assert len(matches) < 2, messages.MORE_THAN_ONE_LAUNCHPAD_FOUND
-    assert not [
-        x for x in port_infos if x.vid == 0x1CBE and x.pid == 0x00FD
-    ], messages.TIVA_LAUNCHPAD_FOUND
+    assert not find_vid_pid(port_infos, 0x1CBE, 0x00FD), messages.TIVA_LAUNCHPAD_FOUND
     assert None, messages.NO_LAUNCHPAD_FOUND
 
 
@@ -48,9 +40,9 @@ class PortManager(QObject):
     def retry(self):
         self.open_launchpad()
 
-    def open_launchpad(self, port_infos: list[PortInfo] | None = None):
+    def open_launchpad(self, port_infos: list[QSerialPortInfo] | None = None):
         if port_infos is None:
-            port_infos = PortInfo.available_ports()
+            port_infos = QSerialPortInfo.availablePorts()
 
         try:
             self.port.setPort(find_launchpad(port_infos))
