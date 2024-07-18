@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from .banner import MessageBanner
 from .bode import BodePlotter
-from .manager import PortManager
+from .launchpad import Launchpad
 from .oscilloscope import Oscilloscope
 from .programmer import Programmer
 from .voltmeter import Voltmeter
@@ -14,13 +14,13 @@ class MainWindow(QMainWindow):
 
         message_banner = MessageBanner()
 
-        self.port_manager = PortManager()
-        # self.port_manager.ready.connect(message_banner.hide)
-        self.port_manager.message.connect(message_banner.set_message)
-        message_banner.retry_button.clicked.connect(self.port_manager.retry)
-        self.port_manager.open_launchpad()
+        self.launchpad = Launchpad()
+        self.launchpad.ready.connect(message_banner.hide)
+        self.launchpad.error.connect(message_banner.set_lp_error)
+        message_banner.retry_button.clicked.connect(self.launchpad.retry)
+        self.launchpad.open_launchpad()
 
-        programmer = Programmer(self.port_manager)
+        programmer = Programmer(self.launchpad)
         voltmeter = Voltmeter()
         oscilloscope = Oscilloscope()
         bode = BodePlotter()

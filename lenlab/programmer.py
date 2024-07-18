@@ -11,17 +11,17 @@ from PySide6.QtWidgets import (
 
 from .bsl import BootstrapLoader
 from .figure import LaunchpadFigure
-from .manager import PortManager
+from .launchpad import Launchpad
 
 
 class Programmer(QWidget):
     title = "Programmer"
     description = "MSPM0 flash programming tool"
 
-    def __init__(self, port_manager: PortManager):
+    def __init__(self, launchpad: Launchpad):
         super().__init__()
 
-        self.port_manager = port_manager
+        self.launchpad = launchpad
         self.bsl = None
 
         figure = LaunchpadFigure()
@@ -50,8 +50,10 @@ class Programmer(QWidget):
         self.messages.clear()
 
         try:
-            path = files() / "firmware.out"
-            firmware = path.read_bytes()
+            firmware_file = files() / ".." / "firmware" / "Debug" / "firmware.bin"
+            firmware_file = firmware_file.resolve()
+            print(f"{firmware_file=}")
+            firmware = firmware_file.read_bytes()
         except OSError as error:
             self.messages.insertPlainText(
                 f"Fehler beim Lesen der Firmware-Binärdatei: {str(error)}"
@@ -59,7 +61,7 @@ class Programmer(QWidget):
             self.program_button.setDisabled(False)
             return
 
-        self.bsl = BootstrapLoader(self.port_manager.port, firmware)
+        self.bsl = BootstrapLoader(self.launchpad.port, firmware)
         self.bsl.message.connect(self.on_message)
         self.bsl.finished.connect(self.on_finished)
         self.bsl.start()

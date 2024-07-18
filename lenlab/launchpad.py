@@ -1,8 +1,16 @@
+from enum import IntEnum, auto
+
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from . import messages
-from .messages import Category, Message
+
+class LpError(IntEnum):
+    MORE_THAN_ONE_LAUNCHPAD_FOUND = auto()
+    TIVA_LAUNCHPAD_FOUND = auto()
+    NO_LAUNCHPAD_FOUND = auto()
+    PERMISSION_ERROR = auto()
+    RESOURCE_ERROR = auto()
+    UNEXPECTED_ERROR = auto()
 
 
 def find_vid_pid(
@@ -21,14 +29,14 @@ def find_launchpad(port_infos: list[QSerialPortInfo]) -> QSerialPortInfo:
         aux_port_info, app_port_info = matches
         return app_port_info
 
-    assert len(matches) < 2, messages.MORE_THAN_ONE_LAUNCHPAD_FOUND
-    assert not find_vid_pid(port_infos, 0x1CBE, 0x00FD), messages.TIVA_LAUNCHPAD_FOUND
-    assert None, messages.NO_LAUNCHPAD_FOUND
+    assert len(matches) < 2, LpError.MORE_THAN_ONE_LAUNCHPAD_FOUND
+    assert not find_vid_pid(port_infos, 0x1CBE, 0x00FD), LpError.TIVA_LAUNCHPAD_FOUND
+    assert None, LpError.NO_LAUNCHPAD_FOUND
 
 
-class PortManager(QObject):
-    message = Signal(Message)
+class Launchpad(QObject):
     ready = Signal()
+    error = Signal(LpError)
 
     def __init__(self):
         super().__init__()
@@ -37,7 +45,7 @@ class PortManager(QObject):
         self.port.errorOccurred.connect(self.on_error_occurred)
 
     @Slot(bool)
-    def retry(self):
+    def retry(self, flag: bool):
         self.open_launchpad()
 
     def open_launchpad(self, port_infos: list[QSerialPortInfo] | None = None):
@@ -51,11 +59,10 @@ class PortManager(QObject):
             # in case of an error, it emits errorOccurred a second time with the error
             # on_error_occurred handles the error case
             if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-                self.message.emit(messages.CONNECTED)
                 self.ready.emit()
 
         except AssertionError as error:
-            self.message.emit(error.args[0])
+            self.error.emit(error.args[0])
 
     @Slot(QSerialPort.SerialPortError)
     def on_error_occurred(self, error):
@@ -65,8 +72,8 @@ class PortManager(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.PermissionError:
-            self.message.emit(messages.PERMISSION_ERROR)
+            self.error.emit(LpError.PERMISSION_ERROR)
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.message.emit(messages.RESOURCE_ERROR)
+            self.error.emit(LpError.RESOURCE_ERROR)
         else:
-            self.message.emit(Message(Category.ERROR, f"{error}\n"))
+            self.error.emit(LpError.UNEXPECTED_ERROR)

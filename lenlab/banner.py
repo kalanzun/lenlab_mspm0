@@ -4,10 +4,11 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from . import symbols
-from .messages import Category, Message
+from .launchpad import LpError
 
 
 class MessageBanner(QWidget):
+    """
     palette_by_category = {
         Category.ERROR: QPalette(QColor(0x80, 0, 0)),
         Category.WARNING: QPalette(QColor(0x80, 0x80, 0)),
@@ -19,6 +20,7 @@ class MessageBanner(QWidget):
         Category.WARNING: symbols.warning,
         Category.INFO: symbols.info,
     }
+    """
 
     def __init__(self):
         super().__init__()
@@ -42,10 +44,9 @@ class MessageBanner(QWidget):
 
         self.setLayout(layout)
 
-    @Slot(Message)
-    def set_message(self, message: Message):
-        self.setPalette(self.palette_by_category[message.category])
-        self.symbol_widget.load(self.symbol_by_category[message.category])
-        self.text_label.setText(message.get_text(QLocale().language()))
-        self.retry_button.setHidden(message.category == Category.INFO)
+    @Slot(LpError)
+    def set_lp_error(self, error: LpError):
+        self.setPalette(QPalette(QColor(0x80, 0, 0)))
+        self.symbol_widget.load(symbols.error)
+        self.text_label.setText(error.name)
         self.show()
