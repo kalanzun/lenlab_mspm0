@@ -122,8 +122,6 @@ class BootstrapLoader(QObject):
         self.device_info: DeviceInfo | None = None
 
         self.port = port
-        assert self.port.isOpen()
-        self.port.setBaudRate(9600)
         self.port.readyRead.connect(self.on_ready_read)
 
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
@@ -164,6 +162,7 @@ class BootstrapLoader(QObject):
 
     def start(self):
         self.message.emit("Verbindung aufbauen")
+        self.port.setBaudRate(9600)
         self.command(bytearray([0x12]), self.on_connected)
 
     def command(self, command, callback, timeout=100):
@@ -172,7 +171,7 @@ class BootstrapLoader(QObject):
         self.timer.start(timeout)
 
     def on_connected(self, reply):
-        assert reply == self.ACK
+        assert reply == self.ACK or reply == self.OK
 
         self.message.emit("Baudrate einstellen")
         self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)

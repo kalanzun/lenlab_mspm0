@@ -18,7 +18,6 @@ class MainWindow(QMainWindow):
         self.launchpad.ready.connect(message_banner.hide)
         self.launchpad.error.connect(message_banner.set_lp_error)
         message_banner.retry_button.clicked.connect(self.launchpad.retry)
-        self.launchpad.open_launchpad()
 
         programmer = Programmer(self.launchpad)
         voltmeter = Voltmeter()
@@ -40,3 +39,5 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
         self.setWindowTitle("Lenlab")
+
+        self.launchpad.open_launchpad()
