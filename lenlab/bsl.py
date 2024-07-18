@@ -6,8 +6,13 @@ The MSPM0 Bootstrap Loader (BSL) provides a method to program and verify the dev
 User's Guide https://www.ti.com/lit/ug/slau887/slau887.pdf
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from io import BytesIO
+from itertools import batched
+from typing import Callable, Self
+
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from PySide6.QtSerialPort import QSerialPort
 
 
 @dataclass(frozen=True)
@@ -78,3 +83,149 @@ def unpack(packet: BytesIO) -> bytes:
     assert checksum(payload) == crc, "Checksum verification failed."
 
     return payload
+
+
+@dataclass(frozen=True)
+class DeviceInfo:
+    response: uint8
+    command_interpreter_version: uint16
+    build_id: uint16
+    application_version: uint32
+    interface_version: uint16
+    max_buffer_size: uint16
+    buffer_start_address: uint32
+    bcr_configuration_id: uint32
+    bsl_configuration_id: uint32
+
+    @classmethod
+    def parse(cls, reply: bytes) -> Self:
+        packet = BytesIO(reply)
+        return cls(*(field.type.unpack(packet) for field in fields(cls)))
+
+
+KB = 1024
+
+
+class BootstrapLoader(QObject):
+    finished = Signal(bool)
+    message = Signal(str)
+
+    batch_size = 12 * KB
+
+    ACK = b"\x00"
+    OK = b"\x3b\x00"
+
+    def __init__(self, port: QSerialPort, firmware: bytes, parent=None):
+        super().__init__(parent)
+
+        self.callback: Callable[[bytes], None] | None = None
+        self.device_info: DeviceInfo | None = None
+
+        self.port = port
+        assert self.port.isOpen()
+        self.port.setBaudRate(9600)
+        self.port.readyRead.connect(self.on_ready_read)
+
+        self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
+        self.firmware_size = len(firmware)
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.on_timeout)
+
+    @Slot()
+    def on_ready_read(self):
+        try:
+            n = self.port.bytesAvailable()
+            if n == 1:
+                ack = self.port.read(1)
+                self.on_reply(ack)
+            elif n > 8:
+                length = get_length(BytesIO(self.port.peek(4)))
+                if n == length + 8:
+                    payload = unpack(BytesIO(self.port.read(n)))
+                    self.on_reply(payload)
+        except AssertionError as error:
+            self.timer.stop()
+            msg = str(error) or "Unerwartete Antwort erhalten"
+            self.message.emit(msg)
+            self.finished.emit(False)
+
+    def on_reply(self, reply: bytes) -> None:
+        assert self.timer.isActive(), "Unerwartete Daten erhalten"
+
+        self.timer.stop()
+        self.callback(reply)
+
+    @Slot()
+    def on_timeout(self):
+        self.message.emit("Keine Antwort erhalten")
+        self.finished.emit(False)
+
+    def start(self):
+        self.message.emit("Verbindung aufbauen")
+        self.command(bytearray([0x12]), self.on_connected)
+
+    def command(self, command, callback, timeout=100):
+        self.port.write(pack(command))
+        self.callback = callback
+        self.timer.start(timeout)
+
+    def on_connected(self, reply):
+        assert reply == self.ACK
+
+        self.message.emit("Baudrate einstellen")
+        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)
+
+    def on_baud_rate_changed(self, reply):
+        assert reply == self.ACK
+
+        self.port.setBaudRate(3_000_000)
+
+        self.message.emit("Controller-Eigenschaften abrufen")
+        self.command(bytearray([0x19]), self.on_device_info)
+
+    def on_device_info(self, reply):
+        self.device_info = DeviceInfo.parse(reply)
+        assert self.device_info.max_buffer_size >= self.batch_size + 8
+
+        self.message.emit(
+            f"Max. Puffergröße: {self.device_info.max_buffer_size / 1000:.1f} KiB"
+        )
+
+        self.message.emit("Bootloader entsperren")
+        self.command(bytearray([0x21] + [0xFF] * 32), self.on_unlocked)
+
+    def on_unlocked(self, reply):
+        assert reply == self.OK, "Entsperren ohne Erfolg"
+
+        self.message.emit("Speicher löschen")
+        self.command(bytearray([0x15]), self.on_erased)
+
+    def on_erased(self, reply):
+        assert reply == self.OK, "Löschen ohne Erfolg"
+
+        self.message.emit(f"Firmware schreiben ({self.firmware_size / 1000:.1f} KiB)")
+        self.next_batch()
+
+    def next_batch(self):
+        i, batch = next(self.enumerate_batched)
+        payload = bytearray([0x24])
+        payload.extend(uint32.pack(i * self.batch_size))
+        payload.extend(batch)
+
+        self.command(payload, self.on_programmed, timeout=300)
+
+    def on_programmed(self, reply):
+        assert reply == self.ACK
+
+        try:
+            self.next_batch()
+        except StopIteration:
+            self.message.emit("Neustarten")
+            self.command(bytearray([0x40]), self.on_reset)
+
+    def on_reset(self, reply):
+        assert reply == self.ACK
+
+        self.finished.emit(True)

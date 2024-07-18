@@ -14,16 +14,16 @@ class MainWindow(QMainWindow):
 
         message_banner = MessageBanner()
 
-        programmer = Programmer()
-        voltmeter = Voltmeter()
-        oscilloscope = Oscilloscope()
-        bode = BodePlotter()
-
         self.port_manager = PortManager()
         # self.port_manager.ready.connect(message_banner.hide)
         self.port_manager.message.connect(message_banner.set_message)
         message_banner.retry_button.clicked.connect(self.port_manager.retry)
         self.port_manager.open_launchpad()
+
+        programmer = Programmer(self.port_manager)
+        voltmeter = Voltmeter()
+        oscilloscope = Oscilloscope()
+        bode = BodePlotter()
 
         tab_widget = QTabWidget()
         tab_widget.addTab(programmer, programmer.title)
