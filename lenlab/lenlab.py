@@ -4,7 +4,6 @@ from lenlab.launchpad import Launchpad
 
 
 class Lenlab(QObject):
-
     def __init__(self, launchpad: Launchpad):
         super().__init__()
 

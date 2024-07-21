@@ -176,7 +176,9 @@ class BootstrapLoader(QObject):
 
     def on_device_info(self, reply):
         self.device_info = DeviceInfo.parse(reply)
-        assert self.device_info.max_buffer_size >= self.batch_size + 8, "Die Puffergröße im Controller ist zu klein"
+        assert (
+            self.device_info.max_buffer_size >= self.batch_size + 8
+        ), "Die Puffergröße im Controller ist zu klein"
 
         self.message.emit(
             f"Max. Puffergröße: {self.device_info.max_buffer_size / 1000:.1f} KiB"
