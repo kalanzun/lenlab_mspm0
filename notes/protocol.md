@@ -33,3 +33,22 @@ The software distinguishes between Lenlab and BSL by the first byte (packet.ack)
 - 0x00: BSL packet
 - 0x4C "L": Lenlab
 - 0x51 - 0x56: BSL error 
+
+## Reply routing
+
+The Lenlab software sends commands and receives replies asynchronously. It can detect the intended recipient
+of a reply by the value of the first byte and call the respective handler (BSL or Lenlab).
+
+The handler of replies from the BSL though does need dynamic routing. A BSL ack packet has no address,
+it is intended for the handler of the last command. The BSL object saves a pointer to the callback when sending the
+command and delivers the next reply to that callback. This implements a state machine with the callback pointer.
+
+## Probing
+
+The Lenlab software looks for a serial port with matching USB vid and pid. If found, it opens the port and sends
+the Lenlab welcome message. If the Lenlab firmware replies with the correct version, the program is ready to operate.
+Otherwise, the main window displays an error message, a hint for solving it and a retry button.
+
+The BSL ignores the Lenlab welcome message and still operates for programming.
+If the is no reply to the welcome message, the software may switch the baudrate and send the BSL welcome message.
+Then, BSL replies and the software switches to the programmer tab.
