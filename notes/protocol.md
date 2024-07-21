@@ -52,3 +52,9 @@ Otherwise, the main window displays an error message, a hint for solving it and 
 The BSL ignores the Lenlab welcome message and still operates for programming.
 If the is no reply to the welcome message, the software may switch the baudrate and send the BSL welcome message.
 Then, BSL replies and the software switches to the programmer tab.
+
+## Baudrate
+
+BSL initially 9600, command to increase up to 3 Mbaud.
+
+Lenlab 9600 works. 2 and 10 Mbaud work only from the debugger. The BSL does ignore a 10 Mbaud welcome message.
