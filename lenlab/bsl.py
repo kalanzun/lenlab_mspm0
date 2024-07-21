@@ -12,7 +12,8 @@ from itertools import batched
 from typing import Callable, Self
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
-from PySide6.QtSerialPort import QSerialPort
+
+from lenlab.launchpad import Launchpad
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,7 @@ class BSLInteger:
 
     def unpack(self, packet: BytesIO) -> int:
         message = packet.read(self.n_bytes)
-        assert len(message) == self.n_bytes, "Message too short."
+        assert len(message) == self.n_bytes, "Message too short"
         return sum(message[i] << (8 * i) for i in range(self.n_bytes))
 
 
@@ -61,26 +62,20 @@ def pack(payload: bytes) -> bytearray:
     )
 
 
-def get_length(packet: BytesIO) -> int:
-    """Get the payload length from a packet header (first four bytes)."""
-    ack = uint8.unpack(packet)
-    assert ack == 0, "First byte (ack) is not zero."
-
-    header = uint8.unpack(packet)
-    assert header == 8, "Second byte (header) is not eight."
-
-    length = uint16.unpack(packet)
-    return length
-
-
 def unpack(packet: BytesIO) -> bytes:
     """Unpack a packet from the Bootstrap Loader and verify the checksum."""
-    length = get_length(packet)
+    ack = uint8.unpack(packet)
+    assert ack == 0, "First byte (ack) is not zero"
+
+    header = uint8.unpack(packet)
+    assert header == 8, "Second byte (header) is not eight"
+
+    length = uint16.unpack(packet)
+    assert len(packet.getbuffer()) == length + 8, "Invalid reply length"
     payload = packet.read(length)
-    assert len(payload) == length, "Message too short."
 
     crc = uint32.unpack(packet)
-    assert checksum(payload) == crc, "Checksum verification failed."
+    assert checksum(payload) == crc, "Checksum verification failed"
 
     return payload
 
@@ -115,58 +110,53 @@ class BootstrapLoader(QObject):
     ACK = b"\x00"
     OK = b"\x3b\x00"
 
-    def __init__(self, port: QSerialPort, firmware: bytes, parent=None):
-        super().__init__(parent)
+    def __init__(self, launchpad: Launchpad):
+        super().__init__()
 
         self.callback: Callable[[bytes], None] | None = None
         self.device_info: DeviceInfo | None = None
+        self.enumerate_batched = None
+        self.firmware_size = 0
 
-        self.port = port
-        self.port.readyRead.connect(self.on_ready_read)
-
-        self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
-        self.firmware_size = len(firmware)
+        self.launchpad = launchpad
+        self.launchpad.bsl_reply.connect(self.on_bsl_reply)
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.on_timeout)
 
-    @Slot()
-    def on_ready_read(self):
+    @Slot(bytes)
+    def on_bsl_reply(self, packet: bytes) -> None:
         try:
-            n = self.port.bytesAvailable()
-            if n == 1:
-                ack = self.port.read(1)
-                self.on_reply(ack)
-            elif n > 8:
-                length = get_length(BytesIO(self.port.peek(4)))
-                if n == length + 8:
-                    payload = unpack(BytesIO(self.port.read(n)))
-                    self.on_reply(payload)
-        except AssertionError as error:
+            assert self.timer.isActive(), "Unerwartete Daten erhalten"
             self.timer.stop()
-            msg = str(error) or "Unerwartete Antwort erhalten"
+
+            if len(packet) == 1:
+                self.callback(packet)
+            else:
+                reply = unpack(BytesIO(packet))
+                self.callback(reply)
+
+        except AssertionError as error:
+            msg = str(error) or "Ungültige Antwort erhalten"
             self.message.emit(msg)
             self.finished.emit(False)
-
-    def on_reply(self, reply: bytes) -> None:
-        assert self.timer.isActive(), "Unerwartete Daten erhalten"
-
-        self.timer.stop()
-        self.callback(reply)
 
     @Slot()
     def on_timeout(self):
         self.message.emit("Keine Antwort erhalten")
         self.finished.emit(False)
 
-    def start(self):
+    def program(self, firmware: bytes):
+        self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
+        self.firmware_size = len(firmware)
+
         self.message.emit("Verbindung aufbauen")
-        self.port.setBaudRate(9600)
+        self.launchpad.port.setBaudRate(9600)
         self.command(bytearray([0x12]), self.on_connected)
 
     def command(self, command, callback, timeout=100):
-        self.port.write(pack(command))
+        self.launchpad.port.write(pack(command))
         self.callback = callback
         self.timer.start(timeout)
 
@@ -179,14 +169,14 @@ class BootstrapLoader(QObject):
     def on_baud_rate_changed(self, reply):
         assert reply == self.ACK
 
-        self.port.setBaudRate(3_000_000)
+        self.launchpad.port.setBaudRate(3_000_000)
 
         self.message.emit("Controller-Eigenschaften abrufen")
         self.command(bytearray([0x19]), self.on_device_info)
 
     def on_device_info(self, reply):
         self.device_info = DeviceInfo.parse(reply)
-        assert self.device_info.max_buffer_size >= self.batch_size + 8
+        assert self.device_info.max_buffer_size >= self.batch_size + 8, "Die Puffergröße im Controller ist zu klein"
 
         self.message.emit(
             f"Max. Puffergröße: {self.device_info.max_buffer_size / 1000:.1f} KiB"
@@ -228,3 +218,4 @@ class BootstrapLoader(QObject):
         assert reply == self.ACK
 
         self.finished.emit(True)
+        self.launchpad.ready.emit()

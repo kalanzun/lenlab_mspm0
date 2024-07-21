@@ -37,15 +37,21 @@ def find_launchpad(port_infos: list[QSerialPortInfo]) -> QSerialPortInfo:
 class Launchpad(QObject):
     ready = Signal()
     error = Signal(LpError)
+    reply = Signal(bytes)
+    bsl_reply = Signal(bytes)
 
     def __init__(self):
         super().__init__()
 
         self.port = QSerialPort()
         self.port.errorOccurred.connect(self.on_error_occurred)
+        self.port.readyRead.connect(self.on_ready_read)
 
     @Slot(bool)
     def retry(self, flag: bool):
+        if self.port.isOpen():
+            self.port.close()
+
         self.open_launchpad()
 
     def open_launchpad(self, port_infos: list[QSerialPortInfo] | None = None):
@@ -66,9 +72,6 @@ class Launchpad(QObject):
 
     @Slot(QSerialPort.SerialPortError)
     def on_error_occurred(self, error):
-        if self.port.isOpen():
-            self.port.close()
-
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.PermissionError:
@@ -77,3 +80,21 @@ class Launchpad(QObject):
             self.error.emit(LpError.RESOURCE_ERROR)
         else:
             self.error.emit(LpError.UNEXPECTED_ERROR)
+
+    @Slot()
+    def on_ready_read(self):
+        n = self.port.bytesAvailable()
+        if n == 1:
+            ack = self.port.read(1).data()
+            self.bsl_reply.emit(ack)
+        elif n >= 8:
+            head = self.port.peek(4).data()
+            length = head[2] + (head[3] << 8)
+            if n >= length + 8:
+                message = self.port.read(length + 8).data()
+                if message[0] == 0 and message[1] == 8:
+                    self.bsl_reply.emit(message)
+                else:
+                    self.reply.emit(message)
+                if n > length + 8:
+                    self.on_ready_read()

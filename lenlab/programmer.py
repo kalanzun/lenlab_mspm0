@@ -21,10 +21,11 @@ class Programmer(QWidget):
     def __init__(self, launchpad: Launchpad):
         super().__init__()
 
-        self.launchpad = launchpad
-        self.launchpad.ready.connect(self.on_ready)
-        self.launchpad.error.connect(self.on_error)
-        self.bsl = None
+        self.bsl = BootstrapLoader(launchpad)
+        self.bsl.launchpad.ready.connect(self.on_ready)
+        self.bsl.launchpad.error.connect(self.on_error)
+        self.bsl.message.connect(self.on_message)
+        self.bsl.finished.connect(self.on_finished)
 
         figure = LaunchpadFigure()
 
@@ -54,9 +55,7 @@ class Programmer(QWidget):
 
     @Slot()
     def on_program_clicked(self):
-        assert self.bsl is None
         self.program_button.setDisabled(True)
-
         self.messages.clear()
 
         try:
@@ -64,10 +63,8 @@ class Programmer(QWidget):
             firmware_file = firmware_file.resolve()
             firmware = firmware_file.read_bytes()
 
-            self.bsl = BootstrapLoader(self.launchpad.port, firmware)
-            self.bsl.message.connect(self.on_message)
-            self.bsl.finished.connect(self.on_finished)
-            self.bsl.start()
+            self.bsl.program(firmware)
+
         except OSError as error:
             self.messages.insertPlainText(
                 f"Fehler beim Lesen der Firmware-Binärdatei: {str(error)}"
@@ -81,5 +78,4 @@ class Programmer(QWidget):
 
     @Slot(bool)
     def on_finished(self, success: bool):
-        self.bsl = None
         self.program_button.setDisabled(False)
