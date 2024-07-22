@@ -17,7 +17,7 @@ class MainWindow(QMainWindow):
 
         message_banner = MessageBanner()
         self.launchpad.ready.connect(message_banner.hide)
-        self.launchpad.error.connect(message_banner.set_lp_error)
+        self.launchpad.error.connect(message_banner.set_message)
         message_banner.retry_button.clicked.connect(self.launchpad.retry)
 
         self.lenlab = Lenlab(self.launchpad)

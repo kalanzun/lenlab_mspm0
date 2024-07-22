@@ -14,6 +14,7 @@ from typing import Callable, Self
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from lenlab.launchpad import Launchpad
+from lenlab.message import Message
 
 
 @dataclass(frozen=True)
@@ -75,7 +76,8 @@ def unpack(packet: BytesIO) -> bytes:
     payload = packet.read(length)
 
     crc = uint32.unpack(packet)
-    assert checksum(payload) == crc, "Checksum verification failed"
+    if not checksum(payload) == crc:
+        raise ChecksumError()
 
     return payload
 
@@ -103,7 +105,7 @@ KB = 1024
 
 class BootstrapLoader(QObject):
     finished = Signal(bool)
-    message = Signal(str)
+    message = Signal(Message)
 
     batch_size = 12 * KB
 
@@ -128,30 +130,28 @@ class BootstrapLoader(QObject):
     @Slot(bytes)
     def on_bsl_reply(self, packet: bytes) -> None:
         try:
-            assert self.timer.isActive(), "Unerwartete Daten erhalten"
+            if not self.timer.isActive():
+                raise UnexpectedReply()
+
             self.timer.stop()
 
-            if len(packet) == 1:
-                self.callback(packet)
-            else:
-                reply = unpack(BytesIO(packet))
-                self.callback(reply)
+            reply = packet if len(packet) == 1 else unpack(BytesIO(packet))
+            self.callback(reply)
 
-        except AssertionError as error:
-            msg = str(error) or "Ungültige Antwort erhalten"
-            self.message.emit(msg)
+        except Message as error:
+            self.message.emit(error)
             self.finished.emit(False)
 
     @Slot()
     def on_timeout(self):
-        self.message.emit("Keine Antwort erhalten")
+        self.message.emit(NoReply())
         self.finished.emit(False)
 
     def program(self, firmware: bytes):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
         self.firmware_size = len(firmware)
 
-        self.message.emit("Verbindung aufbauen")
+        self.message.emit(Connect())
         self.launchpad.port.setBaudRate(9600)
         self.command(bytearray([0x12]), self.on_connected)
 
@@ -161,42 +161,43 @@ class BootstrapLoader(QObject):
         self.timer.start(timeout)
 
     def on_connected(self, reply):
-        assert reply == self.ACK or reply == self.OK
+        if not (reply == self.ACK or reply == self.OK):
+            raise ErrorReply(reply)
 
-        self.message.emit("Baudrate einstellen")
+        self.message.emit(SetBaudRate())
         self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)
 
     def on_baud_rate_changed(self, reply):
-        assert reply == self.ACK
+        if not reply == self.ACK:
+            raise ErrorReply(reply)
 
         self.launchpad.port.setBaudRate(3_000_000)
 
-        self.message.emit("Controller-Eigenschaften abrufen")
+        self.message.emit(GetDeviceInfo())
         self.command(bytearray([0x19]), self.on_device_info)
 
     def on_device_info(self, reply):
         self.device_info = DeviceInfo.parse(reply)
-        assert (
-            self.device_info.max_buffer_size >= self.batch_size + 8
-        ), "Die Puffergröße im Controller ist zu klein"
+        if self.device_info.max_buffer_size < self.batch_size + 8:
+            raise BufferTooSmall(self.device_info.max_buffer_size)
 
-        self.message.emit(
-            f"Max. Puffergröße: {self.device_info.max_buffer_size / 1000:.1f} KiB"
-        )
+        self.message.emit(BufferSize(self.device_info.max_buffer_size / 1000))
 
-        self.message.emit("Bootloader entsperren")
+        self.message.emit(Unlock())
         self.command(bytearray([0x21] + [0xFF] * 32), self.on_unlocked)
 
     def on_unlocked(self, reply):
-        assert reply == self.OK, "Entsperren ohne Erfolg"
+        if not reply == self.OK:
+            raise ErrorReply(reply)
 
-        self.message.emit("Speicher löschen")
+        self.message.emit(Erase())
         self.command(bytearray([0x15]), self.on_erased)
 
     def on_erased(self, reply):
-        assert reply == self.OK, "Löschen ohne Erfolg"
+        if not reply == self.OK:
+            raise ErrorReply(reply)
 
-        self.message.emit(f"Firmware schreiben ({self.firmware_size / 1000:.1f} KiB)")
+        self.message.emit(WriteFirmware(self.firmware_size / 1000))
         self.next_batch()
 
     def next_batch(self):
@@ -208,16 +209,83 @@ class BootstrapLoader(QObject):
         self.command(payload, self.on_programmed, timeout=300)
 
     def on_programmed(self, reply):
-        assert reply == self.ACK
+        if not reply == self.ACK:
+            raise ErrorReply(reply)
 
         try:
             self.next_batch()
         except StopIteration:
-            self.message.emit("Neustarten")
+            self.message.emit(Restart())
             self.command(bytearray([0x40]), self.on_reset)
 
     def on_reset(self, reply):
-        assert reply == self.ACK
+        if not reply == self.ACK:
+            raise ErrorReply(reply)
 
         self.finished.emit(True)
         self.launchpad.ready.emit()
+
+
+class UnexpectedReply(Message):
+    english = "Unexpected reply received"
+    german = "Unerwartete Antwort erhalten"
+
+
+class ChecksumError(Message):
+    english = "Checksum verification failed"
+    german = "Fehlerhafte Prüfsumme"
+
+
+class ErrorReply(Message):
+    english = "Error message received: {0}"
+    german = "Fehlermeldung erhalten: {0}"
+
+
+class NoReply(Message):
+    english = "No reply received"
+    german = "Keine Antwort erhalten"
+
+
+class Connect(Message):
+    english = "Establish connection"
+    german = "Verbindung aufbauen"
+
+
+class SetBaudRate(Message):
+    english = "Set baudrate"
+    german = "Baudrate einstellen"
+
+
+class GetDeviceInfo(Message):
+    english = "Get device info"
+    german = "Controller-Eigenschaften abrufen"
+
+
+class BufferTooSmall(Message):
+    english = "Buffer too small"
+    german = "Die Puffergröße im Controller ist zu klein"
+
+
+class BufferSize(Message):
+    english = "Max. buffer size: {0:.1f} KiB"
+    german = "Max. Puffergröße: {0:.1f} KiB"
+
+
+class Unlock(Message):
+    english = "Unlock Bootstrap Loader"
+    german = "Bootstrap Loader entsperren"
+
+
+class Erase(Message):
+    english = "Erase memory"
+    german = "Speicher löschen"
+
+
+class WriteFirmware(Message):
+    english = "Write firmware ({0:.1f} KiB)"
+    german = "Firmware schreiben ({0:.1f} KiB)"
+
+
+class Restart(Message):
+    english = "Restart"
+    german = "Neustarten"

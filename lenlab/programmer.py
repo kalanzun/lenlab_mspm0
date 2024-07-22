@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
 
 from .bsl import BootstrapLoader
 from .figure import LaunchpadFigure
-from .launchpad import Launchpad, LpError
+from .launchpad import Launchpad
+from .message import Message
 
 
 class Programmer(QWidget):
@@ -49,8 +50,8 @@ class Programmer(QWidget):
     def on_ready(self):
         self.program_button.setEnabled(True)
 
-    @Slot(LpError)
-    def on_error(self, error: LpError):
+    @Slot(Message)
+    def on_error(self, msg: Message):
         self.program_button.setEnabled(False)
 
     @Slot()
@@ -71,9 +72,9 @@ class Programmer(QWidget):
             )
             self.program_button.setDisabled(False)
 
-    @Slot(str)
-    def on_message(self, message):
-        self.messages.insertPlainText(message)
+    @Slot(Message)
+    def on_message(self, message: Message):
+        self.messages.insertPlainText(str(message))
         self.messages.insertPlainText("\n")
 
     @Slot(bool)

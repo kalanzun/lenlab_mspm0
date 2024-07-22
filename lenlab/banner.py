@@ -4,7 +4,7 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from . import symbols
-from .launchpad import LpError
+from .message import Message
 
 
 class MessageBanner(QWidget):
@@ -44,9 +44,9 @@ class MessageBanner(QWidget):
 
         self.setLayout(layout)
 
-    @Slot(LpError)
-    def set_lp_error(self, error: LpError):
+    @Slot(Message)
+    def set_message(self, message: Message):
         self.setPalette(QPalette(QColor(0x80, 0, 0)))
         self.symbol_widget.load(symbols.error)
-        self.text_label.setText(error.name)
+        self.text_label.setText(str(message))
         self.show()
