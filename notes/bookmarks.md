@@ -2,9 +2,9 @@
 
 ## Hardware
 
-Launchpad https://www.ti.com/tool/LP-MSPM0L1306
+Launchpad https://www.ti.com/tool/LP-MSPM0G3507
 
-Microcontroller https://www.ti.com/product/de-de/MSPM0L1306
+Microcontroller https://www.ti.com/product/de-de/MSPM0G3507
 
 MSPM0 Bootstrap Loader User's guide https://www.ti.com/lit/ug/slau887/slau887.pdf
 
