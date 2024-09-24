@@ -1,4 +1,5 @@
 .settings/
+.theia/
 Debug/
 targetConfigs/
 .clangd
