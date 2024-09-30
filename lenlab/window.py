@@ -21,6 +21,7 @@ class MainWindow(QMainWindow):
         message_banner.retry_button.clicked.connect(self.launchpad.retry)
 
         self.lenlab = Lenlab(self.launchpad)
+        self.lenlab.error.connect(message_banner.set_message)
 
         programmer = Programmer(self.launchpad)
         voltmeter = Voltmeter()
