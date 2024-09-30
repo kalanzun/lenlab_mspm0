@@ -33,6 +33,8 @@ class MainWindow(QMainWindow):
         tab_widget.addTab(oscilloscope, oscilloscope.title)
         tab_widget.addTab(bode, bode.title)
 
+        self.lenlab.ready.connect(lambda: tab_widget.setCurrentIndex(1))
+
         layout = QVBoxLayout()
         layout.addWidget(message_banner)
         layout.addWidget(tab_widget)

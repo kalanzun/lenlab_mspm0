@@ -17,6 +17,7 @@ dev = [
   "isort",
   "pytest",
   "ruff",
+  "hatch",
 ]
 
 [project.urls]
@@ -30,4 +31,8 @@ requires = ["hatchling>=1.12.0,<2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "lenlab/__init__.py"
+path = "workspace/lenlab_firmware/version.h"
+pattern = '#define VERSION "(?P<version>[^"]+)"'
+
+[tool.uv]
+cache-keys = [{ file = "workspace/lenlab_firmware/version.h" }]
