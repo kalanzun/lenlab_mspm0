@@ -50,4 +50,6 @@ Maximum samplerate 1MHz
 
 Maximum sinus 100kHz
 
+Minimum sinus 100Hz
+
 TODO: How bad does a 10 point sinus look?
