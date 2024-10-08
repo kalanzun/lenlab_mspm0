@@ -58,15 +58,19 @@ def main():
         if chunk:
             data += chunk
         else:
-            end = time.time()
             print("timeout, end of transfer")
+            break
+
+        if len(data) == 256 * 4096:
+            print("end of transfer")
             break
 
         port.waitForReadyRead(100)
 
+    end = time.time()
     length = len(data)
-    assert length == 256 * 4096
     print(f"received {length / 1024 / 1024:.2f} MB")
+    assert length == 256 * 4096
 
     for i in range(256):
         a = i * 4096
