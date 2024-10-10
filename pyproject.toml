@@ -18,6 +18,9 @@ dev = [
   "pytest",
   "ruff",
   "hatch",
+  "notebook",
+  "numpy",
+  "matplotlib",
 ]
 
 [project.urls]
