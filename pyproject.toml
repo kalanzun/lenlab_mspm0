@@ -30,6 +30,9 @@ lenlab = "lenlab.app:main"
 requires = ["hatchling>=1.12.0,<2"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel.force-include]
+"workspace/lenlab_firmware/Debug/lenlab_firmware.bin" = "lenlab/lenlab_firmware.bin"
+
 [tool.hatch.version]
 path = "workspace/lenlab_firmware/version.h"
 pattern = '#define VERSION "(?P<version>[^"]+)"'

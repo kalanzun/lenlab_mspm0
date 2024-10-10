@@ -1,4 +1,5 @@
-from importlib.resources import files
+from importlib.resources import read_binary, is_resource
+from pathlib import Path
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (
@@ -60,15 +61,20 @@ class Programmer(QWidget):
         self.messages.clear()
 
         try:
-            firmware_file = files() / ".." / "firmware" / "Debug" / "firmware.bin"
-            firmware_file = firmware_file.resolve()
-            firmware = firmware_file.read_bytes()
+            if is_resource(__name__, "lenlab_firmware.bin"):
+                self.messages.insertPlainText("Lese die Firmware-Binärdatei aus dem Python-Paket\n")
+                firmware = read_binary("lenlab", "lenlab_firmware.bin")
+            else:
+                self.messages.insertPlainText("Lese die Firmware-Binärdatei aus dem Projektverzeichnis\n")
+                project_path = Path(__file__).resolve().parent.parent
+                firmware_file = project_path / "workspace" / "lenlab_firmware" / "Debug" / "lenlab_firmware.bin"
+                firmware = firmware_file.read_bytes()
 
             self.bsl.program(firmware)
 
         except OSError as error:
             self.messages.insertPlainText(
-                f"Fehler beim Lesen der Firmware-Binärdatei: {str(error)}"
+                f"Fehler beim Lesen der Firmware-Binärdatei: {str(error)}\n"
             )
             self.program_button.setDisabled(False)
 

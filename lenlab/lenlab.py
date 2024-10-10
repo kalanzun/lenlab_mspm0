@@ -34,7 +34,7 @@ class Lenlab(QObject):
     def on_ready(self) -> None:
         self.launchpad.port.setBaudRate(4_000_000)
         self.launchpad.port.write(b"L8\x00\x00lab!")
-        self.timer.start(100)
+        self.timer.start(200)  # less is too short sometimes
 
     @Slot()
     def on_reply(self, message: bytes) -> None:
