@@ -1,6 +1,7 @@
 from PySide6.QtCharts import QChartView
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -37,6 +38,13 @@ class Voltmeter(QWidget):
         self.sample_rate = QComboBox()
         layout.addWidget(self.sample_rate)
 
+        self.sample_rate.addItem("200ms")
+        self.sample_rate.addItem("500ms")
+        self.sample_rate.addItem("1s")
+        self.sample_rate.addItem("2s")
+
+        self.sample_rate.setCurrentIndex(2)
+
         # start / stop
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
@@ -46,3 +54,10 @@ class Voltmeter(QWidget):
 
         button = QPushButton("Stop")
         layout.addWidget(button)
+
+        # channels
+        checkbox = QCheckBox("Channel 1")
+        sidebar_layout.addWidget(checkbox)
+
+        checkbox = QCheckBox("Channel 2")
+        sidebar_layout.addWidget(checkbox)
