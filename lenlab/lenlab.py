@@ -1,6 +1,6 @@
 from importlib import metadata
 
-from PySide6.QtCore import QObject, Slot, Signal, QTimer
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from .launchpad import Launchpad
 from .message import Message
@@ -71,4 +71,3 @@ class InvalidFirmwareVersion(Message):
     german = """Ungültige Firmware-Version: {0}
         Dieses Lenlab benötigt Version {1}.
         Bitte die aktuelle Version mit dem Programmierer auf das Launchpad schreiben."""
-

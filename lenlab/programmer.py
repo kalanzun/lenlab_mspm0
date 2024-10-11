@@ -1,4 +1,4 @@
-from importlib.resources import read_binary, is_resource
+from importlib.resources import is_resource, read_binary
 from pathlib import Path
 
 from PySide6.QtCore import Slot
@@ -62,12 +62,22 @@ class Programmer(QWidget):
 
         try:
             if is_resource(__name__, "lenlab_firmware.bin"):
-                self.messages.insertPlainText("Lese die Firmware-Binärdatei aus dem Python-Paket\n")
+                self.messages.insertPlainText(
+                    "Lese die Firmware-Binärdatei aus dem Python-Paket\n"
+                )
                 firmware = read_binary("lenlab", "lenlab_firmware.bin")
             else:
-                self.messages.insertPlainText("Lese die Firmware-Binärdatei aus dem Projektverzeichnis\n")
+                self.messages.insertPlainText(
+                    "Lese die Firmware-Binärdatei aus dem Projektverzeichnis\n"
+                )
                 project_path = Path(__file__).resolve().parent.parent
-                firmware_file = project_path / "workspace" / "lenlab_firmware" / "Debug" / "lenlab_firmware.bin"
+                firmware_file = (
+                    project_path
+                    / "workspace"
+                    / "lenlab_firmware"
+                    / "Debug"
+                    / "lenlab_firmware.bin"
+                )
                 firmware = firmware_file.read_bytes()
 
             self.bsl.program(firmware)

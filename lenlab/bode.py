@@ -1,6 +1,31 @@
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCharts import QChartView
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 
 class BodePlotter(QWidget):
     title = "Bode Plotter"
     description = "Voltage generator and voltage measurement as a function of frequency"
+
+    def __init__(self):
+        super().__init__()
+
+        main_layout = QHBoxLayout()
+        self.setLayout(main_layout)
+
+        self.chart_view = QChartView()
+        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        main_layout.addWidget(self.chart_view)
+
+        sidebar_layout = QVBoxLayout()
+        main_layout.addLayout(sidebar_layout)
+
+        # start / cancel
+        layout = QHBoxLayout()
+        sidebar_layout.addLayout(layout)
+
+        button = QPushButton("Start")
+        layout.addWidget(button)
+
+        button = QPushButton("Cancel")
+        layout.addWidget(button)
