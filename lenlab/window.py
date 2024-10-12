@@ -6,6 +6,7 @@ from .launchpad import Launchpad
 from .lenlab import Lenlab
 from .oscilloscope import Oscilloscope
 from .programmer import Programmer
+from .translator import Translator
 from .voltmeter import Voltmeter
 
 
@@ -45,5 +46,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
         self.setWindowTitle("Lenlab")
+
+        self.translator = Translator(self)
+        self.translator.translate()
 
         self.launchpad.open_launchpad()

@@ -24,11 +24,11 @@ class Oscilloscope(QWidget):
         sidebar_layout = QVBoxLayout()
         main_layout.addLayout(sidebar_layout)
 
-        # run / stop
+        # start / stop
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
-        button = QPushButton("Run")
+        button = QPushButton("Start")
         layout.addWidget(button)
 
         button = QPushButton("Stop")
