@@ -1,7 +1,7 @@
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.message import Message
+from .message import Message
 
 
 def find_vid_pid(
@@ -77,14 +77,14 @@ class Launchpad(QObject):
             self.bsl_reply.emit(ack)
         elif n >= 8:
             head = self.port.peek(4).data()
-            length = head[2] + (head[3] << 8)
-            if n >= length + 8:
-                message = self.port.read(length + 8).data()
+            length = 8 + head[2] + (head[3] << 8)
+            if n >= length:
+                message = self.port.read(length).data()
                 if message[0] == 0 and message[1] == 8:
                     self.bsl_reply.emit(message)
                 else:
                     self.reply.emit(message)
-                if n > length + 8:
+                if n > length:
                     self.on_ready_read()
 
 

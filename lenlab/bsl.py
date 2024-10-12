@@ -13,8 +13,8 @@ from typing import Callable, Self
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
-from lenlab.launchpad import Launchpad
-from lenlab.message import Message
+from .launchpad import Launchpad
+from .message import Message
 
 
 @dataclass(frozen=True)
