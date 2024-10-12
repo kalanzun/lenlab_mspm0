@@ -2,13 +2,17 @@ from PySide6.QtCharts import QChartView
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
+from .lenlab import Lenlab
+
 
 class Oscilloscope(QWidget):
     title = "Oscilloscope"
     description = "Voltage measurement as a function of time"
 
-    def __init__(self):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+
+        self.lenlab = lenlab
 
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)

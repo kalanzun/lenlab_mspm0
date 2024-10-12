@@ -10,13 +10,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .lenlab import Lenlab
+
 
 class Voltmeter(QWidget):
     title = "Voltmeter"
     description = "Voltage measurement and logging"
 
-    def __init__(self):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+
+        self.lenlab = lenlab
 
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)

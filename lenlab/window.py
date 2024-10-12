@@ -24,9 +24,9 @@ class MainWindow(QMainWindow):
         self.lenlab.error.connect(message_banner.set_message)
 
         programmer = Programmer(self.launchpad)
-        voltmeter = Voltmeter()
-        oscilloscope = Oscilloscope()
-        bode = BodePlotter()
+        voltmeter = Voltmeter(self.lenlab)
+        oscilloscope = Oscilloscope(self.lenlab)
+        bode = BodePlotter(self.lenlab)
 
         tab_widget = QTabWidget()
         tab_widget.addTab(programmer, programmer.title)
