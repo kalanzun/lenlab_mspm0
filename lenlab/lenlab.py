@@ -4,6 +4,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from .launchpad import Launchpad
 from .message import Message
+from .micro import uint8, uint16, uint32
 
 
 def pad(seq, n):
@@ -13,6 +14,21 @@ def pad(seq, n):
     assert n >= 0
     for _ in range(n):
         yield 0
+
+
+def pack(cmd: bytes, arg: int = 0, payload: bytes = b"") -> bytearray:
+    """Pack a packet for the Lenlab firmware."""
+    assert len(cmd) == 1
+    assert len(payload) <= 32
+    return bytearray().join(
+        [
+            b"L",
+            cmd,
+            uint16.pack(len(payload)),
+            uint32.pack(arg),
+            payload,
+        ]
+    )
 
 
 class Lenlab(QObject):
@@ -53,6 +69,11 @@ class Lenlab(QObject):
     @Slot()
     def on_timeout(self) -> None:
         self.error.emit(NoFirmware())
+
+    def command(self, cmd: bytes, arg: int = 0, payload: bytes = b"") -> None:
+        packet = pack(cmd, arg, payload)
+        print(packet)
+        self.launchpad.port.write(packet)
 
 
 class NoFirmware(Message):

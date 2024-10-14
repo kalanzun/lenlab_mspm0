@@ -1,5 +1,6 @@
 #include "interpreter.h"
 
+#include "signal.h"
 #include "terminal.h"
 #include "version.h"
 
@@ -23,12 +24,20 @@ void version(void)
     terminal_transmit();
 }
 
+void constant(void)
+{
+    signal_constant(terminal.cmd.arg.int32);
+}
+
 void interpreter_main(void)
 {
     if (terminal.rx_flag) {
         switch (terminal.cmd.code) {
             case '8':
                 version();
+                break;
+            case 'C':
+                constant();
                 break;
             default:
                 break;

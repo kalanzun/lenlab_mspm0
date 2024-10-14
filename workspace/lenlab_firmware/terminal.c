@@ -34,7 +34,7 @@ void terminal_init(void)
     terminal.rpl.ack = 'L';
     terminal.rpl.code = 0;
     terminal.rpl.length = 0;
-    terminal.rpl.arg.number = 0;
+    terminal.rpl.arg.uint32 = 0;
 
     NVIC_EnableIRQ(TERMINAL_UART_INST_INT_IRQN);
 

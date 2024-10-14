@@ -6,6 +6,7 @@ from .launchpad import Launchpad
 from .lenlab import Lenlab
 from .oscilloscope import Oscilloscope
 from .programmer import Programmer
+from .signal import SignalGenerator
 from .translator import Translator
 from .voltmeter import Voltmeter
 
@@ -35,11 +36,14 @@ class MainWindow(QMainWindow):
         tab_widget.addTab(oscilloscope, oscilloscope.title)
         tab_widget.addTab(bode, bode.title)
 
+        signal_widget = SignalGenerator(self.lenlab)
+
         self.lenlab.ready.connect(lambda: tab_widget.setCurrentIndex(1))
 
         layout = QVBoxLayout()
         layout.addWidget(message_banner)
         layout.addWidget(tab_widget)
+        layout.addWidget(signal_widget)
 
         widget = QWidget()
         widget.setLayout(layout)

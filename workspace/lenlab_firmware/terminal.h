@@ -10,7 +10,8 @@ struct Packet {
     uint16_t length;
     union {
         uint8_t bytes[4];
-        uint32_t number;
+        uint32_t uint32;
+        int32_t int32;
     } arg;
 };
 

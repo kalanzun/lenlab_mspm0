@@ -9,6 +9,7 @@
 /**
  * Import the modules used in this configuration.
  */
+const DAC12  = scripting.addModule("/ti/driverlib/DAC12");
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
@@ -16,9 +17,15 @@ const UART1  = UART.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
-SYSCTL.forceDefaultClkConfig = true;
+DAC12.dacOutputPinEn     = true;
+DAC12.dacRepresentation  = "TWOS_COMPLEMENT";
+DAC12.dacAmplifier       = "ON";
+DAC12.OutPinConfig.$name = "ti_driverlib_gpio_GPIOPinGeneric2";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
+
+SYSCTL.forceDefaultClkConfig = true;
+SYSCTL.MFPCLKEn              = true;
 
 UART1.$name                             = "TERMINAL_UART";
 UART1.ovsRate                           = "8";
@@ -59,7 +66,9 @@ UART1.DMA_CHANNEL_TX.peripheral.$assign = "DMA_CH4";
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
  * re-solve from scratch.
  */
-SYSCTL.peripheral.$suggestSolution         = "SYSCTL";
+DAC12.peripheral.$suggestSolution          = "DAC0";
+DAC12.peripheral.OutPin.$suggestSolution   = "PA15";
 Board.peripheral.$suggestSolution          = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution = "PA20";
 Board.peripheral.swdioPin.$suggestSolution = "PA19";
+SYSCTL.peripheral.$suggestSolution         = "SYSCTL";

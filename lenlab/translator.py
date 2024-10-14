@@ -75,4 +75,5 @@ german = {
     "Voltmeter": "Voltmeter",
     "Oscilloscope": "Oszilloskop",
     "Bode Plotter": "Bode Plotter",
+    "Amplitude": "Amplitude",
 }
