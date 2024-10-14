@@ -19,7 +19,10 @@ from .message import Message
 
 @dataclass(frozen=True)
 class BSLInteger:
-    """Encode and decode Bootstrap Loader integers in binary little endian format."""
+    """Encode and decode Bootstrap Loader integers in binary little endian format.
+
+    TODO: Remove in favor of int.from_bytes or int().to_bytes
+    """
 
     n_bytes: int
 
@@ -65,14 +68,11 @@ def pack(payload: bytes) -> bytearray:
 
 def unpack(packet: BytesIO) -> bytes:
     """Unpack a packet from the Bootstrap Loader and verify the checksum."""
-    ack = uint8.unpack(packet)
-    assert ack == 0, "First byte (ack) is not zero"
-
     header = uint8.unpack(packet)
     assert header == 8, "Second byte (header) is not eight"
 
     length = uint16.unpack(packet)
-    assert len(packet.getbuffer()) == length + 8, "Invalid reply length"
+    assert len(packet.getbuffer()) == length + 7, "Invalid reply length"
     payload = packet.read(length)
 
     crc = uint32.unpack(packet)
@@ -102,6 +102,8 @@ class DeviceInfo:
 
 KB = 1024
 
+Callback = Callable[[bytes], None] | None
+
 
 class BootstrapLoader(QObject):
     finished = Signal(bool)
@@ -109,34 +111,57 @@ class BootstrapLoader(QObject):
 
     batch_size = 12 * KB
 
-    ACK = b"\x00"
     OK = b"\x3b\x00"
 
     def __init__(self, launchpad: Launchpad):
         super().__init__()
 
-        self.callback: Callable[[bytes], None] | None = None
+        self.ack_callback: Callback = None
+        self.reply_callback: Callback = None
         self.device_info: DeviceInfo | None = None
         self.enumerate_batched = None
         self.firmware_size = 0
 
         self.launchpad = launchpad
+        self.launchpad.bsl_ack.connect(self.on_bsl_ack)
         self.launchpad.bsl_reply.connect(self.on_bsl_reply)
 
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.on_timeout)
+        self.ack_timer = QTimer()
+        self.ack_timer.setSingleShot(True)
+        self.ack_timer.timeout.connect(self.on_timeout)
+
+        self.reply_timer = QTimer()
+        self.reply_timer.setSingleShot(True)
+        self.reply_timer.timeout.connect(self.on_timeout)
+
+    @Slot(bytes)
+    def on_bsl_ack(self, packet: bytes) -> None:
+        try:
+            if not self.ack_timer.isActive():
+                raise UnexpectedReply()
+
+            self.ack_timer.stop()
+
+            if not packet == b"\x00":
+                raise ErrorReply(packet)
+
+            if self.ack_callback is not None:
+                self.ack_callback(packet)
+
+        except Message as error:
+            self.message.emit(error)
+            self.finished.emit(False)
 
     @Slot(bytes)
     def on_bsl_reply(self, packet: bytes) -> None:
         try:
-            if not self.timer.isActive():
+            if not self.reply_timer.isActive():
                 raise UnexpectedReply()
 
-            self.timer.stop()
+            self.reply_timer.stop()
 
-            reply = packet if len(packet) == 1 else unpack(BytesIO(packet))
-            self.callback(reply)
+            reply = unpack(BytesIO(packet))
+            self.reply_callback(reply)
 
         except Message as error:
             self.message.emit(error)
@@ -147,6 +172,16 @@ class BootstrapLoader(QObject):
         self.message.emit(NoReply())
         self.finished.emit(False)
 
+    def command(self, command: bytearray, ack_callback: Callback = None, reply_callback: Callback = None, timeout: int = 100):
+        self.launchpad.port.write(pack(command))
+
+        self.ack_callback = ack_callback
+        self.ack_timer.start(timeout)
+
+        self.reply_callback = reply_callback
+        if reply_callback is not None:
+            self.reply_timer.start(timeout)
+
     def program(self, firmware: bytes):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
         self.firmware_size = len(firmware)
@@ -155,26 +190,15 @@ class BootstrapLoader(QObject):
         self.launchpad.port.setBaudRate(9600)
         self.command(bytearray([0x12]), self.on_connected)
 
-    def command(self, command, callback, timeout=100):
-        self.launchpad.port.write(pack(command))
-        self.callback = callback
-        self.timer.start(timeout)
-
     def on_connected(self, reply):
-        if not (reply == self.ACK or reply == self.OK):
-            raise ErrorReply(reply)
-
         self.message.emit(SetBaudRate())
         self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)
 
     def on_baud_rate_changed(self, reply):
-        if not reply == self.ACK:
-            raise ErrorReply(reply)
-
         self.launchpad.port.setBaudRate(3_000_000)
 
         self.message.emit(GetDeviceInfo())
-        self.command(bytearray([0x19]), self.on_device_info)
+        self.command(bytearray([0x19]), reply_callback=self.on_device_info)
 
     def on_device_info(self, reply):
         self.device_info = DeviceInfo.parse(reply)
@@ -184,14 +208,14 @@ class BootstrapLoader(QObject):
         self.message.emit(BufferSize(self.device_info.max_buffer_size / 1000))
 
         self.message.emit(Unlock())
-        self.command(bytearray([0x21] + [0xFF] * 32), self.on_unlocked)
+        self.command(bytearray([0x21] + [0xFF] * 32), reply_callback=self.on_unlocked)
 
     def on_unlocked(self, reply):
         if not reply == self.OK:
             raise ErrorReply(reply)
 
         self.message.emit(Erase())
-        self.command(bytearray([0x15]), self.on_erased)
+        self.command(bytearray([0x15]), reply_callback=self.on_erased)
 
     def on_erased(self, reply):
         if not reply == self.OK:
@@ -209,9 +233,6 @@ class BootstrapLoader(QObject):
         self.command(payload, self.on_programmed, timeout=300)
 
     def on_programmed(self, reply):
-        if not reply == self.ACK:
-            raise ErrorReply(reply)
-
         try:
             self.next_batch()
         except StopIteration:
@@ -219,9 +240,6 @@ class BootstrapLoader(QObject):
             self.command(bytearray([0x40]), self.on_reset)
 
     def on_reset(self, reply):
-        if not reply == self.ACK:
-            raise ErrorReply(reply)
-
         self.finished.emit(True)
         self.launchpad.ready.emit()
 

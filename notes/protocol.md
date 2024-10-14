@@ -13,12 +13,11 @@ The Lenlab firmware is on the USB device. It waits for a command and returns a r
 
 Packet:
 
-- 1 byte ack
-- 1 byte code
+- 1 byte label
 - 2 bytes length (little endian)
 - length bytes payload
 - 4 bytes args (BSL checksum)
-- Size: length + 8 bytes
+- Size: length + 7 bytes
 
 BSL-Ack-Packet:
 
@@ -28,11 +27,29 @@ BSL-Ack-Packet:
 Compatible packet format between the Lenlab firmware and the Boostrap Loader. The same
 host software can handle both device firmwares.
 
-The software distinguishes between Lenlab and BSL by the first byte (packet.ack):
+The BSL waits for commands from the host. It replies to each command with an ack packet and to some commands
+additionally with a response packet (if the ack was 0x00 ok).
 
-- 0x00: BSL packet
-- 0x4C "L": Lenlab
-- 0x51 - 0x56: BSL error 
+The software distinguishes between Lenlab and BSL by the first byte (ack or label):
+
+- 0x00: BSL ack ok packet
+- 0x08: BSL response packet (with payload)
+- 0x4C "L": Lenlab packet (with payload either way)
+- 0x51 - 0x56: BSL error (1 byte packet)
+- 0x80: BSL command packet (with payload from host to BSL)
+
+Reply Parser
+
+- If the first byte of the message is 0 or 0x51 to 0x56, it's a single byte ack message
+- If the first byte of the packet is 8 (BSL) or 0x4C (Lenlab), it's a packet with payload. 
+  3 bytes header plus payload length (in bytes 2 and 3) plus 4 bytes checksum.
+- The reply parser cannot know whether it should wait for a response packet after a BSL ack ok packet.
+  It depends on the previous command if there is one or not.
+
+The BSL packet header and footer of data packets comprise 7 bytes. Lenlab packets have a minimum size of 8
+to avoid problems with alignment and DMA. The packet header is 3 bytes, the minimum payload is 5 bytes.
+Lenlab packets have no footer, these 4 bytes are added to the payload. The payload transmitted is 4 bytes larger
+than the payload length in the packet header.
 
 ## Reply routing
 
@@ -50,7 +67,7 @@ the Lenlab welcome message. If the Lenlab firmware replies with the correct vers
 Otherwise, Lenlab displays an error message, a hint for solving it (connect Launchpad, flash firmware image)
 and a retry button.
 
-The BSL ignores the Lenlab welcome message and still operates for programming.
+The BSL ignores the Lenlab welcome message and still operates for programming. TODO: It does not ignore it and hangs.
 If there was no reply to the welcome message, the programmer may start programming, switch the baudrate,
 and send the BSL welcome message. After resetting the microcontroller, the programmer resets the communication
 and Lenlab probes anew.

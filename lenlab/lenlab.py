@@ -4,7 +4,6 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from .launchpad import Launchpad
 from .message import Message
-from .micro import uint8, uint16, uint32
 
 
 def pad(seq, n):
@@ -14,21 +13,6 @@ def pad(seq, n):
     assert n >= 0
     for _ in range(n):
         yield 0
-
-
-def pack(cmd: bytes, arg: int = 0, payload: bytes = b"") -> bytearray:
-    """Pack a packet for the Lenlab firmware."""
-    assert len(cmd) == 1
-    assert len(payload) <= 32
-    return bytearray().join(
-        [
-            b"L",
-            cmd,
-            uint16.pack(len(payload)),
-            uint32.pack(arg),
-            payload,
-        ]
-    )
 
 
 class Lenlab(QObject):
@@ -46,34 +30,46 @@ class Lenlab(QObject):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.on_timeout)
 
+    def command(self, payload: bytes = b"") -> None:
+        length = len(payload)
+        assert length >= 5
+
+        length = length - 4  # implicit 4 bytes payload (BSL checksum)
+        assert length <= 32
+
+        packet = bytes().join(
+            [
+                b"L",
+                length.to_bytes(2, byteorder="little"),
+                payload,
+            ]
+        )
+        print(packet)
+        self.launchpad.port.write(packet)
+
     @Slot()
     def on_ready(self) -> None:
         self.launchpad.port.setBaudRate(4_000_000)
-        self.launchpad.port.write(b"L8\x00\x00lab!")
+        self.command(b"8ver?")
         self.timer.start(200)  # less is too short sometimes
 
     @Slot()
-    def on_reply(self, message: bytes) -> None:
+    def on_reply(self, packet: bytes) -> None:
         self.timer.stop()
         major, dot, *rest = metadata.version("lenlab").encode("ascii")
         assert dot == ord(".")
-        pattern = b"L" + bytes([major]) + bytes([0, 0]) + bytes(pad(rest, 4))
+        pattern = b"L" + (1).to_bytes(2, "little") + bytes([major]) + bytes(pad(rest, 4))
         print(f"Lenlab version {pattern}")
-        print(f"Reply {message}")
-        if message == pattern:
+        print(f"Reply {packet}")
+        if packet == pattern:
             self.ready.emit()
         else:
-            version = f"{chr(message[1])}.{''.join(chr(x) for x in message[4:] if x)}"
+            version = f"{chr(packet[3])}.{''.join(chr(x) for x in packet[4:] if x)}"
             self.error.emit(InvalidFirmwareVersion(version, metadata.version("lenlab")))
 
     @Slot()
     def on_timeout(self) -> None:
         self.error.emit(NoFirmware())
-
-    def command(self, cmd: bytes, arg: int = 0, payload: bytes = b"") -> None:
-        packet = pack(cmd, arg, payload)
-        print(packet)
-        self.launchpad.port.write(packet)
 
 
 class NoFirmware(Message):

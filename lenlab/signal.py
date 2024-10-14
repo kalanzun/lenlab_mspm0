@@ -29,4 +29,5 @@ class SignalGenerator(QWidget):
 
     @Slot()
     def on_amplitude_value_changed(self, value: int):
-        self.lenlab.command(b"C", value)
+        payload = b"c" + value.to_bytes(4, byteorder="little", signed=True)
+        self.lenlab.command(payload)

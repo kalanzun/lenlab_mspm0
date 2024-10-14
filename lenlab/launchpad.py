@@ -18,6 +18,7 @@ class Launchpad(QObject):
     ready = Signal()
     error = Signal(Message)
     reply = Signal(bytes)
+    bsl_ack = Signal(bytes)
     bsl_reply = Signal(bytes)
 
     def __init__(self):
@@ -72,19 +73,24 @@ class Launchpad(QObject):
     @Slot()
     def on_ready_read(self):
         n = self.port.bytesAvailable()
-        if n == 1:
-            ack = self.port.read(1).data()
-            self.bsl_reply.emit(ack)
-        elif n >= 8:
-            head = self.port.peek(4).data()
-            length = 8 + head[2] + (head[3] << 8)
+        if n >= 1:
+            ack = self.port.peek(1).data()
+            if ack in b"\x00QRSTUV":  # 0x51 - 0x56
+                packet = self.port.read(1).data()
+                self.bsl_ack.emit(packet)
+                n -= 1
+
+        if n >= 7:
+            head = self.port.peek(3).data()
+            length = int.from_bytes(head[1:3], byteorder="little") + 7
             if n >= length:
-                message = self.port.read(length).data()
-                if message[0] == 0 and message[1] == 8:
-                    self.bsl_reply.emit(message)
+                packet = self.port.read(length).data()
+                if packet[0] == 8:
+                    self.bsl_reply.emit(packet)
                 else:
-                    self.reply.emit(message)
-                if n > length:
+                    self.reply.emit(packet)
+
+                if n - length:
                     self.on_ready_read()
 
 
