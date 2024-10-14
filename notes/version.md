@@ -32,7 +32,4 @@ Hatch und Hatchling lesen und schreiben die Version in der Header-Datei `version
 
 Lenlab kennt (nur) die Version des installierten Python-Pakets.
 Mit einem editable install im virtual environment funktioniert das auch während der Entwicklung.
-
-Bei Versionsänderung muss der editable install aktualisiert werden.
-
-`uv pip install -e .`
+`uv sync` führt den editable install automatisch aus.
