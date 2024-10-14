@@ -2,7 +2,7 @@ from io import BytesIO
 
 import pytest
 
-from lenlab.bsl import BSLInteger, pack, unpack
+from lenlab.bsl import BSLInteger, pack, unpack, ChecksumError
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_program():
 
 
 def test_checksum_error():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ChecksumError):
         unpack(BytesIO(bytes.fromhex("00 08 02 00 3B 00 38 02 94 81")))
 
 
