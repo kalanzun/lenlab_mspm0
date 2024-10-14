@@ -8,16 +8,18 @@ struct Packet {
     uint8_t ack;
     uint8_t code;
     uint16_t length;
-    uint8_t arg0;
-    uint8_t arg1;
-    uint8_t arg2;
-    uint8_t arg3;
+    union {
+        uint8_t bytes[4];
+        uint32_t number;
+    } arg;
 };
 
 struct Terminal {
     volatile bool rx_flag;
+    volatile bool ld_flag;
     volatile bool tx_flag;
     volatile struct Packet cmd;
+    volatile uint8_t payload[32];
     struct Packet rpl;
 };
 

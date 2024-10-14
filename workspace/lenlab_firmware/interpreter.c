@@ -12,13 +12,13 @@ void version(void)
     if (version[i]) i++;
     if (version[i]) i++;
 
-    terminal.rpl.arg0 = version[i];
+    terminal.rpl.arg.bytes[0] = version[i];
     if (version[i]) i++;
-    terminal.rpl.arg1 = version[i];
+    terminal.rpl.arg.bytes[1] = version[i];
     if (version[i]) i++;
-    terminal.rpl.arg2 = version[i];
+    terminal.rpl.arg.bytes[2] = version[i];
     if (version[i]) i++;
-    terminal.rpl.arg3 = version[i];
+    terminal.rpl.arg.bytes[3] = version[i];
 
     terminal_transmit();
 }
