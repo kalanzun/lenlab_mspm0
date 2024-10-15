@@ -76,4 +76,9 @@ german = {
     "Oscilloscope": "Oszilloskop",
     "Bode Plotter": "Bode Plotter",
     "Amplitude": "Amplitude",
+    "Signal generator": "Signalgenerator",
+    "0V": "0V",
+    "1.1V": "1.1V",
+    "2.2V": "2.2V",
+    "3.3V": "3.3V",
 }
