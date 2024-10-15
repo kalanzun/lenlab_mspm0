@@ -17,29 +17,6 @@ from .launchpad import Launchpad
 from .message import Message
 
 
-@dataclass(frozen=True)
-class BSLInteger:
-    """Encode and decode Bootstrap Loader integers in binary little endian format.
-
-    TODO: Remove in favor of int.from_bytes or int().to_bytes
-    """
-
-    n_bytes: int
-
-    def pack(self, value: int) -> bytearray:
-        return bytearray((value >> (8 * i)) & 0xFF for i in range(self.n_bytes))
-
-    def unpack(self, packet: BytesIO) -> int:
-        message = packet.read(self.n_bytes)
-        assert len(message) == self.n_bytes, "Message too short"
-        return sum(message[i] << (8 * i) for i in range(self.n_bytes))
-
-
-uint8 = BSLInteger(1)
-uint16 = BSLInteger(2)
-uint32 = BSLInteger(4)
-
-
 crc_polynom = 0xEDB88320
 
 
@@ -54,32 +31,42 @@ def checksum(payload: bytes) -> int:
     return crc
 
 
-def pack(payload: bytes) -> bytearray:
+def pack(payload: bytes) -> bytes:
     """Pack a packet for the Bootstrap Loader."""
-    return bytearray().join(
-        [
-            uint8.pack(0x80),
-            uint16.pack(len(payload)),
-            payload,
-            uint32.pack(checksum(payload)),
-        ]
-    )
+    packet = BytesIO()
+    packet.write((0x80).to_bytes(1, byteorder="little"))
+    packet.write(len(payload).to_bytes(2, byteorder="little"))
+    packet.write(payload)
+    packet.write(checksum(payload).to_bytes(4, byteorder="little"))
+    return packet.getvalue()
 
 
 def unpack(packet: BytesIO) -> bytes:
     """Unpack a packet from the Bootstrap Loader and verify the checksum."""
-    header = uint8.unpack(packet)
-    assert header == 8, "Second byte (header) is not eight"
+    header = int.from_bytes(packet.read(1), byteorder="little")
+    assert header == 8, "First byte (header) is not eight"
 
-    length = uint16.unpack(packet)
+    length = int.from_bytes(packet.read(2), byteorder="little")
     assert len(packet.getbuffer()) == length + 7, "Invalid reply length"
     payload = packet.read(length)
 
-    crc = uint32.unpack(packet)
+    crc = int.from_bytes(packet.read(4), byteorder="little")
     if not checksum(payload) == crc:
         raise ChecksumError()
 
     return payload
+
+
+class uint8(int):
+    n_bytes = 1
+
+
+class uint16(int):
+    n_bytes = 2
+
+
+class uint32(int):
+    n_bytes = 4
 
 
 @dataclass(frozen=True)
@@ -97,7 +84,7 @@ class DeviceInfo:
     @classmethod
     def parse(cls, reply: bytes) -> Self:
         packet = BytesIO(reply)
-        return cls(*(field.type.unpack(packet) for field in fields(cls)))
+        return cls(*(field.type.from_bytes(packet.read(field.type.n_bytes), byteorder="little") for field in fields(cls)))
 
 
 KB = 1024
@@ -227,7 +214,7 @@ class BootstrapLoader(QObject):
     def next_batch(self):
         i, batch = next(self.enumerate_batched)
         payload = bytearray([0x24])
-        payload.extend(uint32.pack(i * self.batch_size))
+        payload.extend((i * self.batch_size).to_bytes(4, byteorder="little"))
         payload.extend(batch)
 
         self.command(payload, self.on_programmed, timeout=300)
