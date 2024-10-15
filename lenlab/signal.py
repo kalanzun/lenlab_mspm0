@@ -14,8 +14,12 @@ class SignalGenerator(QWidget):
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
+        button_layout = QHBoxLayout()
+        main_layout.addLayout(button_layout)
+
         self.toggle_button = QPushButton("Signal generator")
-        main_layout.addWidget(self.toggle_button)
+        button_layout.addWidget(self.toggle_button)
+        button_layout.addStretch(1)
 
         self.toggle_button.setCheckable(True)
         self.toggle_button.toggled.connect(self.on_toggled)
@@ -48,10 +52,10 @@ class SignalWidget(QWidget):
         line = QHBoxLayout()
         layout.addLayout(line)
 
-        label = QLabel("Amplitude")
+        label = QLabel("Amplitude [V]")
         line.addWidget(label)
 
-        self.edit = QLineEdit()
+        self.edit = QLineEdit("0.000")
         line.addWidget(self.edit)
         line.addStretch(1)
         self.edit.editingFinished.connect(self.on_editing_finished)
@@ -78,6 +82,7 @@ class SignalWidget(QWidget):
         layout.addWidget(self.slider)
 
         self.slider.setMinimum(-1650)
+        self.slider.setValue(-1650)
         self.slider.setMaximum(1650)
         self.slider.setTickInterval(550)
         self.slider.setTickPosition(QSlider.TickPosition.TicksAbove)
@@ -87,6 +92,7 @@ class SignalWidget(QWidget):
     def on_slider_value_changed(self, value: int):
         # payload = b"c" + value.to_bytes(4, byteorder="little", signed=True)
         # self.lenlab.command(payload)
+        self.lenlab.set_signal_constant(value)
         value = (value + 1650) / 1000
         self.edit.setText(f"{value:.3f}")
 

@@ -75,10 +75,11 @@ german = {
     "Voltmeter": "Voltmeter",
     "Oscilloscope": "Oszilloskop",
     "Bode Plotter": "Bode Plotter",
-    "Amplitude": "Amplitude",
+    "Amplitude [V]": "Amplitude [V]",
     "Signal generator": "Signalgenerator",
     "0V": "0V",
     "1.1V": "1.1V",
     "2.2V": "2.2V",
     "3.3V": "3.3V",
+    "0.000": "0.000",
 }

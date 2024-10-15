@@ -27,6 +27,8 @@ void version(void)
 void constant(void)
 {
     signal_constant(terminal_getArgInt32());
+    terminal.rpl[3] = 'c';
+    terminal_transmit();
 }
 
 void interpreter_main(void)

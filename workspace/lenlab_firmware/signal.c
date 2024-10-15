@@ -14,6 +14,6 @@ void signal_constant(int32_t amplitude_mV)
 
 void signal_init(void)
 {
-    signal_constant(0);
+    signal_constant(-1650);
     DL_DAC12_enable(DAC0);
 }

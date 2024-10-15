@@ -30,12 +30,17 @@ class Lenlab(QObject):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.on_timeout)
 
+        self.busy = False
+        self.amplitude = None
+
     def command(self, payload: bytes = b"") -> None:
         length = len(payload)
         assert length >= 5
 
         length = length - 4  # implicit 4 bytes payload (BSL checksum)
         assert length <= 32
+
+        assert not self.busy
 
         packet = bytes().join(
             [
@@ -45,6 +50,7 @@ class Lenlab(QObject):
             ]
         )
         print(packet)
+        self.busy = True
         self.launchpad.port.write(packet)
 
     @Slot()
@@ -56,6 +62,17 @@ class Lenlab(QObject):
     @Slot()
     def on_reply(self, packet: bytes) -> None:
         self.timer.stop()
+        assert self.busy
+        self.busy = False
+
+        if packet[3] == b"8":
+            self.version_reply(packet)
+
+        if self.amplitude is not None:
+            self.signal_constant_command(self.amplitude)
+            self.amplitude = None
+
+    def version_reply(self, packet: bytes) -> None:
         major, dot, *rest = metadata.version("lenlab").encode("ascii")
         assert dot == ord(".")
         pattern = b"L" + (1).to_bytes(2, "little") + bytes([major]) + bytes(pad(rest, 4))
@@ -69,7 +86,19 @@ class Lenlab(QObject):
 
     @Slot()
     def on_timeout(self) -> None:
+        self.busy = False
         self.error.emit(NoFirmware())
+
+    def set_signal_constant(self, amplitude: int):
+        """amplitude in mV from -1650 mV to 1650 mV"""
+        if self.busy:
+            self.amplitude = amplitude
+        else:
+            self.signal_constant_command(amplitude)
+
+    def signal_constant_command(self, amplitude: int):
+        payload = b"c" + amplitude.to_bytes(4, byteorder="little", signed=True)
+        self.command(payload)
 
 
 class NoFirmware(Message):
