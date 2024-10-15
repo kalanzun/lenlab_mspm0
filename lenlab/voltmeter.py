@@ -65,3 +65,5 @@ class Voltmeter(QWidget):
 
         checkbox = QCheckBox("Channel 2")
         sidebar_layout.addWidget(checkbox)
+
+        sidebar_layout.addStretch(1)

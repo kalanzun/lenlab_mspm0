@@ -33,3 +33,5 @@ class BodePlotter(QWidget):
 
         button = QPushButton("Cancel")
         layout.addWidget(button)
+
+        sidebar_layout.addStretch(1)

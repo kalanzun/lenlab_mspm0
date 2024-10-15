@@ -33,3 +33,5 @@ class Oscilloscope(QWidget):
 
         button = QPushButton("Stop")
         layout.addWidget(button)
+
+        sidebar_layout.addStretch(1)
