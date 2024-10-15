@@ -1,16 +1,15 @@
 #include "signal.h"
 
+#include "q.h"
+
 #include "ti_msp_dl_config.h"
 
-typedef int32_t sq16_t;
-
-const sq16_t attenuation = 81344; // 4096 / 3300 mV * (1 << 16)
+const q_t attenuation = 81344; // 4096 / 3300 mV * (1 << 16)
 
 void signal_constant(int32_t amplitude_mV)
 {
-    sq16_t amplitude = attenuation * amplitude_mV;
-    uint16_t *ptr = (uint16_t *) &amplitude;
-    DL_DAC12_output12(DAC0, ptr[1]);
+    q_t amplitude = attenuation * amplitude_mV;
+    DL_DAC12_output12(DAC0, q_integer_part(amplitude));
 }
 
 void signal_init(void)

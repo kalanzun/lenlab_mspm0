@@ -11,7 +11,7 @@ uint8_t terminal_getKey(void)
 
 int32_t terminal_getArgInt32(void)
 {
-    return ((int32_t *) (&terminal.cmd[4]))[0];
+    return *((int32_t *) (&terminal.cmd[4]));
 }
 
 void terminal_transmit(void)
