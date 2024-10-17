@@ -4,3 +4,4 @@ uv.lock
 Debug/
 targetConfigs/
 .clangd
+.theia/
