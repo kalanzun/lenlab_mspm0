@@ -41,6 +41,9 @@ class Terminal:
 
         return True  # 8 bytes available
 
+    def wait_for_transmission(self, timeout=200):
+        return self.port.waitForBytesWritten(timeout)
+
     def knock(self):
         self.port.write(packet(b"knock"))
         assert self.wait_for_packet()
@@ -99,3 +102,23 @@ def test_reply_too_long(terminal: Terminal):
     assert not terminal.wait_for_packet()
 
     terminal.knock()
+
+
+def test_baudrate(terminal: Terminal):
+    terminal.write(packet(b"b4MBd"))
+    terminal.wait_for_transmission()
+
+    terminal.port.setBaudRate(4_000_000)
+    terminal.wait_for_packet(300)
+    reply = terminal.read()
+    assert reply == packet(b"b4MBd")
+
+    terminal.knock()
+
+    terminal.write(packet(b"b9600"))
+    terminal.wait_for_transmission()
+
+    terminal.port.setBaudRate(9_600)
+    terminal.wait_for_packet(300)
+    reply = terminal.read()
+    assert reply == packet(b"b9600")

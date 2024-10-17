@@ -57,6 +57,7 @@ const struct Packet bsl_c = { .buffer = {0x80, 1, 0, 0x12, 0x3A, 0x61, 0x44, 0xD
 const struct Packet hello = { .buffer = {'L', 1, 0, 'h', 'e', 'l', 'l', 'o'}, };
 const struct Packet get10 = { .buffer = {'L', 1, 0, 'g', 'e', 't', '1', '0'}, };
 const struct Packet b4MBd = { .buffer = {'L', 1, 0, 'b', '4', 'M', 'B', 'd'}, };
+const struct Packet b9600 = { .buffer = {'L', 1, 0, 'b', '9', '6', '0', '0'}, };
 
 void terminal_interpreter(void)
 {
@@ -75,7 +76,14 @@ void terminal_interpreter(void)
     else if (packet_compare(&terminal.cmd, &b4MBd)) {
         DL_UART_disable(TERMINAL_UART_INST);
         DL_UART_configBaudRate(TERMINAL_UART_INST, TERMINAL_UART_INST_FREQUENCY, 4000000);
-
+        packet_write(&terminal.rpl, &b4MBd);
+        // delayed reply, the UART needs some time to change
+        terminal.baudrate_reply = 2;
+    }
+    else if (packet_compare(&terminal.cmd, &b9600)) {
+        DL_UART_disable(TERMINAL_UART_INST);
+        DL_UART_configBaudRate(TERMINAL_UART_INST, TERMINAL_UART_INST_FREQUENCY, 9600);
+        packet_write(&terminal.rpl, &b9600);
         // delayed reply, the UART needs some time to change
         terminal.baudrate_reply = 2;
     }
@@ -100,7 +108,6 @@ void terminal_tick(void)
     if (terminal.baudrate_reply) {
         if (terminal.baudrate_reply == 1) {
             DL_UART_enable(TERMINAL_UART_INST);
-            packet_write(&terminal.rpl, &b4MBd);
             terminal_transmit(PACKET_SIZE);
         }
         terminal.baudrate_reply -= 1;
