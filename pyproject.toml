@@ -12,3 +12,9 @@ dependencies = [
 dev-dependencies = [
     "pytest>=8.3.3",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "bsl: communicate with the BSL",
+    "fw: communicate with the firmware",
+]
