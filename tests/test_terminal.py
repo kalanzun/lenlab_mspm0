@@ -2,15 +2,14 @@ from typing import Iterable
 
 import pytest
 
-from PySide6.QtCore import QObject, QTimer, QMetaMethod
+from PySide6.QtCore import QObject, QTimer, QMetaMethod, QCoreApplication
 from PySide6.QtTest import QSignalSpy
-from PySide6.QtWidgets import QApplication
 
-from lenlab.terminal import Terminal, packet
+from lenlab.terminal import Terminal, Probe, packet
 
 
 class Bot(QObject):
-    def __init__(self, app: QApplication, terminal: Terminal):
+    def __init__(self, app: QCoreApplication, terminal: Terminal):
         super().__init__()
 
         self.app = app
@@ -33,10 +32,10 @@ class Bot(QObject):
                 yield name, QSignalSpy(getattr(obj, name))
 
     def write(self, data: bytes) -> None:
-        self.terminal.port.write(data)
+        self.terminal.write(data)
 
     def wait_for_transmission(self, timeout: int = 200) -> bool:
-        return self.terminal.port.waitForBytesWritten(timeout)
+        return self.terminal.wait_for_transmission(timeout)
 
     def wait_for_reply(self, timeout: int = 200) -> bytes | None:
         spy = dict(self.spy_items(self.terminal))
@@ -71,7 +70,9 @@ class Bot(QObject):
 
         return bsl_ack.at(0)[0] if bsl_ack.count() else None
 
-    def wait_for_bsl_ack_reply(self, timeout: int = 200) -> (bytes | None, bytes | None):
+    def wait_for_bsl_ack_reply(
+        self, timeout: int = 200
+    ) -> (bytes | None, bytes | None):
         spy = dict(self.spy_items(self.terminal))
 
         self.timer.start(timeout)
@@ -97,84 +98,106 @@ class Bot(QObject):
         return reply
 
 
-@pytest.fixture(scope="session")
-def app() -> QApplication:
-    return QApplication()
+@pytest.fixture(scope="module")
+def terminal(app) -> Terminal:
+    terminal = Terminal()
+    if terminal.open():
+        probe = Probe(terminal)
+        probe.ready.connect(app.quit)
+        probe.error.connect(app.quit)
+        probe.start()
+        app.exec()
+        del probe
+
+    yield terminal
+
+    terminal.close()
 
 
 @pytest.fixture
-def terminal(port) -> Terminal:
-    return Terminal(port)
-
-
-@pytest.fixture
-def bot(app: QApplication, terminal: Terminal) -> Bot:
+def bot(app: QCoreApplication, terminal: Terminal) -> Bot:
     return Bot(app, terminal)
 
 
-def test_knock(firmware, bot: Bot):
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
+@pytest.fixture
+def bsl(bot: Bot) -> Bot:
+    if not bot.terminal.bsl:
+        pytest.skip("bsl required")
+
+    return bot
 
 
-def test_incomplete_packet(firmware, bot: Bot):
-    bot.write(b"L\x05\x00")
-    assert bot.wait_for_reply() is None
+@pytest.fixture
+def firmware(bot: Bot) -> Bot:
+    if not bot.terminal.firmware:
+        pytest.skip("firmware required")
 
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
-
-
-def test_wrong_baudrate(firmware, bot: Bot):
-    bot.terminal.port.setBaudRate(4_000_000)
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() is None
-
-    bot.terminal.port.setBaudRate(9_600)
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
+    return bot
 
 
-def test_hitchhiker(firmware, bot: Bot):
-    bot.write(packet(b"knock") + b"knock")
-    assert bot.wait_for_reply() == packet(b"hello")
-    assert bot.wait_for_reply() is None
-
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
+def test_knock(firmware: Bot):
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
 
 
-def test_reply_too_long(firmware, bot: Bot):
-    bot.write(packet(b"get10"))
-    assert bot.wait_for_reply() == packet(b"get10")
-    assert bot.wait_for_reply() is None
+def test_incomplete_packet(firmware: Bot):
+    firmware.write(b"L\x05\x00")
+    assert firmware.wait_for_reply() is None
 
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
-
-
-def test_baudrate(firmware, bot: Bot):
-    bot.write(packet(b"b4MBd"))
-    assert bot.wait_for_transmission()
-
-    bot.terminal.port.setBaudRate(4_000_000)
-    assert bot.wait_for_reply(300) == packet(b"b4MBd")
-
-    bot.write(packet(b"knock"))
-    assert bot.wait_for_reply() == packet(b"hello")
-
-    bot.write(packet(b"b9600"))
-    assert bot.wait_for_transmission()
-
-    bot.terminal.port.setBaudRate(9_600)
-    assert bot.wait_for_reply(300) == packet(b"b9600")
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
 
 
-def test_probe(firmware, bot: Bot):
-    bot.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
-    assert bot.wait_for_reply() == packet(b"hello")
+def test_wrong_baudrate(firmware: Bot):
+    firmware.terminal.port.setBaudRate(4_000_000)
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() is None
+
+    firmware.terminal.port.setBaudRate(9_600)
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
 
 
-def test_probe_bsl(bsl, bot: Bot):
-    bot.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
-    assert bot.wait_for_bsl_reply() == bytes.fromhex("08 02 00 3B 06 0D A7 F7 6B")
+def test_hitchhiker(firmware: Bot):
+    firmware.write(packet(b"knock") + b"knock")
+    assert firmware.wait_for_reply() == packet(b"hello")
+    assert firmware.wait_for_reply() is None
+
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
+
+
+def test_reply_too_long(firmware: Bot):
+    firmware.write(packet(b"get10"))
+    assert firmware.wait_for_reply() == packet(b"get10")
+    assert firmware.wait_for_reply() is None
+
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
+
+
+def test_baudrate(firmware: Bot):
+    firmware.write(packet(b"b4MBd"))
+    assert firmware.wait_for_transmission()
+
+    firmware.terminal.port.setBaudRate(4_000_000)
+    assert firmware.wait_for_reply(300) == packet(b"b4MBd")
+
+    firmware.write(packet(b"knock"))
+    assert firmware.wait_for_reply() == packet(b"hello")
+
+    firmware.write(packet(b"b9600"))
+    assert firmware.wait_for_transmission()
+
+    firmware.terminal.port.setBaudRate(9_600)
+    assert firmware.wait_for_reply(300) == packet(b"b9600")
+
+
+def test_probe(firmware: Bot):
+    firmware.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
+    assert firmware.wait_for_reply() == packet(b"hello")
+
+
+def test_probe_bsl(bsl: Bot):
+    bsl.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
+    assert bsl.wait_for_bsl_reply() == bytes.fromhex("08 02 00 3B 06 0D A7 F7 6B")
