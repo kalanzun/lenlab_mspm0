@@ -12,28 +12,27 @@ class Terminal:
     def __init__(self, port: QSerialPort):
         self.port = port
 
-    def read(self) -> bytes:
-        return self.port.readAll().data()
-
-    def write(self, data: bytes):
-        self.port.write(data)
-
-    def wait_for_packet(self, timeout=200):
-        while self.port.bytesAvailable() < 8:
+    def wait_for_packet(self, length: int = 8, timeout: int = 200) -> bool:
+        while self.port.bytesAvailable() < length:
             if not self.port.waitForReadyRead(timeout):
                 self.port.readAll()  # clear out partial packet data
                 return False  # timeout
 
-        return True  # 8 bytes available
+        return True  # length bytes available
 
-    def wait_for_transmission(self, timeout=200):
+    def read(self) -> bytes:
+        # do read extra data
+        return self.port.readAll().data()
+
+    def read_packet(self, length: int = 8, timeout: int = 200) -> bytes | None:
+        if self.wait_for_packet(length, timeout):
+            return self.read()
+
+    def write(self, data: bytes):
+        self.port.write(data)
+
+    def wait_for_transmission(self, timeout: int = 200) -> bool:
         return self.port.waitForBytesWritten(timeout)
-
-    def knock(self):
-        self.port.write(packet(b"knock"))
-        assert self.wait_for_packet()
-        reply = self.read()
-        assert reply == packet(b"hello")
 
 
 @pytest.fixture
@@ -42,14 +41,16 @@ def terminal(port) -> Terminal:
 
 
 def test_knock(firmware, terminal: Terminal):
-    terminal.knock()
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_incomplete_packet(firmware, terminal: Terminal):
     terminal.write(b"L\x05\x00")
     assert not terminal.wait_for_packet()
 
-    terminal.knock()
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_wrong_baudrate(firmware, terminal: Terminal):
@@ -58,29 +59,26 @@ def test_wrong_baudrate(firmware, terminal: Terminal):
     assert not terminal.wait_for_packet()
 
     terminal.port.setBaudRate(9_600)
-    terminal.knock()
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_hitchhiker(firmware, terminal: Terminal):
     terminal.write(packet(b"knock") + b"knock")
-    assert terminal.wait_for_packet()
-    reply = terminal.read()
-    assert reply == packet(b"hello")
+    assert terminal.read_packet() == packet(b"hello")
 
     assert not terminal.wait_for_packet()
-
-    terminal.knock()
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_reply_too_long(firmware, terminal: Terminal):
     terminal.write(packet(b"get10"))
-    assert terminal.wait_for_packet()
-    reply = terminal.read()
-    assert reply == packet(b"get10")
+    assert terminal.read_packet() == packet(b"get10")
 
     assert not terminal.wait_for_packet()
-
-    terminal.knock()
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_baudrate(firmware, terminal: Terminal):
@@ -88,30 +86,22 @@ def test_baudrate(firmware, terminal: Terminal):
     terminal.wait_for_transmission()
 
     terminal.port.setBaudRate(4_000_000)
-    terminal.wait_for_packet(300)
-    reply = terminal.read()
-    assert reply == packet(b"b4MBd")
-
-    terminal.knock()
+    assert terminal.read_packet(timeout=300) == packet(b"b4MBd")
+    terminal.write(packet(b"knock"))
+    assert terminal.read_packet() == packet(b"hello")
 
     terminal.write(packet(b"b9600"))
     terminal.wait_for_transmission()
 
     terminal.port.setBaudRate(9_600)
-    terminal.wait_for_packet(300)
-    reply = terminal.read()
-    assert reply == packet(b"b9600")
+    assert terminal.read_packet(timeout=300) == packet(b"b9600")
 
 
 def test_probe(firmware, terminal: Terminal):
     terminal.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
-    assert terminal.wait_for_packet()
-    reply = terminal.read()
-    assert reply == packet(b"hello")
+    assert terminal.read_packet() == packet(b"hello")
 
 
 def test_probe_bsl(bsl, terminal: Terminal):
     terminal.write(bytes.fromhex("80 01 00 12 3A 61 44 DE"))
-    assert terminal.port.waitForReadyRead(200)
-    reply = terminal.read()
-    assert reply == b"\x00" or reply == b"\x00\x08\x02\x00;\x06\r\xa7"
+    assert terminal.read_packet(length=10) == bytes.fromhex("00 08 02 00 3B 06 0D A7 F7 6B")
