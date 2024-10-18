@@ -1,61 +1,12 @@
+from typing import Iterable
+
 import pytest
 
-from PySide6.QtCore import Slot, Signal, QObject, QTimer, QMetaMethod
-from PySide6.QtSerialPort import QSerialPort
+from PySide6.QtCore import QObject, QTimer, QMetaMethod
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication
 
-
-def packet(cmd: bytes):
-    assert len(cmd) == 5
-    return b"L\x01\x00" + cmd
-
-
-class Terminal(QObject):
-    reply = Signal(bytes)
-    bsl_ack = Signal(bytes)
-    bsl_reply = Signal(bytes)
-
-    def __init__(self, port: QSerialPort):
-        super().__init__()
-        self.port = port
-        self.port.readyRead.connect(self.on_ready_read)
-
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.setInterval(200)
-        self.timer.timeout.connect(self.on_timeout)
-
-    @Slot()
-    def on_ready_read(self):
-        n = self.port.bytesAvailable()
-        if n >= 1:
-            ack = self.port.peek(1).data()
-            if ack in b"\x00QRSTUV":  # 0x51 - 0x56
-                packet = self.port.read(1).data()
-                n -= len(packet)
-                self.bsl_ack.emit(packet)
-
-        if n >= 7:
-            head = self.port.peek(3).data()
-            if head[0] in b"\x08L":
-                length = int.from_bytes(head[1:3], byteorder="little") + 7
-                if n >= length:
-                    packet = self.port.read(length).data()
-                    n -= len(packet)
-                    if packet[0] == 8:
-                        self.bsl_reply.emit(packet)
-                    else:
-                        self.reply.emit(packet)
-
-        if n == 0:
-            self.timer.stop()
-        else:
-            self.timer.start()
-
-    @Slot()
-    def on_timeout(self) -> None:
-        self.port.readAll()
+from lenlab.terminal import Terminal, packet
 
 
 class Bot(QObject):
@@ -73,7 +24,7 @@ class Bot(QObject):
         self.timer.timeout.connect(app.quit)
 
     @staticmethod
-    def spy_items(obj):
+    def spy_items(obj: QObject) -> Iterable[tuple[str, QSignalSpy]]:
         meta = obj.metaObject()
         for i in range(meta.methodCount()):
             meth = meta.method(i)
