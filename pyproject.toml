@@ -1,14 +1,28 @@
 [project]
 name = "lenlab"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.12"
+authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dynamic = ["version", "description"]
+# Python 3.10 introduced Structural Pattern Matching
+requires-python = ">=3.10,<3.13"
 dependencies = [
-    "pyside6>=6.8.0.1",
+    "pyside6>=6.8.0.1,<7",
 ]
+
+[project.urls]
+Home = "https://github.com/kalanzun/lenlab_mspm0"
 
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.3.3",
 ]
+cache-keys = [{file = "workspace/lenlab_firmware/version.h"}]
+
+[build-system]
+requires = ["hatchling>=1.12.0,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "workspace/lenlab_firmware/version.h"
+pattern = '#define VERSION "(?P<version>[^"]+)"'
