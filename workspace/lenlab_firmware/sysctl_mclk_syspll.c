@@ -1,3 +1,5 @@
+#include "terminal.h"
+
 #include "ti_msp_dl_config.h"
 
 static bool tick = false;
@@ -12,9 +14,13 @@ int main(void)
 
     DL_TimerG_startCounter(TICK_TIMER_INST);
 
+    terminal_init();
+
     while (1) {
         if (tick) {
             tick = false;
+
+            terminal_main();
 
             blink = (blink + 1) & 15;
             if (blink == 0) DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
