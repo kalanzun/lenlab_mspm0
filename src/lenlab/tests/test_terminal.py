@@ -1,5 +1,5 @@
 import pytest
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPortInfo
 from PySide6.QtTest import QSignalSpy
 
@@ -36,9 +36,13 @@ def app() -> App:
 
 
 @pytest.fixture(scope="session")
-def terminal() -> Terminal:
+def port_infos():
+    return QSerialPortInfo.availablePorts()
+
+
+@pytest.fixture
+def terminal(port_infos) -> Terminal:
     terminal = Terminal()
-    port_infos = QSerialPortInfo.availablePorts()
     terminal.open(port_infos)
     yield terminal
     terminal.close()
@@ -105,6 +109,27 @@ def test_command_too_short(app: App, terminal: Terminal):
     terminal.write(b"Lk\x05\x00")
     reply = app.wait_for(terminal.data)
     assert reply is None
+
+    terminal.write(pack(b"knock"))
+    reply = app.wait_for(terminal.data)
+    assert reply is not None
+    assert reply == b"Lk\x00\x00nock"
+
+
+def test_change_baudrate(app: App, terminal: Terminal):
+    if not terminal.port_open:
+        pytest.skip("no port")
+
+    terminal.write(pack(b"b4MBd"))
+    assert app.wait_for(terminal.port.bytesWritten) == 8
+
+
+
+def test_fast_terminal(app: App, terminal: Terminal):
+    if not terminal.port_open:
+        pytest.skip("no port")
+
+    terminal.port.setBaudRate(4_000_000)
 
     terminal.write(pack(b"knock"))
     reply = app.wait_for(terminal.data)

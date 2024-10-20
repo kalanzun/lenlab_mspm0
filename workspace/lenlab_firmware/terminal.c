@@ -47,14 +47,28 @@ void terminal_transmitReply(void)
     terminal_transmitPacket(&terminal.rpl);
 }
 
+void terminal_changeBaudrate(void)
+{
+    const uint32_t divisor = 80;
+
+    // DMA inactive
+    DL_UART_disable(TERMINAL_UART_INST);
+
+    // 4 MBaud
+    DL_UART_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_8X);
+    DL_UART_setBaudRateDivisor(TERMINAL_UART_INST, divisor >> 6, divisor & 0x3F);
+
+    DL_UART_enable(TERMINAL_UART_INST);
+}
+
 void terminal_init(void)
 {
     NVIC_EnableIRQ(TERMINAL_UART_INST_INT_IRQN);
 
     DL_DMA_setSrcAddr(DMA, DMA_CH_RX_CHAN_ID, (uint32_t) &TERMINAL_UART_INST->RXDATA);
-    terminal_receiveCommand();
-
     DL_DMA_setDestAddr(DMA, DMA_CH_TX_CHAN_ID, (uint32_t) &TERMINAL_UART_INST->TXDATA);
+
+    terminal_receiveCommand();
 }
 
 void terminal_main(void)
@@ -66,7 +80,7 @@ void terminal_main(void)
 
 void terminal_tick(void)
 {
-    if (DL_DMA_isChannelEnabled(DMA, DMA_CH_RX_CHAN_ID)) { // RX is active
+    if (DL_DMA_isChannelEnabled(DMA, DMA_CH_RX_CHAN_ID)) { // RX active
         if (DL_DMA_getTransferSize(DMA, DMA_CH_RX_CHAN_ID) < sizeof(Packet)) { // some bytes have arrived
             if (terminal.rx_stalled) { // reset RX
                     DL_DMA_disableChannel(DMA, DMA_CH_RX_CHAN_ID);

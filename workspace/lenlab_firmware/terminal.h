@@ -22,6 +22,8 @@ void terminal_transmitPacket(const Packet *packet);
 
 void terminal_transmitReply(void);
 
+void terminal_changeBaudrate(void);
+
 void terminal_init(void);
 
 void terminal_main(void);
