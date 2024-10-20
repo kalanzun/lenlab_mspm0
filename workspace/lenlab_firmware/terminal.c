@@ -4,12 +4,13 @@
 
 #include "ti_msp_dl_config.h"
 
-struct Terminal terminal = { .rx_flag = false, .tx_flag = false };
+struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
 static void terminal_receive(uint32_t address, uint32_t size)
 {
     while (terminal.rx_flag) {}
     terminal.rx_flag = true;
+    terminal.rx_stalled = false;
 
     DL_DMA_setDestAddr(DMA, DMA_CH_RX_CHAN_ID, address);
     DL_DMA_setTransferSize(DMA, DMA_CH_RX_CHAN_ID, size);
@@ -63,6 +64,22 @@ void terminal_main(void)
     }
 }
 
+void terminal_tick(void)
+{
+    if (DL_DMA_isChannelEnabled(DMA, DMA_CH_RX_CHAN_ID)) { // RX is active
+        if (DL_DMA_getTransferSize(DMA, DMA_CH_RX_CHAN_ID) < sizeof(Packet)) { // some bytes have arrived
+            if (terminal.rx_stalled) { // reset RX
+                    DL_DMA_disableChannel(DMA, DMA_CH_RX_CHAN_ID);
+                    terminal.rx_flag = false;
+                    terminal_receiveCommand();
+            }
+            else {
+                terminal.rx_stalled = true;
+            }
+        }
+    }
+}
+
 void TERMINAL_UART_INST_IRQHandler(void)
 {
     switch (DL_UART_Main_getPendingInterrupt(TERMINAL_UART_INST)) {
@@ -71,8 +88,6 @@ void TERMINAL_UART_INST_IRQHandler(void)
             break;
         case DL_UART_MAIN_IIDX_DMA_DONE_RX:
             terminal.rx_flag = false;
-            break;
-        case DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR:
             break;
         default:
             break;

@@ -76,9 +76,9 @@ TIMER1.timerPeriod      = "20ms";
 
 UART1.$name                             = "TERMINAL_UART";
 UART1.enableFIFO                        = true;
-UART1.enabledInterrupts                 = ["DMA_DONE_RX","DMA_DONE_TX","RX_TIMEOUT_ERROR"];
 UART1.enabledDMARXTriggers              = "DL_UART_DMA_INTERRUPT_RX";
 UART1.enabledDMATXTriggers              = "DL_UART_DMA_INTERRUPT_TX";
+UART1.enabledInterrupts                 = ["DMA_DONE_RX","DMA_DONE_TX"];
 UART1.peripheral.$assign                = "UART0";
 UART1.peripheral.rxPin.$assign          = "PA11";
 UART1.peripheral.txPin.$assign          = "PA10";

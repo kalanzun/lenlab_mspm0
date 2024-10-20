@@ -11,6 +11,7 @@ struct Terminal {
     Packet rpl;
     volatile bool rx_flag;
     volatile bool tx_flag;
+    volatile bool rx_stalled;
 };
 
 extern struct Terminal terminal;
@@ -23,8 +24,8 @@ void terminal_transmitReply(void);
 
 void terminal_init(void);
 
-void terminal_tick(void);
-
 void terminal_main(void);
+
+void terminal_tick(void);
 
 #endif

@@ -67,7 +67,7 @@ def test_bsl_connect(app: App, terminal: Terminal):
         )
 
 
-def test_firmware_knock(app: App, terminal: Terminal):
+def test_knock(app: App, terminal: Terminal):
     if not terminal.port_open:
         pytest.skip("no port")
 
@@ -75,5 +75,38 @@ def test_firmware_knock(app: App, terminal: Terminal):
     reply = app.wait_for(terminal.data)
 
     assert reply is not None
+    assert reply == b"Lk\x00\x00nock"
+
+
+def test_hitchhiker(app: App, terminal: Terminal):
+    if not terminal.port_open:
+        pytest.skip("no port")
+
+    terminal.write(pack(b"knock") + b"knock")
+    reply = app.wait_for(terminal.data)
+
+    assert reply is not None
     assert len(reply) == 8
     assert reply.startswith(b"Lk\x00\x00")
+
+    reply = app.wait_for(terminal.data)
+    assert reply is None
+
+    terminal.write(pack(b"knock"))
+    reply = app.wait_for(terminal.data)
+    assert reply is not None
+    assert reply == b"Lk\x00\x00nock"
+
+
+def test_command_too_short(app: App, terminal: Terminal):
+    if not terminal.port_open:
+        pytest.skip("no port")
+
+    terminal.write(b"Lk\x05\x00")
+    reply = app.wait_for(terminal.data)
+    assert reply is None
+
+    terminal.write(pack(b"knock"))
+    reply = app.wait_for(terminal.data)
+    assert reply is not None
+    assert reply == b"Lk\x00\x00nock"

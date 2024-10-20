@@ -35,6 +35,7 @@ void TICK_TIMER_INST_IRQHandler(void)
     switch (DL_TimerG_getPendingInterrupt(TICK_TIMER_INST)) {
         case DL_TIMERG_IIDX_ZERO:
             tick = true;
+            terminal_tick();
             break;
         default:
             break;
