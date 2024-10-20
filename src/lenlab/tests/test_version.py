@@ -2,4 +2,7 @@ from importlib import metadata
 
 
 def test_version():
-    assert metadata.version("lenlab")
+    version = metadata.version("lenlab")
+    assert len(version) >= 3
+    assert len(version) <= 6
+    assert version[1] == "."
