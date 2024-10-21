@@ -10,11 +10,23 @@ def terminal(port_infos) -> Terminal:
     if not terminal.open(port_infos):
         pytest.skip("no port")
 
+    with Spy(terminal.port.bytesWritten) as tx:
+        terminal.write(pack(b"b4MBd"))
+    assert tx.get_single() == 8
+
+    assert terminal.port.setBaudRate(4_000_000)
+    assert terminal.port.clear()
+
     yield terminal
+
+    with Spy(terminal.port.bytesWritten) as tx:
+        terminal.write(pack(b"b9600"))
+    assert tx.get_single() == 8
+
     terminal.close()
 
 
-def test_bsl_connect(terminal: Terminal):
+def test_fast_bsl_connect(terminal: Terminal):
     with Spy(terminal.data) as spy:
         terminal.write(bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE)))
 
@@ -35,7 +47,7 @@ def test_bsl_connect(terminal: Terminal):
         )
 
 
-def test_knock(terminal: Terminal):
+def test_fast_knock(terminal: Terminal):
     with Spy(terminal.data) as spy:
         terminal.write(pack(b"knock"))
 
@@ -43,7 +55,7 @@ def test_knock(terminal: Terminal):
     assert reply == b"Lk\x00\x00nock"
 
 
-def test_hitchhiker(terminal: Terminal):
+def test_fast_hitchhiker(terminal: Terminal):
     with Spy(terminal.data) as spy:
         terminal.write(pack(b"knock") + b"knock")
 
@@ -63,7 +75,7 @@ def test_hitchhiker(terminal: Terminal):
     assert reply == b"Lk\x00\x00nock"
 
 
-def test_command_too_short(terminal: Terminal):
+def test_fast_command_too_short(terminal: Terminal):
     with Spy(terminal.data) as spy:
         terminal.write(b"Lk\x05\x00")
 
@@ -71,50 +83,6 @@ def test_command_too_short(terminal: Terminal):
     assert reply is None
 
     with Spy(terminal.data) as spy:
-        terminal.write(pack(b"knock"))
-
-    reply = spy.get_single()
-    assert reply == b"Lk\x00\x00nock"
-
-
-def test_change_baudrate(terminal: Terminal):
-    with Spy(terminal.data) as spy:
-        terminal.write(pack(b"knock"))
-
-    reply = spy.get_single()
-    assert reply == b"Lk\x00\x00nock"
-
-    # with Spy(terminal.data) as spy:
-    with Spy(terminal.port.bytesWritten) as tx:
-        terminal.write(pack(b"b4MBd"))
-    assert tx.get_single() == 8
-
-    assert terminal.port.setBaudRate(4_000_000)
-    assert terminal.port.clear()
-
-    # reply = spy.get_single()
-    # assert reply is None
-    # assert reply == b"Lb\x00\x004MBd"
-
-    with Spy(terminal.data) as spy:
-        terminal.write(pack(b"knock"))
-
-    reply = spy.get_single()
-    assert reply == b"Lk\x00\x00nock"
-
-    # with Spy(terminal.data) as spy:
-    with Spy(terminal.port.bytesWritten) as tx:
-        terminal.write(pack(b"b9600"))
-    assert tx.get_single() == 8
-
-    assert terminal.port.setBaudRate(9_600)
-    assert terminal.port.clear()
-
-    # reply = spy.get_single()
-    # assert reply is None
-    # assert reply == b"Lb\x00\x004MBd"
-
-    with Spy(terminal.data, timeout=300) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()

@@ -1,28 +1,19 @@
-from typing import Callable, Iterable
+from typing import Iterable
 
 from PySide6.QtCore import (
     QIODeviceBase,
     QObject,
-    QTimer,
     Signal,
     Slot,
 )
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
+from .singleshot import SingleShotTimer
+
 
 def pack(payload: bytes) -> bytes:
     assert len(payload) == 5
     return b"L" + payload[0:1] + b"\x00\x00" + payload[1:]
-
-
-def create_single_shot_timer(
-    callback: Callable[[], None], timeout: int = 100
-) -> QTimer:
-    timer = QTimer()
-    timer.setSingleShot(True)
-    timer.setInterval(timeout)
-    timer.timeout.connect(callback)
-    return timer
 
 
 def find_vid_pid(
@@ -54,7 +45,7 @@ class Terminal(QObject):
         self.port.readyRead.connect(self.on_ready_read)
         self.port.errorOccurred.connect(self.on_error_occurred)
 
-        self.timer = create_single_shot_timer(self.on_timeout, 20)
+        self.timer = SingleShotTimer(self.on_timeout, 20)
 
     def open(self, port_infos: Iterable[QSerialPortInfo]) -> bool:
         matches = list(find_vid_pid(port_infos, 0x0451, 0xBEF3))
