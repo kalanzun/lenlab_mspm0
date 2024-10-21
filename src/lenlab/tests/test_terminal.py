@@ -1,5 +1,5 @@
 import pytest
-from PySide6.QtCore import QCoreApplication, QIODeviceBase
+from PySide6.QtCore import QCoreApplication, QEventLoop
 from PySide6.QtSerialPort import QSerialPortInfo
 from PySide6.QtTest import QSignalSpy
 
@@ -7,32 +7,38 @@ from lenlab.terminal import Terminal, create_single_shot_timer, pack
 
 
 class Spy(QSignalSpy):
+    def __init__(self, signal, timeout=100):
+        super().__init__(signal)
+
+        self._signal = signal
+        self._timeout = timeout
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            return
+
+        if self.count() == 1:
+            return
+
+        loop = QEventLoop()
+        self._signal.connect(loop.quit)
+        timer = create_single_shot_timer(loop.quit, self._timeout)
+
+        timer.start()
+        loop.exec()
+        self._signal.disconnect(loop.quit)
+
     def get_single(self):
         if self.count() == 1:
             return self.at(0)[0]
 
 
-class App(QCoreApplication):
-    def __init__(self):
-        super().__init__()
-
-        self.timer = create_single_shot_timer(self.quit)
-
-    def run(self, timeout=100):
-        self.timer.start(timeout)
-        self.exec()
-
-    def wait_for(self, signal, timeout=100):
-        spy = Spy(signal)
-        signal.connect(self.quit)
-        self.run(timeout)
-
-        return spy.get_single()
-
-
-@pytest.fixture(scope="session")
-def app() -> App:
-    return App()
+@pytest.fixture(scope="session", autouse=True)
+def app() -> QCoreApplication:
+    return QCoreApplication()
 
 
 @pytest.fixture(scope="session")
@@ -43,18 +49,18 @@ def port_infos():
 @pytest.fixture
 def terminal(port_infos) -> Terminal:
     terminal = Terminal()
-    terminal.open(port_infos)
+    if not terminal.open(port_infos):
+        pytest.skip("no port")
+
     yield terminal
     terminal.close()
 
 
-def test_bsl_connect(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+def test_bsl_connect(terminal: Terminal):
+    with Spy(terminal.data) as spy:
+        terminal.write(bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE)))
 
-    terminal.write(bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE)))
-    reply = app.wait_for(terminal.data)
-
+    reply = spy.get_single()
     assert reply is not None
     assert len(reply) in {1, 8, 10}
 
@@ -71,67 +77,87 @@ def test_bsl_connect(app: App, terminal: Terminal):
         )
 
 
-def test_knock(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+def test_knock(terminal: Terminal):
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock"))
 
-    terminal.write(pack(b"knock"))
-    reply = app.wait_for(terminal.data)
-
-    assert reply is not None
+    reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
 
 
-def test_hitchhiker(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+def test_hitchhiker(terminal: Terminal):
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock") + b"knock")
 
-    terminal.write(pack(b"knock") + b"knock")
-    reply = app.wait_for(terminal.data)
+    reply = spy.get_single()
+    assert reply == b"Lk\x00\x00nock"
 
-    assert reply is not None
-    assert len(reply) == 8
-    assert reply.startswith(b"Lk\x00\x00")
+    with Spy(terminal.data) as spy:
+        pass
 
-    reply = app.wait_for(terminal.data)
+    reply = spy.get_single()
     assert reply is None
 
-    terminal.write(pack(b"knock"))
-    reply = app.wait_for(terminal.data)
-    assert reply is not None
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock"))
+
+    reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
 
 
-def test_command_too_short(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+def test_command_too_short(terminal: Terminal):
+    with Spy(terminal.data) as spy:
+        terminal.write(b"Lk\x05\x00")
 
-    terminal.write(b"Lk\x05\x00")
-    reply = app.wait_for(terminal.data)
+    reply = spy.get_single()
     assert reply is None
 
-    terminal.write(pack(b"knock"))
-    reply = app.wait_for(terminal.data)
-    assert reply is not None
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock"))
+
+    reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
 
 
-def test_change_baudrate(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+def test_change_baudrate(terminal: Terminal):
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock"))
 
-    terminal.write(pack(b"b4MBd"))
-    assert app.wait_for(terminal.port.bytesWritten) == 8
+    reply = spy.get_single()
+    assert reply == b"Lk\x00\x00nock"
 
+    # with Spy(terminal.data) as spy:
+    with Spy(terminal.port.bytesWritten) as tx:
+        terminal.write(pack(b"b4MBd"))
+    assert tx.get_single() == 8
 
+    assert terminal.port.setBaudRate(4_000_000)
+    assert terminal.port.clear()
 
-def test_fast_terminal(app: App, terminal: Terminal):
-    if not terminal.port_open:
-        pytest.skip("no port")
+    # reply = spy.get_single()
+    # assert reply is None
+    # assert reply == b"Lb\x00\x004MBd"
 
-    terminal.port.setBaudRate(4_000_000)
+    with Spy(terminal.data) as spy:
+        terminal.write(pack(b"knock"))
 
-    terminal.write(pack(b"knock"))
-    reply = app.wait_for(terminal.data)
-    assert reply is not None
+    reply = spy.get_single()
+    assert reply == b"Lk\x00\x00nock"
+
+    # with Spy(terminal.data) as spy:
+    with Spy(terminal.port.bytesWritten) as tx:
+        terminal.write(pack(b"b9600"))
+    assert tx.get_single() == 8
+
+    assert terminal.port.setBaudRate(9_600)
+    assert terminal.port.clear()
+
+    # reply = spy.get_single()
+    # assert reply is None
+    # assert reply == b"Lb\x00\x004MBd"
+
+    with Spy(terminal.data, timeout=300) as spy:
+        terminal.write(pack(b"knock"))
+
+    reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"

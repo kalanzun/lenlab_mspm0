@@ -47,18 +47,25 @@ void terminal_transmitReply(void)
     terminal_transmitPacket(&terminal.rpl);
 }
 
-void terminal_changeBaudrate(void)
+void terminal_changeBaudrate(enum Baudrate baudrate)
 {
-    const uint32_t divisor = 80;
-
     // DMA inactive
-    DL_UART_disable(TERMINAL_UART_INST);
+    DL_UART_Main_disable(TERMINAL_UART_INST);
 
-    // 4 MBaud
-    DL_UART_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_8X);
-    DL_UART_setBaudRateDivisor(TERMINAL_UART_INST, divisor >> 6, divisor & 0x3F);
+    switch (baudrate) {
+        case Baudrate_9600:
+            DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_16X);
+            DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, TERMINAL_UART_IBRD_40_MHZ_9600_BAUD, TERMINAL_UART_FBRD_40_MHZ_9600_BAUD);
+            break;
+        case Baudrate_4MBd:
+            DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_8X);
+            DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, 1, 16);
+            break;
+    }
 
-    DL_UART_enable(TERMINAL_UART_INST);
+    DL_UART_Main_enable(TERMINAL_UART_INST);
+    // wait for at least 100 ms to send a reply
+    // or don't send a reply and wait for the next command
 }
 
 void terminal_init(void)

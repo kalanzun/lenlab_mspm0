@@ -22,7 +22,12 @@ void terminal_transmitPacket(const Packet *packet);
 
 void terminal_transmitReply(void);
 
-void terminal_changeBaudrate(void);
+enum Baudrate {
+    Baudrate_9600,
+    Baudrate_4MBd,
+};
+
+void terminal_changeBaudrate(enum Baudrate baudrate);
 
 void terminal_init(void);
 
