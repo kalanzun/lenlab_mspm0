@@ -8,7 +8,7 @@ struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = f
 
 static void terminal_receive(uint32_t address, uint32_t size)
 {
-    while (terminal.rx_flag) {}
+    while (terminal.rx_flag) { }
     terminal.rx_flag = true;
     terminal.rx_stalled = false;
 
@@ -17,9 +17,9 @@ static void terminal_receive(uint32_t address, uint32_t size)
     DL_DMA_enableChannel(DMA, DMA_CH_RX_CHAN_ID);
 }
 
-static void terminal_receivePacket(Packet *packet)
+static void terminal_receivePacket(Packet* packet)
 {
-    terminal_receive((uint32_t) packet, sizeof(*packet));
+    terminal_receive((uint32_t)packet, sizeof(*packet));
 }
 
 void terminal_receiveCommand(void)
@@ -29,7 +29,7 @@ void terminal_receiveCommand(void)
 
 static void terminal_transmit(uint32_t address, uint32_t size)
 {
-    while (terminal.tx_flag) {}
+    while (terminal.tx_flag) { }
     terminal.tx_flag = true;
 
     DL_DMA_setSrcAddr(DMA, DMA_CH_TX_CHAN_ID, address);
@@ -37,9 +37,9 @@ static void terminal_transmit(uint32_t address, uint32_t size)
     DL_DMA_enableChannel(DMA, DMA_CH_TX_CHAN_ID);
 }
 
-void terminal_transmitPacket(const Packet *packet)
+void terminal_transmitPacket(const Packet* packet)
 {
-    terminal_transmit((uint32_t) packet, sizeof(*packet));
+    terminal_transmit((uint32_t)packet, sizeof(*packet));
 }
 
 void terminal_transmitReply(void)
@@ -53,14 +53,14 @@ void terminal_changeBaudrate(enum Baudrate baudrate)
     DL_UART_Main_disable(TERMINAL_UART_INST);
 
     switch (baudrate) {
-        case Baudrate_9600:
-            DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_16X);
-            DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, TERMINAL_UART_IBRD_40_MHZ_9600_BAUD, TERMINAL_UART_FBRD_40_MHZ_9600_BAUD);
-            break;
-        case Baudrate_4MBd:
-            DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_8X);
-            DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, 1, 16);
-            break;
+    case Baudrate_9600:
+        DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_16X);
+        DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, TERMINAL_UART_IBRD_40_MHZ_9600_BAUD, TERMINAL_UART_FBRD_40_MHZ_9600_BAUD);
+        break;
+    case Baudrate_4MBd:
+        DL_UART_Main_setOversampling(TERMINAL_UART_INST, DL_UART_OVERSAMPLING_RATE_8X);
+        DL_UART_Main_setBaudRateDivisor(TERMINAL_UART_INST, 1, 16);
+        break;
     }
 
     DL_UART_Main_enable(TERMINAL_UART_INST);
@@ -72,8 +72,8 @@ void terminal_init(void)
 {
     NVIC_EnableIRQ(TERMINAL_UART_INST_INT_IRQN);
 
-    DL_DMA_setSrcAddr(DMA, DMA_CH_RX_CHAN_ID, (uint32_t) &TERMINAL_UART_INST->RXDATA);
-    DL_DMA_setDestAddr(DMA, DMA_CH_TX_CHAN_ID, (uint32_t) &TERMINAL_UART_INST->TXDATA);
+    DL_DMA_setSrcAddr(DMA, DMA_CH_RX_CHAN_ID, (uint32_t)&TERMINAL_UART_INST->RXDATA);
+    DL_DMA_setDestAddr(DMA, DMA_CH_TX_CHAN_ID, (uint32_t)&TERMINAL_UART_INST->TXDATA);
 
     terminal_receiveCommand();
 }
@@ -90,11 +90,10 @@ void terminal_tick(void)
     if (DL_DMA_isChannelEnabled(DMA, DMA_CH_RX_CHAN_ID)) { // RX active
         if (DL_DMA_getTransferSize(DMA, DMA_CH_RX_CHAN_ID) < sizeof(Packet)) { // some bytes have arrived
             if (terminal.rx_stalled) { // reset RX
-                    DL_DMA_disableChannel(DMA, DMA_CH_RX_CHAN_ID);
-                    terminal.rx_flag = false;
-                    terminal_receiveCommand();
-            }
-            else {
+                DL_DMA_disableChannel(DMA, DMA_CH_RX_CHAN_ID);
+                terminal.rx_flag = false;
+                terminal_receiveCommand();
+            } else {
                 terminal.rx_stalled = true;
             }
         }
@@ -104,13 +103,13 @@ void terminal_tick(void)
 void TERMINAL_UART_INST_IRQHandler(void)
 {
     switch (DL_UART_Main_getPendingInterrupt(TERMINAL_UART_INST)) {
-        case DL_UART_MAIN_IIDX_DMA_DONE_TX:
-            terminal.tx_flag = false;
-            break;
-        case DL_UART_MAIN_IIDX_DMA_DONE_RX:
-            terminal.rx_flag = false;
-            break;
-        default:
-            break;
+    case DL_UART_MAIN_IIDX_DMA_DONE_TX:
+        terminal.tx_flag = false;
+        break;
+    case DL_UART_MAIN_IIDX_DMA_DONE_RX:
+        terminal.rx_flag = false;
+        break;
+    default:
+        break;
     }
 }

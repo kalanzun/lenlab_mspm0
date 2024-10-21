@@ -18,7 +18,7 @@ extern struct Terminal terminal;
 
 void terminal_receiveCommand(void);
 
-void terminal_transmitPacket(const Packet *packet);
+void terminal_transmitPacket(const Packet* packet);
 
 void terminal_transmitReply(void);
 

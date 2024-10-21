@@ -23,7 +23,8 @@ int main(void)
             terminal_main();
 
             blink = (blink + 1) & 15;
-            if (blink == 0) DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
+            if (blink == 0)
+                DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
         }
 
         __WFI();
@@ -33,11 +34,11 @@ int main(void)
 void TICK_TIMER_INST_IRQHandler(void)
 {
     switch (DL_TimerG_getPendingInterrupt(TICK_TIMER_INST)) {
-        case DL_TIMERG_IIDX_ZERO:
-            tick = true;
-            terminal_tick();
-            break;
-        default:
-            break;
+    case DL_TIMERG_IIDX_ZERO:
+        tick = true;
+        terminal_tick();
+        break;
+    default:
+        break;
     }
 }
