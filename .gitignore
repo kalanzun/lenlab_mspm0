@@ -1,3 +1,10 @@
 .idea/
 .venv/
+dist/
 uv.lock
+
+.theia/
+.settings/
+Debug/
+targetConfigs/
+.clangd

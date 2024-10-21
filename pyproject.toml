@@ -1,5 +1,6 @@
 [project]
 name = "lenlab"
+readme = "README.md"
 authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: Apache Software License"]
@@ -31,3 +32,9 @@ cache-keys = [{file = "workspace/lenlab_firmware/version.h"}]
 [tool.hatch.version]
 path = "workspace/lenlab_firmware/version.h"
 pattern = '#define VERSION "(?P<version>[^"]+)"'
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["workspace/lenlab_firmware/Debug/lenlab_firmware.bin"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"workspace/lenlab_firmware/Debug/lenlab_firmware.bin" = "lenlab/lenlab_firmware.bin"
