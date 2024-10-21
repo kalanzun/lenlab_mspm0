@@ -39,7 +39,7 @@ static void terminal_transmit(uint32_t address, uint32_t size)
 
 void terminal_transmitPacket(const Packet* packet)
 {
-    terminal_transmit((uint32_t)packet, sizeof(*packet));
+    terminal_transmit((uint32_t)packet, packet->length + 8);
 }
 
 void terminal_transmitReply(void)

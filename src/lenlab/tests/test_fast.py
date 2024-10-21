@@ -27,28 +27,16 @@ def terminal(port_infos) -> Terminal:
 
 
 def test_fast_bsl_connect(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE)))
 
     reply = spy.get_single()
-    assert reply is not None
-    assert len(reply) in {1, 8, 10}
-
-    # firmware
-    if len(reply) == 8:
-        assert reply.startswith(b"Lk\x00\x00")
-
-    # bsl
-    elif len(reply) == 1:
-        assert reply == b"\x00"
-    elif len(reply) == 10:
-        assert reply == bytes(
-            (0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B)
-        )
+    # BSL does not reply to the fast terminal
+    assert reply == b"Lk\x00\x00nock"
 
 
 def test_fast_knock(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -56,19 +44,19 @@ def test_fast_knock(terminal: Terminal):
 
 
 def test_fast_hitchhiker(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock") + b"knock")
 
     reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         pass
 
     reply = spy.get_single()
     assert reply is None
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -76,14 +64,32 @@ def test_fast_hitchhiker(terminal: Terminal):
 
 
 def test_fast_command_too_short(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(b"Lk\x05\x00")
 
     reply = spy.get_single()
     assert reply is None
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
+
+
+# @pytest.mark.repeat(1000)
+def test_fast_and_big(terminal: Terminal):
+    # time-based packets 50ms: 3 errors in 1000 transmissions, 500s
+    # length-based packets 100ms: 1000 transmissions in 120s
+    # with the same terminal object (fixture scope module): 3 errors in 1000 transmissions 120s
+    # with 250ms: no errors in 120s
+    with Spy(terminal.reply, 300) as spy:
+        terminal.write(pack(b"m30KB"))
+
+    reply = spy.get_single()
+    head = reply[0:4]
+    assert head == b"Lm\x00\x78"
+    payload = reply[4:8]
+    assert payload == b"30KB"
+    values = reply[8:]
+    assert len(values) == 30 * 1024

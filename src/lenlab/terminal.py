@@ -34,6 +34,7 @@ class Terminal(QObject):
     """
 
     data = Signal(bytes)
+    reply = Signal(bytes)
     error = Signal(TerminalError)
 
     port_open: bool = False
@@ -45,7 +46,9 @@ class Terminal(QObject):
         self.port.readyRead.connect(self.on_ready_read)
         self.port.errorOccurred.connect(self.on_error_occurred)
 
-        self.timer = SingleShotTimer(self.on_timeout, 20)
+        # the OS might delay a chunk, < 50 ms doesn't always work
+        # 50 ms: 3 error in 1000 packet transmissions, 30 KB packets
+        self.timer = SingleShotTimer(self.on_timeout, 250)
 
     def open(self, port_infos: Iterable[QSerialPortInfo]) -> bool:
         matches = list(find_vid_pid(port_infos, 0x0451, 0xBEF3))
@@ -68,7 +71,19 @@ class Terminal(QObject):
 
     @Slot()
     def on_ready_read(self) -> None:
-        self.timer.start()
+        n = self.port.bytesAvailable()
+        if n >= 8:
+            head = self.port.peek(4).data()
+            if head[0:1] == b"L" or head[0:2] == b"\x00\x08":
+                length = int.from_bytes(head[2:4], "little") + 8
+                if n >= length:
+                    self.timer.stop()
+                    n -= length
+                    reply = self.port.read(length).data()
+                    self.reply.emit(reply)
+
+        if n > 0:
+            self.timer.start()
 
     @Slot()
     def on_timeout(self) -> None:

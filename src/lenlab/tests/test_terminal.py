@@ -15,11 +15,17 @@ def terminal(port_infos) -> Terminal:
 
 
 def test_bsl_connect(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    data_spy = Spy(terminal.data)
+    with Spy(terminal.reply, 300) as spy:
         terminal.write(bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE)))
 
-    reply = spy.get_single()
-    assert reply is not None
+    if spy.count() == 1:
+        reply = spy.get_single()
+    elif data_spy.count() == 1:
+        reply = data_spy.get_single()
+    else:
+        assert False
+
     assert len(reply) in {1, 8, 10}
 
     # firmware
@@ -36,7 +42,7 @@ def test_bsl_connect(terminal: Terminal):
 
 
 def test_knock(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -44,19 +50,19 @@ def test_knock(terminal: Terminal):
 
 
 def test_hitchhiker(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock") + b"knock")
 
     reply = spy.get_single()
     assert reply == b"Lk\x00\x00nock"
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         pass
 
     reply = spy.get_single()
     assert reply is None
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -64,13 +70,13 @@ def test_hitchhiker(terminal: Terminal):
 
 
 def test_command_too_short(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(b"Lk\x05\x00")
 
     reply = spy.get_single()
     assert reply is None
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -78,7 +84,7 @@ def test_command_too_short(terminal: Terminal):
 
 
 def test_change_baudrate(terminal: Terminal):
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -96,7 +102,7 @@ def test_change_baudrate(terminal: Terminal):
     # assert reply is None
     # assert reply == b"Lb\x00\x004MBd"
 
-    with Spy(terminal.data) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
@@ -114,7 +120,7 @@ def test_change_baudrate(terminal: Terminal):
     # assert reply is None
     # assert reply == b"Lb\x00\x004MBd"
 
-    with Spy(terminal.data, timeout=300) as spy:
+    with Spy(terminal.reply) as spy:
         terminal.write(pack(b"knock"))
 
     reply = spy.get_single()
