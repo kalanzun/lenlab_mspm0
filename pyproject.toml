@@ -15,6 +15,7 @@ Home = "https://github.com/kalanzun/lenlab_mspm0"
 
 [tool.uv]
 dev-dependencies = [
+    "pytest-random-order>=1.1.1",
     "pytest>=8.3.3",
 ]
 cache-keys = [{file = "workspace/lenlab_firmware/version.h"}]
