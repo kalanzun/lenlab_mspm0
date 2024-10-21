@@ -28,6 +28,12 @@ uvx lenlab
 
 https://pypi.org/project/lenlab/
 
+Falls es eine neue Lenlab-Version gibt:
+
+```ps1
+uv tool upgrade lenlab
+```
+
 ## Testen
 
 Erstellen Sie ein Projektverzeichnis (ein python virtual environment) und wechseln Sie in das Verzeichnis:
@@ -62,3 +68,10 @@ uv run pytest --pyargs lenlab --random-order --random-order-bucket package --cou
 ```
 
 Der Befehl führt die Tests zehnmal aus in zufälliger Reihenfolge.
+
+Wenn Sie fertig sind, können Sie das Projektverzeichnis wieder löschen:
+
+```ps1
+cd ..
+rm -r lenlab
+```
