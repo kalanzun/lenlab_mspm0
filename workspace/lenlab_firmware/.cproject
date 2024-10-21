@@ -15,7 +15,7 @@
             <storageModule moduleId="cdtBuildSystem" version="4.0.0">
                 <configuration artifactExtension="out" artifactName="${ProjName}" buildProperties="" cleanCommand="${CG_CLEAN_CMD}" description="" id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1651425955" name="Debug" parent="com.ti.ccstudio.buildDefinitions.TMS470.Debug">
                     <folderInfo id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1651425955." name="/" resourcePath="">
-                        <toolChain id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.DebugToolchain.751547784" name="TI Build Tools" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.DebugToolchain" targetTool="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.linkerDebug.1886386872">
+                        <toolChain id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.DebugToolchain.751547784" name="TI Build Tools" secondaryOutputs="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.outputType__BIN.1972025406" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.DebugToolchain" targetTool="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.exe.linkerDebug.1886386872">
                             <option id="com.ti.ccstudio.buildDefinitions.core.OPT_TAGS.2145752793" superClass="com.ti.ccstudio.buildDefinitions.core.OPT_TAGS" valueType="stringList">
                                 <listOptionValue value="DEVICE_CONFIGURATION_ID=Cortex M.MSPM0G3507"/>
                                 <listOptionValue value="DEVICE_CORE_ID="/>
@@ -78,7 +78,11 @@
                                     <listOptionValue value="libc.a"/>
                                 </option>
                             </tool>
-                            <tool id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.1352755585" name="Arm Hex Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex"/>
+                            <tool id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.1352755585" name="Arm Hex Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex">
+                                <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.TOOL_ENABLE.487743490" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.TOOL_ENABLE" value="true" valueType="boolean"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT.69537113" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT" value="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT.BINARY" valueType="enumerated"/>
+                                <outputType id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.outputType__BIN.1972025406" name="Binary File" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.outputType__BIN"/>
+                            </tool>
                             <tool id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.objcopy.1124549273" name="Arm Objcopy Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.objcopy"/>
                             <tool id="com.ti.ccstudio.buildDefinitions.sysConfig.26845542" name="SysConfig" superClass="com.ti.ccstudio.buildDefinitions.sysConfig">
                                 <option id="com.ti.ccstudio.buildDefinitions.sysConfig.PRODUCTS.1475222093" superClass="com.ti.ccstudio.buildDefinitions.sysConfig.PRODUCTS" valueType="stringList">

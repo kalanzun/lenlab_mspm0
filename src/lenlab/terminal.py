@@ -8,6 +8,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
+from .message import Message
 from .singleshot import SingleShotTimer
 
 
@@ -24,10 +25,6 @@ def find_vid_pid(
             yield port_info
 
 
-class TerminalError(Exception):
-    pass
-
-
 class Terminal(QObject):
     """
     A data packet is a stream of bytes followed by a pause of at least 20 ms (about 20 bytes at 9600 baud).
@@ -35,9 +32,9 @@ class Terminal(QObject):
 
     data = Signal(bytes)
     reply = Signal(bytes)
-    error = Signal(TerminalError)
 
-    port_open: bool = False
+    ready = Signal()
+    error = Signal(Message)
 
     def __init__(self):
         super().__init__()
@@ -55,19 +52,27 @@ class Terminal(QObject):
         if len(matches) == 2:
             aux_port_info, port_info = matches
             self.port.setPort(port_info)
-            self.port.setBaudRate(9600)
-            # on_error_occurred will handle an error
-            self.port_open = self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite)
+
+            # open emits a NoError on errorOccurred in any case
+            # in case of an error, it emits errorOccurred a second time with the error
+            # on_error_occurred handles the error case
+            if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+                self.ready.emit()
+                return True
+
+        elif len(matches) > 2:
+            self.error.emit(TooManyLaunchpadsFound(len(matches) // 2))
+
+        elif list(find_vid_pid(port_infos, 0x1CBE, 0x00FD)):
+            self.error.emit(TivaLaunchpadFound())
 
         else:
-            self.port_open = False
-            self.error.emit(TerminalError("no port found"))
+            self.error.emit(NoLaunchpadFound())
 
-        return self.port_open
+        return False
 
     def close(self) -> None:
         self.port.close()
-        self.port_open = False
 
     @Slot()
     def on_ready_read(self) -> None:
@@ -92,10 +97,62 @@ class Terminal(QObject):
 
     @Slot(QSerialPort.SerialPortError)
     def on_error_occurred(self, error) -> None:
-        if error == QSerialPort.SerialPortError.NoError:
+        if error is QSerialPort.SerialPortError.NoError:
             pass
+        elif error is QSerialPort.SerialPortError.PermissionError:
+            self.error.emit(LaunchpadPermissionError())
+        elif error is QSerialPort.SerialPortError.ResourceError:
+            self.error.emit(LaunchpadResourceError())
         else:
-            self.error.emit(TerminalError(error))
+            self.error.emit(LaunchpadCommunicationError(self.port.errorString()))
 
     def write(self, packet: bytes) -> int:
         return self.port.write(packet)
+
+
+class TooManyLaunchpadsFound(Message):
+    english = """Too many Launchpads found: {0}
+        Lenlab can only control one Launchpad at a time.
+        Please connect a single Launchpad only."""
+    german = """Zu viele Launchpads gefunden: {0}
+        Lenlab kann nur ein Launchpad gleichzeitig steuern.
+        Bitte nur ein einzelnes Launchpad verbinden."""
+
+
+class TivaLaunchpadFound(Message):
+    english = """Tiva C-Series Launchpad found
+        This Lenlab Version 8 works with the Launchpad LP-MSPM0G3507.
+        Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
+        works with the Tiva C-Series Launchpad EK-TM4C123GXL."""
+    german = """Tiva C-Serie Launchpad gefunden
+        Dieses Lenlab in Version 8 funktioniert mit dem Launchpad LP-MSPM0G3507.
+        Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
+        funktioniert mit dem Tiva C-Serie Launchpad EK-TM4C123GXL."""
+
+
+class NoLaunchpadFound(Message):
+    english = """No Launchpad found
+        Please connect the Launchpad via USB to the computer."""
+    german = """Kein Launchpad gefunden
+        Bitte das Launchpad über USB mit dem Computer verbinden."""
+
+
+class LaunchpadPermissionError(Message):
+    english = """Permission error on Launchpad connection
+        Lenlab requires unique access to the serial communication with the Launchpad.
+        Maybe another instance of Lenlab is running and blocks the access?"""
+    german = """Keine Zugriffsberechtigung auf die Verbindung mit dem Launchpad
+        Lenlab braucht alleinigen Zugriff auf die serielle Kommunikation mit dem Launchpad.
+        Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Zugriff?"""
+
+
+class LaunchpadResourceError(Message):
+    english = """Connection lost
+        The Launchpad vanished. Please reconnect it to the computer."""
+    german = """Verbindung verloren
+        Das Launchpad ist verschwunden. Bitte wieder mit dem Computer verbinden."""
+
+
+class LaunchpadCommunicationError(Message):
+    english = "Communication error\n{0}"
+    german = "Kommunikationsfehler\n{0}"
