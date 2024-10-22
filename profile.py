@@ -1,8 +1,13 @@
+import subprocess
+
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPortInfo, QSerialPort
 
 
 def profile():
+    print("USB devices")
+    subprocess.run(["powershell", "Get-PnpDevice -InstanceId 'USB*' | select Status,Class,FriendlyName,InstanceId"])
+
     port_infos = QSerialPortInfo.availablePorts()
     for info in port_infos:
         print("QSerialPortInfo")
