@@ -57,6 +57,12 @@ class Terminal(QObject):
             # in case of an error, it emits errorOccurred a second time with the error
             # on_error_occurred handles the error case
             if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+                self.port.setBaudRate(QSerialPort.BaudRate.Baud9600)
+                self.port.setDataBits(QSerialPort.DataBits.Data8)
+                self.port.setFlowControl(QSerialPort.FlowControl.NoFlowControl)
+                self.port.setParity(QSerialPort.Parity.NoParity)
+                self.port.setStopBits(QSerialPort.StopBits.OneStop)
+
                 self.ready.emit()
                 return True
 
