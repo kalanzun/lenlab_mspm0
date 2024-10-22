@@ -152,7 +152,7 @@ class BootstrapLoader(QObject):
         self.message.emit(NoReply())
         self.finished.emit(False)
 
-    def command(self, command, callback, timeout=300):
+    def command(self, command, callback, timeout=400):
         # ack packets are slow through the terminal object
         self.terminal.write(pack(command))
         self.callback = callback
