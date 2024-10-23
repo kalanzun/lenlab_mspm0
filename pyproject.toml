@@ -5,8 +5,9 @@ authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 dynamic = ["version", "description"]
-# Python 3.10 introduced Structural Pattern Matching
-requires-python = ">=3.10,<3.13"
+# Structural Pattern Matching >=3.10
+# itertools.batched >=3.12
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pyside6>=6.8.0.1,<7",
 ]
