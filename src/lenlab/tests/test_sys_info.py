@@ -75,15 +75,24 @@ def test_sys_info():
     logger.info(f"QSysInfo(\n{pretty(dict(query(QSysInfo, sys_info_keys)))})")
 
     for port_info in QSerialPortInfo.availablePorts():
-        logger.info(
-            f"QSerialPortInfo(\n{pretty(dict(query(port_info, port_info_keys)))})"
-        )
+        if (
+        port_info.vendorIdentifier() == 0x0451
+        and port_info.productIdentifier() == 0xBEF3):
 
-        port = QSerialPort(port_info)
-        if port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-            logger.info(f"QSerialPort(\n{pretty(dict(query(port, port_keys)))})")
+            logger.info(
+                f"QSerialPortInfo(vid=0x0451, pid=0xBEF3,\n{pretty(dict(query(port_info, port_info_keys)))})"
+            )
+
+            port = QSerialPort(port_info)
+            if port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+                logger.info(f"QSerialPort(\n{pretty(dict(query(port, port_keys)))})")
+                port.close()
+            else:
+                logger.info(port.errorString())
         else:
-            logger.info(port.errorString())
+            logger.debug(
+                f"QSerialPortInfo({port_info.portName()})"
+            )
 
 
 class Spy(QSignalSpy):
@@ -150,5 +159,6 @@ def test_probe():
                     logger.info("unknown reply")
             else:
                 logger.info("no reply received")
+            port.close()
         else:
             logger.info(port.errorString())
