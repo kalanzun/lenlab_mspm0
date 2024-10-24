@@ -11,6 +11,10 @@
 
 `pytest --random-order --random-order-bucket package --count=10`
 
+## Print system information
+
+`pytest --pyargs lenlab -m sys_info --log-cli-level INFO`
+
 # Build
 
 `uv build`

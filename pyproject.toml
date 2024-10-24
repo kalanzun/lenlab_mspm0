@@ -39,3 +39,8 @@ artifacts = ["workspace/lenlab_firmware/Debug/lenlab_firmware.bin"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "workspace/lenlab_firmware/Debug/lenlab_firmware.bin" = "lenlab/lenlab_firmware.bin"
+
+[tool.pytest.ini_options]
+markers = [
+    "sys_info",
+]
