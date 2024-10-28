@@ -13,6 +13,9 @@ dependencies = [
 requires = ["hatchling>=1.12.0,<2"]
 build-backend = "hatchling.build"
 
+[project.entry-points.pytest11]
+lp_plugin = "lenlab.tests.lp_plugin"
+
 [tool.ruff]
 line-length = 120
 
