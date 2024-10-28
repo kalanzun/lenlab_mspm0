@@ -1,3 +1,4 @@
+#include "memory.h"
 #include "terminal.h"
 
 #include "ti_msp_dl_config.h"
@@ -14,6 +15,7 @@ int main(void)
 
     DL_TimerG_startCounter(TICK_TIMER_INST);
 
+    memory_init();
     terminal_init();
 
     while (1) {

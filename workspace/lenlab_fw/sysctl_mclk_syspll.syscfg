@@ -9,6 +9,7 @@
 /**
  * Import the modules used in this configuration.
  */
+const CRC    = scripting.addModule("/ti/driverlib/CRC");
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1  = GPIO.addInstance();
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
@@ -48,12 +49,15 @@ const pinFunction1                        = system.clockTree["CLKOUT"];
 pinFunction1.enable                       = true;
 pinFunction1.peripheral.clkOutPin.$assign = "PA14";
 
+CRC.seed       = 0xFFFFFFFF;
+CRC.bitReverse = "REVERSED";
+
+const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
+
 GPIO1.$name                          = "GPIO_LEDS";
 GPIO1.associatedPins[0].$name        = "USER_LED_1";
 GPIO1.associatedPins[0].assignedPort = "PORTA";
 GPIO1.associatedPins[0].assignedPin  = "0";
-
-const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
 SYSCTL.MCLKSource            = "HSCLK";
 SYSCTL.EXCLKSource           = "SYSPLLOUT1";
@@ -113,8 +117,8 @@ UART1.DMA_CHANNEL_TX.peripheral.$assign = "DMA_CH4";
  * re-solve from scratch.
  */
 pinFunction1.peripheral.$suggestSolution     = "SYSCTL";
-GPIO1.associatedPins[0].pin.$suggestSolution = "PA0";
 Board.peripheral.$suggestSolution            = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution   = "PA20";
 Board.peripheral.swdioPin.$suggestSolution   = "PA19";
+GPIO1.associatedPins[0].pin.$suggestSolution = "PA0";
 TIMER1.peripheral.$suggestSolution           = "TIMA0";
