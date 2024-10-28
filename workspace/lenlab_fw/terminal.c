@@ -1,10 +1,11 @@
 #include "terminal.h"
 
-#include "packet.h"
+#include "memory.h"
 
 #include "ti_msp_dl_config.h"
 
-static const struct Packet knock = { .label = 'L', .address = 'k', .length = sizeof(struct Packet), .argument = { 'n', 'o', 'c', 'k' } };
+static const struct Packet knock = { .label = 'L', .code = 'k', .length = sizeof(struct Packet), .argument = { 'n', 'o', 'c', 'k' } };
+static const struct Packet m28KB = { .label = 'L', .code = 'm', .length = sizeof(struct Packet), .argument = { '2', '8', 'K', 'B' } };
 
 struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
@@ -78,10 +79,15 @@ void terminal_main(void)
 {
     if (!terminal.rx_flag) {
         if (terminal.cmd.label == 'L' && terminal.cmd.length == 8) {
-            switch (terminal.cmd.address) {
+            switch (terminal.cmd.code) {
             case 'k':
                 if (packet_compareArgument(&terminal.cmd, &knock)) {
                     terminal_transmitPacket(&knock);
+                }
+                break;
+            case 'm':
+                if (packet_compareArgument(&terminal.cmd, &m28KB)) {
+                    terminal_transmitPacket(&memory.packet);
                 }
                 break;
             }

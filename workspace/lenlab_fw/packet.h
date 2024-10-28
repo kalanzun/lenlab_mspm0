@@ -7,7 +7,7 @@
 
 struct Packet {
     uint8_t label;
-    uint8_t address;
+    uint8_t code;
     uint16_t length;
     uint8_t argument[4];
 };
