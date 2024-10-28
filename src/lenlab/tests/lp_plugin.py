@@ -82,5 +82,8 @@ def port(launchpad: Launchpad) -> QSerialPort:
     if not port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
         pytest.skip(port.errorString())
 
+    if launchpad.firmware:
+        port.setBaudRate(1_000_000)
+
     yield port
     port.close()
