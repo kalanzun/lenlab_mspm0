@@ -23,23 +23,47 @@ def crc32(checksum: int = 0xFFFFFFFF):
         yield checksum
 
 
+def read(port: QSerialPort, size: int, timeout: int = 100) -> bytes:
+    while port.bytesAvailable() < size:
+        if not port.waitForReadyRead(timeout):  # about 1 KB per event
+            break
+
+    return port.read(size).data()
+
+
 def test_knock(firmware, port: QSerialPort):
     port.write(launchpad.knock_packet)
-    while port.bytesAvailable() < 8:
-        assert port.waitForReadyRead(100), "no reply received"
-    reply = port.readAll().data()
+    reply = read(port, 8)
     assert reply == launchpad.knock_packet
 
 
-# @pytest.mark.repeat(4096)
-def test_28kb(firmware, port: QSerialPort):
+def test_28kb_checksum(firmware, port: QSerialPort):
     port.write(pack(b"m28KB"))
-    while port.bytesAvailable() < 28 * KB:
-        if not port.waitForReadyRead(100):
-            break
-    reply = port.readAll().data()
-    assert len(reply) == 28 * KB
+    reply = read(port, 28 * KB)
+    head = reply[:8]
+    assert head == b"Lm\x00\x7028KB"
 
-    for i, (word, checksum) in enumerate(zip(batched(reply[8:], 4), crc32(), strict=False)):
+    size = len(reply)
+    assert size == 28 * KB
+
+    payload = reply[8:]
+    for i, (word, checksum) in enumerate(zip(batched(payload, 4), crc32(), strict=False)):
         value = int.from_bytes(word, "little")
-        assert value == checksum, f"{i=}"
+        assert value == checksum, f"false value at {i=}"
+
+
+@pytest.mark.repeat(4000)  # 100 MB, 21 minutes
+def test_28kb_error_rate(firmware, port: QSerialPort):
+    # 4 MBaud: about 120 invalid packets per 100 MB
+    #     round trip time: 120 ms, net transfer rate 230 KB/s
+    # 1 MBaud: about 2 invalid packets per 100 MB
+    #     round trip time: 320 ms, net transfer rate 90 KB/s
+    port.write(pack(b"m28KB"))
+
+    reply = read(port, 28 * KB)
+    head = reply[:8]
+    assert head == b"Lm\x00\x7028KB"
+
+    # there seem to be no corrupt but complete packets
+    size = len(reply)
+    assert size == 28 * KB
