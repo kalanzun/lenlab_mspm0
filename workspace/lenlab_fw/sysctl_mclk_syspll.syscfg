@@ -1,10 +1,10 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "MSPM0G350X" --part "Default" --package "LQFP-64(PM)" --product "mspm0_sdk@2.02.00.05"
+ * @v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)" --product "mspm0_sdk@2.02.00.05"
+ * @versions {"tool":"1.21.0+3721"}
  */
-//@cliArgs --device "MSPM0G350X" --package "LQFP-64(PM)" --part "Default"
-//@v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)"
-// @cliArgs --board /ti/boards/LP_MSPM0G3507 --rtos nortos
 
 /**
  * Import the modules used in this configuration.
@@ -53,21 +53,33 @@ GPIO1.associatedPins[0].assignedPin  = "0";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
-SYSCTL.MCLKSource        = "HSCLK";
-SYSCTL.EXCLKSource       = "SYSPLLOUT1";
-SYSCTL.SYSPLL_CLK1En     = true;
-SYSCTL.enableEXCLK       = true;
-SYSCTL.SYSPLL_CLK2XEn    = true;
-SYSCTL.SYSPLL_CLK2XDiv   = 1;
-SYSCTL.HSCLKSource       = "SYSPLLCLK2X";
-SYSCTL.validateClkStatus = true;
-SYSCTL.SYSPLL_Qdiv       = 5;
+SYSCTL.MCLKSource            = "HSCLK";
+SYSCTL.EXCLKSource           = "SYSPLLOUT1";
+SYSCTL.SYSPLL_CLK1En         = true;
+SYSCTL.enableEXCLK           = true;
+SYSCTL.SYSPLL_CLK2XEn        = true;
+SYSCTL.SYSPLL_CLK2XDiv       = 1;
+SYSCTL.HSCLKSource           = "SYSPLLCLK2X";
+SYSCTL.validateClkStatus     = true;
+SYSCTL.SYSPLL_Qdiv           = 5;
 SYSCTL.forceDefaultClkConfig = true;
-SYSCTL.clockTreeEn        = true;
+SYSCTL.clockTreeEn           = true;
 
-TIMER1.$name            = "TIMER_0";
 TIMER1.timerClkDiv      = 8;
 TIMER1.timerMode        = "PERIODIC";
-TIMER1.timerClkPrescale = 256;
-TIMER1.timerPeriod      = "500ms";
 TIMER1.interrupts       = ["ZERO"];
+TIMER1.timerClkPrescale = 200;
+TIMER1.timerPeriod      = "20ms";
+TIMER1.$name            = "TICK_TIMER";
+
+/**
+ * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
+ * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
+ * re-solve from scratch.
+ */
+pinFunction1.peripheral.$suggestSolution     = "SYSCTL";
+GPIO1.associatedPins[0].pin.$suggestSolution = "PA0";
+Board.peripheral.$suggestSolution            = "DEBUGSS";
+Board.peripheral.swclkPin.$suggestSolution   = "PA20";
+Board.peripheral.swdioPin.$suggestSolution   = "PA19";
+TIMER1.peripheral.$suggestSolution           = "TIMA0";
