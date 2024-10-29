@@ -30,5 +30,5 @@ class Spy(QSignalSpy):
         return not _error
 
     def run_until_single_arg(self, timeout=100):
-        self.run_until(timeout)
-        return self.get_single_arg()
+        if self.run_until(timeout):
+            return self.get_single_arg()
