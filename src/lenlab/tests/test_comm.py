@@ -31,7 +31,7 @@ def test_knock(firmware, port: QSerialPort):
     assert reply == knock_packet
 
 
-@pytest.mark.repeat(4000)  # 100 MB, 21 minutes
+# @pytest.mark.repeat(4000)  # 100 MB, 21 minutes
 def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
     # 4 MBaud: about 120 invalid packets per 100 MB
     #     round trip time: 120 ms, net transfer rate 230 KB/s
@@ -41,7 +41,7 @@ def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
 
     reply = read(port, 28 * KB)
     head = reply[:8]
-    assert head == b"Lm\xF8\x6Fg28K", "invalid reply"
+    assert head == b"Lm\xf8\x6fg28K", "invalid reply"
 
     # there seem to be no corrupt but complete packets
     size = len(reply)

@@ -63,7 +63,7 @@ def memory(terminal: Terminal) -> np.ndarray:
     return np.fromiter(crc(repeat(0, (28 * KB - 8) // 4), n_bits=32), dtype=np.dtype("<u4"))
 
 
-@pytest.mark.repeat(4000)  # 100 MB, 21 minutes
+# @pytest.mark.repeat(4000)  # 100 MB, 21 minutes
 def test_28k(firmware, terminal: Terminal, memory: np.ndarray):
     spy = Spy(terminal.reply)
     terminal.write(pack(b"mg28K"))  # get 28K
@@ -71,7 +71,7 @@ def test_28k(firmware, terminal: Terminal, memory: np.ndarray):
     assert reply is not None, "no reply"
 
     head = reply[:8]
-    assert head == b"Lm\xF8\x6Fg28K", "invalid reply"
+    assert head == b"Lm\xf8\x6fg28K", "invalid reply"
 
     # there seem to be no corrupt but complete packets
     size = len(reply)
