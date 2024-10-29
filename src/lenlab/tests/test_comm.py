@@ -4,10 +4,8 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab import launchpad
+from lenlab.launchpad import KB, crc, knock_packet
 from lenlab.lenlab import pack
-
-KB = 1024
 
 
 @pytest.fixture(scope="module")
@@ -16,7 +14,7 @@ def memory(port: QSerialPort) -> np.ndarray:
     reply = read(port, 8)
     assert reply == pack(b"mi28K")
 
-    return np.fromiter(launchpad.crc(repeat(0, (28 * KB - 8) // 4), n_bits=32), dtype=np.dtype("<u4"))
+    return np.fromiter(crc(repeat(0, (28 * KB - 8) // 4), n_bits=32), dtype=np.dtype("<u4"))
 
 
 def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
@@ -28,13 +26,13 @@ def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
 
 
 def test_knock(firmware, port: QSerialPort):
-    port.write(launchpad.knock_packet)
+    port.write(knock_packet)
     reply = read(port, 8)
-    assert reply == launchpad.knock_packet
+    assert reply == knock_packet
 
 
 @pytest.mark.repeat(4000)  # 100 MB, 21 minutes
-def test_28kb(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
+def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
     # 4 MBaud: about 120 invalid packets per 100 MB
     #     round trip time: 120 ms, net transfer rate 230 KB/s
     # 1 MBaud: about 2 invalid packets per 100 MB
@@ -52,4 +50,4 @@ def test_28kb(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
     # little endian, unsigned int, 4 byte, offset 8 bytes
     payload = np.frombuffer(reply, np.dtype("<u4"), offset=8)
     if not np.all(payload == memory):
-        raise AssertionError("complete packet and corrupt data")
+        raise AssertionError("complete packet, but corrupt data")

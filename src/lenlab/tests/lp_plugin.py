@@ -6,6 +6,7 @@ from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from lenlab.launchpad import find_launchpad
+from lenlab.terminal import Terminal
 
 logger = getLogger(__name__)
 
@@ -122,3 +123,11 @@ def cleanup(request, port: QSerialPort):
             logger.warning("spurious bytes cleaned up")
 
         port.clear()
+
+
+@pytest.fixture(scope="module")
+def terminal(port: QSerialPort) -> Terminal:
+    terminal = Terminal(port)
+    # port is already open
+    yield terminal
+    terminal.close()
