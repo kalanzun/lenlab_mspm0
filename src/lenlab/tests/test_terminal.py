@@ -10,7 +10,7 @@ from lenlab.tests.spy import Spy
 
 
 def test_bsl_connect(bsl, terminal: Terminal):
-    spy = Spy(terminal.bsl)
+    spy = Spy(terminal.reply)
     ack = Spy(terminal.ack)
     terminal.write(connect_packet)
     reply = spy.run_until_single_arg()
@@ -71,7 +71,7 @@ def test_28k(firmware, terminal: Terminal, memory: np.ndarray):
     assert reply is not None, "no reply"
 
     head = reply[:8]
-    assert head == b"Lm\x00\x70g28K", "invalid reply"
+    assert head == b"Lm\xF8\x6Fg28K", "invalid reply"
 
     # there seem to be no corrupt but complete packets
     size = len(reply)

@@ -41,7 +41,7 @@ def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
 
     reply = read(port, 28 * KB)
     head = reply[:8]
-    assert head == b"Lm\x00\x70g28K", "invalid reply"
+    assert head == b"Lm\xF8\x6Fg28K", "invalid reply"
 
     # there seem to be no corrupt but complete packets
     size = len(reply)

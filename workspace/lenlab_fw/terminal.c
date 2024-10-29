@@ -4,9 +4,9 @@
 
 #include "ti_msp_dl_config.h"
 
-static const struct Packet knock = { .label = 'L', .code = 'k', .length = sizeof(struct Packet), .argument = { 'n', 'o', 'c', 'k' } }; // knock
-static const struct Packet mi28K = { .label = 'L', .code = 'm', .length = sizeof(struct Packet), .argument = { 'i', '2', '8', 'K' } }; // init 28K
-static const struct Packet mg28K = { .label = 'L', .code = 'm', .length = sizeof(struct Packet), .argument = { 'g', '2', '8', 'K' } }; // get 28K
+static const struct Packet knock = { .label = 'L', .code = 'k', .length = 0, .argument = { 'n', 'o', 'c', 'k' } }; // knock
+static const struct Packet mi28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'i', '2', '8', 'K' } }; // init 28K
+static const struct Packet mg28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'g', '2', '8', 'K' } }; // get 28K
 
 struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
@@ -23,7 +23,7 @@ static void terminal_receive(uint32_t address, uint32_t size)
 
 static void terminal_receivePacket(struct Packet* packet)
 {
-    terminal_receive((uint32_t)packet, sizeof(struct Packet));
+    terminal_receive((uint32_t)packet, sizeof(*packet));
 }
 
 void terminal_receiveCommand(void)
@@ -43,7 +43,7 @@ static void terminal_transmit(uint32_t address, uint32_t size)
 
 static void terminal_transmitPacket(const struct Packet* packet)
 {
-    terminal_transmit((uint32_t)packet, packet->length);
+    terminal_transmit((uint32_t)packet, packet->length + 8);
 }
 
 void terminal_transmitReply(void)
@@ -82,7 +82,7 @@ static void terminal_init28K(void)
 
     memory.packet.label = 'L';
     memory.packet.code = 'm';
-    memory.packet.length = sizeof(struct Memory);
+    memory.packet.length = sizeof(memory.payload);
     packet_copyArgument(&memory.packet, &mg28K); // get 28K
 
     DL_CRC_setSeed32(CRC, CRC_SEED);
@@ -95,7 +95,7 @@ static void terminal_init28K(void)
 void terminal_main(void)
 {
     if (!terminal.rx_flag) {
-        if (terminal.cmd.label == 'L' && terminal.cmd.length == 8) {
+        if (terminal.cmd.label == 'L' && terminal.cmd.length == 0) {
             switch (terminal.cmd.code) {
             case 'k':
                 if (packet_compareArgument(&terminal.cmd, &knock)) {

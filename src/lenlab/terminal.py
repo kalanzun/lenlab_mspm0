@@ -4,7 +4,6 @@ from PySide6.QtSerialPort import QSerialPort
 
 class Terminal(QObject):
     ack = Signal(bytes)
-    bsl = Signal(bytes)
     error = Signal(str)
     reply = Signal(bytes)
 
@@ -49,20 +48,11 @@ class Terminal(QObject):
 
         if n >= 8:
             head = self.port.peek(4).data()
-            if head[0:1] == b"L":
-                length = int.from_bytes(head[2:4], "little")
-                if n == length:
-                    reply = self.read(n)
-                    self.reply.emit(reply)
-                elif n > length:
-                    self.read(n)
-                    self.error.emit(f"overlong packet received: {n=}, {head=}")
-
-            elif head[0:2] == b"\x00\x08":
+            if head[0:1] == b"L" or head[0:2] == b"\x00\x08":
                 length = int.from_bytes(head[2:4], "little") + 8
                 if n == length:
                     reply = self.read(n)
-                    self.bsl.emit(reply)
+                    self.reply.emit(reply)
                 elif n > length:
                     self.read(n)
                     self.error.emit(f"overlong packet received: {n=}, {head=}")
