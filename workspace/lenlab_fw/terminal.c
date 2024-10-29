@@ -111,8 +111,8 @@ void terminal_main(void)
                 }
                 break;
             }
-            terminal_receiveCommand();
         }
+        terminal_receiveCommand();
     }
 }
 
