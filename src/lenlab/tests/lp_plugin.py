@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+from logging import getLogger
 
 import pytest
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from lenlab.launchpad import find_launchpad
+
+logger = getLogger(__name__)
 
 
 def pytest_addoption(parser):
@@ -27,6 +30,21 @@ def pytest_addoption(parser):
         default=False,
         help="assume launchpad with BSL",
     )
+
+
+phase_report_key = pytest.StashKey[dict[str, pytest.CollectReport]]()
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True)
+def pytest_runtest_makereport(item, call):
+    # execute all other hooks to obtain the report object
+    rep = yield
+
+    # store test results for each phase of a call, which can
+    # be "setup", "call", "teardown"
+    item.stash.setdefault(phase_report_key, {})[rep.when] = rep
+
+    return rep
 
 
 @pytest.fixture(scope="session")
@@ -88,3 +106,19 @@ def port(launchpad: Launchpad) -> QSerialPort:
     port.clear()  # The OS may have leftovers in the buffers
     yield port
     port.close()
+
+
+@pytest.fixture
+def cleanup(request, port: QSerialPort):
+    yield
+
+    report = request.node.stash[phase_report_key]
+    if "call" in report and report["call"].failed:
+        logger.info("cleanup")
+        while port.waitForReadyRead(300):  # wait for timeout
+            pass
+
+        if port.bytesAvailable():
+            logger.warning("spurious bytes cleaned up")
+
+        port.clear()
