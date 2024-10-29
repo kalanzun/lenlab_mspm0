@@ -15,7 +15,6 @@ int main(void)
 
     DL_TimerG_startCounter(TICK_TIMER_INST);
 
-    memory_init();
     terminal_init();
 
     while (1) {

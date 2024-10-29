@@ -19,6 +19,4 @@ static_assert(sizeof(struct Memory) == 28 * KB,
 
 extern struct Memory memory;
 
-void memory_init(void);
-
 #endif

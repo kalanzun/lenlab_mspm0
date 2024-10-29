@@ -26,4 +26,10 @@ static inline bool packet_compareArgument(const struct Packet* restrict self, co
     return true;
 }
 
+static inline void packet_copyArgument(struct Packet* restrict self, const struct Packet* restrict other)
+{
+    for (uint8_t i = 0; i < LENGTH(self->argument); i++)
+        self->argument[i] = other->argument[i];
+}
+
 #endif
