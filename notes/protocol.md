@@ -13,9 +13,9 @@ Packets may arrive incomplete with corrupted data. There seem to be no corrupt b
 | baudrate | errors per 100 MB |
 |----------|-------------------|
 | 4 MBaud  | 120               |
-| 1 MBaud  | 2                 |
+| 1 MBaud  | 1                 |
 
-Test: `test_comm:test_28kb_error_rate` "Error" means an incomplete and corrupt packet.
+Test: `test_comm:test_28kb` "Error" means an incomplete and corrupt packet.
 
 The application is required to detect and gracefully handle incomplete and corrupt packets.
 
