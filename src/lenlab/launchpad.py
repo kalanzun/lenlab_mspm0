@@ -26,3 +26,21 @@ def find_launchpad(port_infos: list[QSerialPortInfo]) -> list[QSerialPortInfo]:
     ti_ports = find_vid_pid(port_infos)
     matches = find_description(ti_ports)
     return matches if matches else ti_ports
+
+
+# CRC32, ISO 3309
+# little endian, reversed polynom
+# These settings are compatible with the CRC peripheral on the microcontroller
+# and the BSL
+crc_polynom = 0xEDB88320
+
+
+def crc(values, seed=0xFFFFFFFF, n_bits=8):
+    checksum = seed
+    for value in values:
+        checksum = checksum ^ value
+        for _ in range(n_bits):
+            mask = -(checksum & 1)
+            checksum = (checksum >> 1) ^ (crc_polynom & mask)
+
+        yield checksum

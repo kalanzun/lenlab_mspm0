@@ -85,5 +85,6 @@ def port(launchpad: Launchpad) -> QSerialPort:
     if launchpad.firmware:
         port.setBaudRate(1_000_000)
 
+    port.clear()  # The OS may have leftovers in the buffers
     yield port
     port.close()
