@@ -21,6 +21,11 @@ lenlab = "lenlab.cli:main"
 [project.entry-points.pytest11]
 lp_plugin = "lenlab.tests.lp_plugin"
 
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
 [tool.ruff]
 line-length = 120
 
