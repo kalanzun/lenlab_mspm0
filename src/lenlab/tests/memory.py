@@ -3,7 +3,7 @@ from itertools import repeat
 import numpy as np
 
 from lenlab.launchpad import crc
-from lenlab.lenlab import pack
+from lenlab.protocol import pack
 
 KB = 1024
 

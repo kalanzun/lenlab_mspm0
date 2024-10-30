@@ -8,8 +8,9 @@ import pytest
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
+from lenlab.bsl import BSL
 from lenlab.launchpad import find_launchpad
-from lenlab.lenlab import pack
+from lenlab.protocol import Protocol
 
 logger = getLogger(__name__)
 
@@ -69,9 +70,10 @@ class Launchpad:
     firmware_baudrate = 1_000_000
     default_baudrate = 9_600
 
-    knock_packet = pack(b"knock")
-    connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
-    ok_packet = bytes((0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B))
+    # shortcuts
+    knock_packet = Protocol.knock_packet
+    connect_packet = BSL.connect_packet
+    ok_packet = BSL.ok_packet
 
     @property
     def baud_rate(self) -> int:

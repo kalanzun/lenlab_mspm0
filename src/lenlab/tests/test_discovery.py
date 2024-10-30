@@ -2,15 +2,18 @@ from contextlib import closing
 from logging import getLogger
 
 import pytest
-from PySide6.QtSerialPort import QSerialPortInfo
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
+from lenlab.discovery import Discovery, Future
 from lenlab.launchpad import find_vid_pid
+from lenlab.terminal import Terminal
 from lenlab.tests.lp_plugin import Launchpad
+from lenlab.tests.spy import Spy
 
 logger = getLogger(__name__)
 
 
-def test_all_discovery(port_infos: list[QSerialPortInfo]):
+def test_all_launchpad_discovery(port_infos: list[QSerialPortInfo]):
     matches = find_vid_pid(port_infos)
     if not matches:
         pytest.skip("no port found")
@@ -22,7 +25,7 @@ def test_all_discovery(port_infos: list[QSerialPortInfo]):
     assert len(result) == 1
 
 
-def test_single_discovery(port_infos: list[QSerialPortInfo]):
+def test_single_launchpad_discovery(port_infos: list[QSerialPortInfo]):
     matches = find_vid_pid(port_infos)
     if not matches:
         pytest.skip("no port found")
@@ -52,3 +55,33 @@ def test_bsl_responsive(bsl: Launchpad):
         reply = port.readAll().data()
         assert reply == bsl.ok_packet
         logger.info(f"{bsl.port_name}: BSL responsive")
+
+
+def test_discovery(port_infos: list[QSerialPortInfo]):
+    matches = find_vid_pid(port_infos)
+    if not matches:
+        pytest.skip("no port found")
+
+    future = Future()
+    future.error.connect(logger.info)
+    spy = Spy(future.result)
+
+    for match in matches:
+        port = QSerialPort(match)
+        terminal = Terminal(port)
+        discovery = Discovery(terminal)
+        discovery.error.connect(future.error.emit)
+        discovery.result.connect(future.result.emit)
+        discovery.start()
+
+    if not spy.run_until(800):
+        pytest.skip("no launchpad found")
+
+    terminal = spy.get_single_arg()
+    assert terminal
+
+    if terminal.firmware:
+        logger.info(f"{terminal.port_name}: firmware found")
+
+    if terminal.bsl:
+        logger.info(f"{terminal.port_name}: bsl found")

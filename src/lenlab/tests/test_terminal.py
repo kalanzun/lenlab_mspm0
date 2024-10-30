@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.lenlab import pack
+from lenlab.protocol import pack
 from lenlab.terminal import Terminal
 from lenlab.tests.memory import check_memory, memory_28k
 from lenlab.tests.spy import Spy

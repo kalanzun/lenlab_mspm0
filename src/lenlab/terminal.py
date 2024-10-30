@@ -10,8 +10,19 @@ class Terminal(QObject):
     def __init__(self, port: QSerialPort):
         super().__init__()
         self.port = port
+
+        self.firmware = False
+        self.bsl = False
+
         self.port.errorOccurred.connect(self.on_error_occurred)
         self.port.readyRead.connect(self.on_ready_read)
+
+    @property
+    def port_name(self) -> str:
+        return self.port.portName()
+
+    def set_baud_rate(self, baud_rate: int):
+        self.port.setBaudRate(baud_rate)
 
     def open(self) -> bool:
         # port.open emits a NoError on errorOccurred in any case
