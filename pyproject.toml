@@ -25,6 +25,7 @@ lp_plugin = "lenlab.tests.lp_plugin"
 addopts = [
     "--import-mode=importlib",
 ]
+log_format = "%(levelname)s %(message)s"
 
 [tool.ruff]
 line-length = 120
