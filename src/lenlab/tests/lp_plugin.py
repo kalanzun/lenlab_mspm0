@@ -8,7 +8,8 @@ import pytest
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.launchpad import connect_packet, find_launchpad, knock_packet, ok_packet
+from lenlab.launchpad import find_launchpad
+from lenlab.lenlab import pack
 
 logger = getLogger(__name__)
 
@@ -62,9 +63,19 @@ class LaunchpadError(Exception):
 @dataclass(slots=True, frozen=True)
 class Launchpad:
     port_info: QSerialPortInfo
-    baud_rate: int = 1_000_000
     firmware: bool = False
     bsl: bool = False
+
+    firmware_baudrate = 1_000_000
+    default_baudrate = 9_600
+
+    knock_packet = pack(b"knock")
+    connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
+    ok_packet = bytes((0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B))
+
+    @property
+    def baud_rate(self) -> int:
+        return self.firmware_baudrate if self.firmware else self.default_baudrate
 
     @property
     def port_name(self) -> str:
@@ -84,21 +95,21 @@ class Launchpad:
         for port_info in port_infos:
             launchpad = None
             with closing(cls(port_info).open_port()) as port:
-                # port.setBaudRate(1_000_000)
-                port.write(knock_packet)
+                port.setBaudRate(cls.firmware_baudrate)
+                port.write(cls.knock_packet)
                 if port.waitForReadyRead(100):
                     reply = port.readAll().data()
-                    if reply and knock_packet.startswith(reply):
+                    if reply and cls.knock_packet.startswith(reply):
                         launchpad = cls(QSerialPortInfo(port), firmware=True)
                         logger.info(f"{launchpad.port_name}: firmware found")
                         yield launchpad
 
-                port.setBaudRate(9_600)
-                port.write(connect_packet)
+                port.setBaudRate(cls.default_baudrate)
+                port.write(cls.connect_packet)
                 if port.waitForReadyRead(100):
                     reply = port.readAll().data()
-                    if reply and ok_packet.startswith(reply):
-                        launchpad = cls(QSerialPortInfo(port), baud_rate=9_600, bsl=True)
+                    if reply and cls.ok_packet.startswith(reply):
+                        launchpad = cls(QSerialPortInfo(port), bsl=True)
                         logger.info(f"{launchpad.port_name}: BSL found")
                         yield launchpad
 
@@ -124,7 +135,6 @@ def launchpad(request, port_infos: list[QSerialPortInfo]) -> Launchpad:
 
         launchpad = Launchpad(
             matches[0],
-            baud_rate=1_000_000 if _firmware else 9_600,
             firmware=_firmware,
             bsl=_bsl,
         )

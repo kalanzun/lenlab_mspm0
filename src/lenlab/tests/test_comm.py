@@ -2,15 +2,13 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad import knock_packet
 from lenlab.lenlab import pack
 from lenlab.tests.memory import KB, check_memory, memory_28k
 
 
 def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
-    while port.bytesAvailable() < size:
-        if not port.waitForReadyRead(timeout):  # about 1 KB per event
-            break
+    while port.bytesAvailable() < size and port.waitForReadyRead(timeout):  # about 1 KB per event
+        pass
 
     return port.read(size).data()
 
@@ -25,9 +23,9 @@ def memory(port: QSerialPort) -> np.ndarray:
 
 
 def test_knock(firmware, port: QSerialPort):
-    port.write(knock_packet)
+    port.write(firmware.knock_packet)
     reply = read(port, 8)
-    assert reply == knock_packet
+    assert reply == firmware.knock_packet
 
 
 # @pytest.mark.repeat(4000)  # 100 MB, 21 minutes
