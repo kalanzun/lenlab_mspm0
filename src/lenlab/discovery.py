@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, Signal, Slot
 
-from .bsl import BSL
+from .bsl import BootstrapLoader
 from .protocol import Protocol
 from .singleshot import SingleShotTimer
 from .terminal import Terminal
@@ -58,7 +58,7 @@ class Discovery(Future):
         if reply == Protocol.knock_packet:
             self.terminal.firmware = True
             self.result.emit(self.terminal)
-        elif reply == BSL.ok_packet:
+        elif reply == BootstrapLoader.ok_packet:
             self.terminal.bsl = True
             self.result.emit(self.terminal)
         else:
@@ -69,7 +69,7 @@ class Discovery(Future):
     def on_firmware_timeout(self) -> None:
         self.terminal.set_baud_rate(9_600)
         self.bsl_timer.start()
-        self.terminal.write(BSL.connect_packet)
+        self.terminal.write(BootstrapLoader.connect_packet)
 
     @Slot()
     def on_bsl_timeout(self) -> None:

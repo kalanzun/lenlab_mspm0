@@ -8,7 +8,7 @@ import pytest
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.bsl import BSL
+from lenlab.bsl import BootstrapLoader
 from lenlab.launchpad import find_launchpad
 from lenlab.protocol import Protocol
 
@@ -34,6 +34,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="assume launchpad with BSL",
+    )
+    parser.addoption(
+        "--flash",
+        action="store_true",
+        default=False,
+        help="allow to flash the firmware",
     )
 
 
@@ -72,8 +78,8 @@ class Launchpad:
 
     # shortcuts
     knock_packet = Protocol.knock_packet
-    connect_packet = BSL.connect_packet
-    ok_packet = BSL.ok_packet
+    connect_packet = BootstrapLoader.connect_packet
+    ok_packet = BootstrapLoader.ok_packet
 
     @property
     def baud_rate(self) -> int:
@@ -163,6 +169,17 @@ def bsl(launchpad: Launchpad) -> Launchpad:
         return launchpad
 
     pytest.skip("no BSL found")
+
+
+@pytest.fixture(scope="session")
+def flash(request, launchpad: Launchpad) -> Launchpad:
+    if not launchpad.bsl:
+        pytest.skip("no BSL found")
+
+    if not request.config.getoption("flash"):
+        pytest.skip("flash not enabled")
+
+    return launchpad
 
 
 @pytest.fixture(scope="module")

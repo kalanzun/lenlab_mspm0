@@ -70,3 +70,20 @@ def comm_test(args):
     # later arguments replace previous arguments
     test_args.extend(args)
     return pytest.main(test_args)
+
+
+@command
+def flash(args):
+    import pytest
+
+    test_args = [
+        "--pyargs",
+        "lenlab.tests.test_bsl::test_flash",
+        "--log-cli-level",
+        "INFO",
+        "--flash",
+    ]
+    # later arguments replace previous arguments
+    test_args.extend(args)
+    print(test_args)
+    return pytest.main(test_args)
