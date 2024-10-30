@@ -1,6 +1,7 @@
 .idea/
 .venv/
 uv.lock
+*.log
 
 .theia/
 .clangd
