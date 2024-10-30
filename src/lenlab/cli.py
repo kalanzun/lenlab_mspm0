@@ -21,48 +21,52 @@ def main(args: Sequence[str] | None = None) -> int:
         default=next(iter(commands.keys()), None),
     )
 
-    namespace = parser.parse_args(args)
-    return commands[namespace.command]()
+    namespace, unknown = parser.parse_known_args(args)
+    return commands[namespace.command](unknown)
 
 
 @command
-def sys_info():
+def sys_info(args):
     import pytest
 
-    return pytest.main(
-        [
-            "--pyargs",
-            "lenlab.tests.test_sys_info",
-            "--log-cli-level",
-            "INFO",
-            "--log-file",
-            "sys_info.log",
-        ]
-    )
+    test_args = [
+        "--pyargs",
+        "lenlab.tests.test_sys_info",
+        "--log-cli-level",
+        "INFO",
+        "--log-file",
+        "sys_info.log",
+    ]
+    # later arguments replace previous arguments
+    test_args.extend(args)
+    return pytest.main(test_args)
 
 
 @command
-def test():
+def test(args):
     import pytest
 
-    return pytest.main(
-        [
-            "--pyargs",
-            "lenlab.tests",
-            "--log-cli-level",
-            "INFO",
-        ]
-    )
+    test_args = [
+        "--pyargs",
+        "lenlab.tests",
+        "--log-cli-level",
+        "INFO",
+    ]
+    # later arguments replace previous arguments
+    test_args.extend(args)
+    return pytest.main(test_args)
 
 
 @command
-def comm_test():
+def comm_test(args):
+    """about 10 minutes"""
     import pytest
 
-    return pytest.main(
-        [
-            "--pyargs",
-            "lenlab.tests.test_comm::test_28k",
-            "--count=2000",
-        ]
-    )
+    test_args = [
+        "--pyargs",
+        "lenlab.tests.test_comm::test_28k",
+        "--count=2000",
+    ]
+    # later arguments replace previous arguments
+    test_args.extend(args)
+    return pytest.main(test_args)
