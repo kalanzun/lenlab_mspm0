@@ -1,12 +1,14 @@
+from collections.abc import Generator
+from contextlib import closing
 from dataclasses import dataclass
 from logging import getLogger
+from typing import Self
 
 import pytest
 from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.launchpad import find_launchpad
-from lenlab.terminal import Terminal
+from lenlab.launchpad import connect_packet, find_launchpad, knock_packet, ok_packet
 
 logger = getLogger(__name__)
 
@@ -53,30 +55,86 @@ def port_infos() -> list[QSerialPortInfo]:
     return QSerialPortInfo.availablePorts()
 
 
-@dataclass(slots=True)
+class LaunchpadError(Exception):
+    pass
+
+
+@dataclass(slots=True, frozen=True)
 class Launchpad:
-    port_info: QSerialPortInfo | None = None
+    port_info: QSerialPortInfo
+    baud_rate: int = 1_000_000
     firmware: bool = False
     bsl: bool = False
+
+    @property
+    def port_name(self) -> str:
+        return self.port_info.portName()
+
+    def open_port(self) -> QSerialPort:
+        port = QSerialPort(self.port_info)
+        if not port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+            raise LaunchpadError(port.errorString())
+
+        port.setBaudRate(self.baud_rate)
+        port.clear()  # The OS may have leftovers in the buffers
+        return port
+
+    @classmethod
+    def discover(cls, port_infos: list[QSerialPortInfo]) -> Generator[Self]:
+        for port_info in port_infos:
+            launchpad = None
+            with closing(cls(port_info).open_port()) as port:
+                # port.setBaudRate(1_000_000)
+                port.write(knock_packet)
+                if port.waitForReadyRead(100):
+                    reply = port.readAll().data()
+                    if reply and knock_packet.startswith(reply):
+                        launchpad = cls(QSerialPortInfo(port), firmware=True)
+                        logger.info(f"{launchpad.port_name}: firmware found")
+                        yield launchpad
+
+                port.setBaudRate(9_600)
+                port.write(connect_packet)
+                if port.waitForReadyRead(100):
+                    reply = port.readAll().data()
+                    if reply and ok_packet.startswith(reply):
+                        launchpad = cls(QSerialPortInfo(port), baud_rate=9_600, bsl=True)
+                        logger.info(f"{launchpad.port_name}: BSL found")
+                        yield launchpad
+
+            if not launchpad:
+                logger.info(f"{port_info.portName()}: nothing found")
 
 
 @pytest.fixture(scope="session")
 def launchpad(request, port_infos: list[QSerialPortInfo]) -> Launchpad:
-    if port_name := request.config.getoption("--port"):
+    if port_name := request.config.getoption("port"):
         matches = [port_info for port_info in port_infos if port_info.portName() == port_name]
     else:
         matches = find_launchpad(port_infos)
-        if len(matches) > 1:
-            pytest.skip("cannot choose port")
 
     if not matches:
         pytest.skip("no port found")
 
-    return Launchpad(
-        matches[0],
-        firmware=request.config.getoption("--fw"),
-        bsl=request.config.getoption("--bsl"),
-    )
+    _firmware = request.config.getoption("fw")
+    _bsl = request.config.getoption("bsl")
+    if _firmware or _bsl:
+        if len(matches) > 1:
+            pytest.skip("cannot choose port")
+
+        launchpad = Launchpad(
+            matches[0],
+            baud_rate=1_000_000 if _firmware else 9_600,
+            firmware=_firmware,
+            bsl=_bsl,
+        )
+        return launchpad
+
+    launchpad = next(Launchpad.discover(matches), None)
+    if not launchpad:
+        pytest.skip("no launchpad found")
+
+    return launchpad
 
 
 @pytest.fixture(scope="session")
@@ -97,14 +155,7 @@ def bsl(launchpad: Launchpad) -> Launchpad:
 
 @pytest.fixture(scope="module")
 def port(launchpad: Launchpad) -> QSerialPort:
-    port = QSerialPort(launchpad.port_info)
-    if not port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-        pytest.skip(port.errorString())
-
-    if launchpad.firmware:
-        port.setBaudRate(1_000_000)
-
-    port.clear()  # The OS may have leftovers in the buffers
+    port = launchpad.open_port()
     yield port
     port.close()
 
@@ -123,11 +174,3 @@ def cleanup(request, port: QSerialPort):
             logger.warning("spurious bytes cleaned up")
 
         port.clear()
-
-
-@pytest.fixture(scope="module")
-def terminal(port: QSerialPort) -> Terminal:
-    terminal = Terminal(port)
-    # port is already open
-    yield terminal
-    terminal.close()

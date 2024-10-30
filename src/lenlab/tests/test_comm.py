@@ -1,20 +1,10 @@
-from itertools import repeat
-
 import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad import KB, crc, knock_packet
+from lenlab.launchpad import knock_packet
 from lenlab.lenlab import pack
-
-
-@pytest.fixture(scope="module")
-def memory(port: QSerialPort) -> np.ndarray:
-    port.write(pack(b"mi28K"))  # init 28K
-    reply = read(port, 8)
-    assert reply == pack(b"mi28K")
-
-    return np.fromiter(crc(repeat(0, (28 * KB - 8) // 4), n_bits=32), dtype=np.dtype("<u4"))
+from lenlab.tests.memory import KB, check_memory, memory_28k
 
 
 def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
@@ -23,6 +13,15 @@ def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
             break
 
     return port.read(size).data()
+
+
+@pytest.fixture(scope="module")
+def memory(port: QSerialPort) -> np.ndarray:
+    port.write(pack(b"mi28K"))  # init 28K
+    reply = read(port, 8)
+    assert reply == pack(b"mi28K")
+
+    return memory_28k()
 
 
 def test_knock(firmware, port: QSerialPort):
@@ -38,16 +37,5 @@ def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
     # 1 MBaud: about 2 invalid packets per 100 MB
     #     round trip time: 320 ms, net transfer rate 90 KB/s
     port.write(pack(b"mg28K"))  # get 28K
-
     reply = read(port, 28 * KB)
-    head = reply[:8]
-    assert head == b"Lm\xf8\x6fg28K", "invalid reply"
-
-    # there seem to be no corrupt but complete packets
-    size = len(reply)
-    assert size == 28 * KB, "incomplete packet"
-
-    # little endian, unsigned int, 4 byte, offset 8 bytes
-    payload = np.frombuffer(reply, np.dtype("<u4"), offset=8)
-    if not np.all(payload == memory):
-        raise AssertionError("complete packet, but corrupt data")
+    check_memory(b"mg28K", memory, reply)
