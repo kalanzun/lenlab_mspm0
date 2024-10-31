@@ -72,6 +72,7 @@ class Launchpad:
     port_info: QSerialPortInfo
     firmware: bool = False
     bsl: bool = False
+    flash: bool = False
 
     firmware_baudrate = 1_000_000
     default_baudrate = 9_600
@@ -137,7 +138,11 @@ def launchpad(request, port_infos: list[QSerialPortInfo]) -> Launchpad:
 
     _firmware = request.config.getoption("fw")
     _bsl = request.config.getoption("bsl")
-    if _firmware or _bsl:
+    _flash = request.config.getoption("flash")
+    if sum([_firmware, _bsl, _flash]) > 1:
+        pytest.skip("only one --fw, --bsl, or --flash")
+
+    if _firmware or _bsl or _flash:
         if len(matches) > 1:
             pytest.skip("cannot choose port")
 
@@ -145,6 +150,7 @@ def launchpad(request, port_infos: list[QSerialPortInfo]) -> Launchpad:
             matches[0],
             firmware=_firmware,
             bsl=_bsl,
+            flash=_flash,
         )
         return launchpad
 
@@ -173,13 +179,10 @@ def bsl(launchpad: Launchpad) -> Launchpad:
 
 @pytest.fixture(scope="session")
 def flash(request, launchpad: Launchpad) -> Launchpad:
-    if not launchpad.bsl:
-        pytest.skip("no BSL found")
+    if launchpad.flash:
+        return launchpad
 
-    if not request.config.getoption("flash"):
-        pytest.skip("flash not enabled")
-
-    return launchpad
+    pytest.skip("flash not enabled")
 
 
 @pytest.fixture(scope="module")
