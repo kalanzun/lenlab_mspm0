@@ -58,7 +58,7 @@ def test(args):
 
 
 @command
-def comm_test(args):
+def stress(args):
     """about 10 minutes"""
     import pytest
 
