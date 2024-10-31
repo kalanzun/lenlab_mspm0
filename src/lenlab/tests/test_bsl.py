@@ -1,5 +1,5 @@
+from importlib import resources
 from logging import getLogger
-from pathlib import Path
 
 from PySide6.QtSerialPort import QSerialPort
 
@@ -28,8 +28,9 @@ def test_resilience_to_false_baudrate(bsl, port: QSerialPort):
 
 
 def test_flash(flash, port: QSerialPort):
-    firmware_path = Path("workspace") / "lenlab_fw" / "Debug" / "lenlab_fw.bin"
-    firmware_bin = firmware_path.read_bytes()
+    import lenlab
+
+    firmware_bin = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
 
     terminal = Terminal(port)
     loader = BootstrapLoader(terminal)
