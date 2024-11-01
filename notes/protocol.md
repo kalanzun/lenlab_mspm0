@@ -67,3 +67,14 @@ as well as testing the firmware implementation.
 
 The test suit has a software launchpad, which generates transmission errors upon request
 to test the resilience of the Lenlab software.
+
+## Simplification
+
+It would be cute to change the baudrate dynamically, it's perfectly fine for Lenlab to work with
+one single baud rate setting. A single fixed baud rate reduces the complexity of discovery.
+Even if it crashed the BSL, the user would just need to reset the board into BSL mode after discovery.
+
+It would be cute to go to 4 MBaud or higher. It's perfectly fine for Lenlab to go slow with 1 MBaud.
+It's fast enough for practical use and the error rate is low.
+Lenlab can get away with ignoring very few broken packets. Lenlab handles missing logger points gracefully
+or waits for the next oscilloscope trigger.
