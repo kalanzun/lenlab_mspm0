@@ -59,3 +59,11 @@ Discovery opens both ports, sends commands, and selects the port which receives 
 The firmware should fall back to the default baud rate or the user should reset the firmware.
 - If the firmware actively sent ping or logger packets, discovery would need clever code to distinguish
 valid packets from invalid data at a different baud rate and then reset the firmware.
+
+## Test suite
+
+The test suite requires the hardware to do error rate and transfer rate measurement,
+as well as testing the firmware implementation.
+
+The test suit has a software launchpad, which generates transmission errors upon request
+to test the resilience of the Lenlab software.
