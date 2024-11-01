@@ -78,3 +78,13 @@ It would be cute to go to 4 MBaud or higher. It's perfectly fine for Lenlab to g
 It's fast enough for practical use and the error rate is low.
 Lenlab can get away with ignoring very few broken packets. Lenlab handles missing logger points gracefully
 or waits for the next oscilloscope trigger.
+
+## Packet format
+
+### BSL acknowledge packet
+
+BSL replies to the connect command with an ack (single byte), if it's the first connect.
+Otherwise, it replies with a full ok response (10 bytes).
+
+Because the user might reset the launchpad to BSL mode while Lenlab is running,
+Lenlab should always expect both replies to the connect command.
