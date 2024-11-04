@@ -13,16 +13,18 @@ def memory_28k() -> np.ndarray:
 
 
 def check_memory(argument: bytes, memory: np.ndarray, reply: bytes):
-    head = reply[:8]
-    packet = pack(argument, length=memory.nbytes)
+    assert len(argument) == 4
+
+    head = reply[:7]
+    packet = pack(argument, length=memory.nbytes)[1:]
     assert head == packet, "invalid reply"
 
     # there seem to be no corrupt but complete packets
-    payload_size = len(reply) - 8
+    payload_size = len(reply) - 7
     memory_size = memory.nbytes
     assert payload_size == memory_size, "incomplete packet"
 
     # little endian, unsigned int, 4 byte, offset 8 bytes
-    payload = np.frombuffer(reply, np.dtype("<u4"), offset=8)
+    payload = np.frombuffer(reply, np.dtype("<u4"), offset=7)
     if not np.all(payload == memory):
         raise AssertionError("complete packet, but corrupt data")

@@ -15,9 +15,9 @@ def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
 
 @pytest.fixture(scope="module")
 def memory(port: QSerialPort) -> np.ndarray:
-    port.write(pack(b"mi28K"))  # init 28K
+    port.write(pack(b"mini"))  # memory init
     reply = read(port, 8)
-    assert reply == pack(b"mi28K")
+    assert reply == pack(b"mini")
 
     return memory_28k()
 
@@ -34,6 +34,6 @@ def test_28k(firmware, cleanup, port: QSerialPort, memory: np.ndarray):
     #     round trip time: 120 ms, net transfer rate 230 KB/s
     # 1 MBaud: about 2 invalid packets per 100 MB
     #     round trip time: 320 ms, net transfer rate 90 KB/s
-    port.write(pack(b"mg28K"))  # get 28K
-    reply = read(port, 28 * KB)
-    check_memory(b"mg28K", memory, reply)
+    port.write(pack(b"mget"))  # memory get
+    reply = read(port, 28 * KB)[1:]  # check_memory expects no prefix 'L'
+    check_memory(b"mget", memory, reply)

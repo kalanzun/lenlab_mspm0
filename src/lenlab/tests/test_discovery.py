@@ -53,7 +53,7 @@ def test_bsl_responsive(bsl):
             assert port.waitForReadyRead(100)
         reply = port.readAll().data()
         assert reply == bsl.ok_packet
-        logger.info(f"{bsl.port_name}: BSL responsive")
+        logger.info(f"{bsl.port_name}: bsl responsive")
 
 
 def test_discovery(port_infos: list[QSerialPortInfo]):

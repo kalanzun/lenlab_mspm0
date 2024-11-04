@@ -1,7 +1,7 @@
 def pack(argument: bytes, length: int = 0) -> bytes:
-    assert len(argument) == 5
-    return b"L" + argument[0:1] + length.to_bytes(2, byteorder="little") + argument[1:]
+    assert len(argument) == 4
+    return b"Ll" + length.to_bytes(2, byteorder="little") + argument
 
 
 class Protocol:
-    knock_packet = pack(b"knock")
+    knock_packet = pack(b"knoc")

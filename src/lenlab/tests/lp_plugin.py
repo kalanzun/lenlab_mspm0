@@ -33,7 +33,7 @@ def pytest_addoption(parser):
         "--bsl",
         action="store_true",
         default=False,
-        help="assume launchpad with BSL",
+        help="assume launchpad with bsl",
     )
     parser.addoption(
         "--flash",
@@ -119,7 +119,7 @@ class Launchpad:
                     reply = port.readAll().data()
                     if reply and cls.ok_packet.startswith(reply):
                         launchpad = cls(QSerialPortInfo(port), bsl=True)
-                        logger.info(f"{launchpad.port_name}: BSL found")
+                        logger.info(f"{launchpad.port_name}: bsl found")
                         yield launchpad
 
             if not launchpad:
@@ -174,7 +174,7 @@ def bsl(launchpad: Launchpad) -> Launchpad:
     if launchpad.bsl:
         return launchpad
 
-    pytest.skip("no BSL found")
+    pytest.skip("no bsl found")
 
 
 @pytest.fixture(scope="session")

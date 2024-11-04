@@ -2,11 +2,12 @@
 
 #include "memory.h"
 
+#include "packet.h"
 #include "ti_msp_dl_config.h"
 
-static const struct Packet knock = { .label = 'L', .code = 'k', .length = 0, .argument = { 'n', 'o', 'c', 'k' } }; // knock
-static const struct Packet mi28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'i', '2', '8', 'K' } }; // init 28K
-static const struct Packet mg28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'g', '2', '8', 'K' } }; // get 28K
+static const struct Packet knoc = { .label = lenlab_label, .length = 0, .argument = { 'k', 'n', 'o', 'c' } }; // knock
+static const struct Packet mini = { .label = lenlab_label, .length = 0, .argument = { 'm', 'i', 'n', 'i' } }; // memory init
+static const struct Packet mget = { .label = lenlab_label, .length = 0, .argument = { 'm', 'g', 'e', 't' } }; // memory get
 
 struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
@@ -76,14 +77,13 @@ void terminal_tick(void)
     }
 }
 
-static void terminal_init28K(void)
+static void terminal_memory_init(void)
 {
     uint32_t* restrict payload = (uint32_t*)&memory.payload;
 
-    memory.packet.label = 'L';
-    memory.packet.code = 'm';
+    memory.packet.label = lenlab_label;
     memory.packet.length = sizeof(memory.payload);
-    packet_copyArgument(&memory.packet, &mg28K); // get 28K
+    packet_copyArgument(&memory.packet, &mget);
 
     DL_CRC_setSeed32(CRC, CRC_SEED);
     for (uint32_t i = 0; i < sizeof(memory.payload) / sizeof(*payload); i++) {
@@ -95,18 +95,18 @@ static void terminal_init28K(void)
 void terminal_main(void)
 {
     if (!terminal.rx_flag) {
-        if (terminal.cmd.label == 'L' && terminal.cmd.length == 0) {
-            switch (terminal.cmd.code) {
+        if (terminal.cmd.label == lenlab_label && terminal.cmd.length == 0) {
+            switch (terminal.cmd.argument[0]) {
             case 'k':
-                if (packet_compareArgument(&terminal.cmd, &knock)) {
-                    terminal_transmitPacket(&knock);
+                if (packet_compareArgument(&terminal.cmd, &knoc)) {
+                    terminal_transmitPacket(&knoc);
                 }
                 break;
             case 'm':
-                if (packet_compareArgument(&terminal.cmd, &mi28K)) { // init 28K
-                    terminal_init28K();
-                    terminal_transmitPacket(&mi28K);
-                } else if (packet_compareArgument(&terminal.cmd, &mg28K)) { // get 28K
+                if (packet_compareArgument(&terminal.cmd, &mini)) {
+                    terminal_memory_init();
+                    terminal_transmitPacket(&mini);
+                } else if (packet_compareArgument(&terminal.cmd, &mget)) {
                     terminal_transmitPacket(&memory.packet);
                 }
                 break;

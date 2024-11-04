@@ -36,14 +36,15 @@ def pack(payload: bytes) -> bytes:
 
 def unpack(packet: BytesIO) -> bytes:
     """Unpack a packet from the Bootstrap Loader and verify the checksum."""
-    ack = int.from_bytes(packet.read(1), byteorder="little")
-    assert ack == 0, "First byte (ack) is not zero"
+    # Terminal strips the ack
+    # ack = int.from_bytes(packet.read(1), byteorder="little")
+    # assert ack == 0, "First byte (ack) is not zero"
 
     header = int.from_bytes(packet.read(1), byteorder="little")
-    assert header == 8, "Second byte (header) is not eight"
+    assert header == 8, "Second byte (head) is not eight"
 
     length = int.from_bytes(packet.read(2), byteorder="little")
-    assert len(packet.getbuffer()) == length + 8, "Invalid reply length"
+    assert len(packet.getbuffer()) == length + 7, "Invalid reply length"
     payload = packet.read(length)
 
     checksum = int.from_bytes(packet.read(4), byteorder="little")
@@ -88,17 +89,20 @@ class BootstrapLoader(QObject):
     batch_size = 12 * KB
 
     connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
-    ok_packet = bytes((0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B))
+    ok_packet = bytes((0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B))  # it's actually "invalid command"
 
-    OK = b"\x3b\x00"
+    ok = b"\x3b\x00"
+    # invalid_command = b"\x3b\x06"
 
     def __init__(self, terminal: Terminal):
         super().__init__()
 
-        self.callback: Callback = None
+        self.ack: Callback = None
+        self.reply: Callback = None
         self.device_info: DeviceInfo | None = None
         self.enumerate_batched = None
         self.firmware_size = 0
+        self.bsl_reset = True
 
         self.terminal = terminal
         self.terminal.ack.connect(self.on_ack)
@@ -108,17 +112,20 @@ class BootstrapLoader(QObject):
 
     @Slot(bytes)
     def on_ack(self, packet: bytes):
+        # self.message.emit(f"on_ack {packet}")
         try:
+            if not self.ack:
+                return
+
             if not self.timer.isActive():
-                raise UnexpectedReply()
+                raise UnexpectedReply(packet)
 
             self.timer.stop()
 
-            ack = self.terminal.read(1)
-            if not ack == b"\x00":
-                raise ErrorReply(ack)
+            if not packet == b"\x00":
+                raise ErrorReply(packet)
 
-            self.callback(ack)
+            self.ack(packet)
 
         except Message as error:
             self.message.emit(error)
@@ -126,14 +133,18 @@ class BootstrapLoader(QObject):
 
     @Slot(bytes)
     def on_reply(self, packet: bytes):
+        # self.message.emit(f"on_reply {packet}")
         try:
             if not self.timer.isActive():
-                raise UnexpectedReply()
+                raise UnexpectedReply(packet)
 
             self.timer.stop()
 
+            if not self.reply:
+                raise UnexpectedReply(packet)
+
             reply = unpack(BytesIO(packet))
-            self.callback(reply)
+            self.reply(reply)
 
         except Message as error:
             self.message.emit(error)
@@ -144,30 +155,32 @@ class BootstrapLoader(QObject):
         self.message.emit(NoReply())
         self.finished.emit(False)
 
-    def command(self, command: bytearray, callback: Callback, timeout: int = 100):
+    def command(self, command: bytearray, ack: Callback | None = None, reply: Callback | None = None, timeout: int = 100):
         self.terminal.write(pack(command))
 
-        self.callback = callback
+        self.ack = ack
+        self.reply = reply
         self.timer.start(timeout)
 
-    def program(self, firmware: bytes):
+    def program(self, firmware: bytes, bsl_reset: bool = True):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
         self.firmware_size = len(firmware)
+        self.bsl_reset = bsl_reset
 
         self.message.emit(Connect())
         self.terminal.port.clear()
         self.terminal.set_baud_rate(9_600)
         self.command(bytearray([0x12]), self.on_connected)
 
-    def on_connected(self, reply: bytes):
+    def on_connected(self, ack: bytes):
         self.message.emit(SetBaudRate())
-        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)
+        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed, timeout=300)
 
-    def on_baud_rate_changed(self, reply: bytes):
+    def on_baud_rate_changed(self, ack: bytes):
         self.terminal.set_baud_rate(3_000_000)
 
         self.message.emit(GetDeviceInfo())
-        self.command(bytearray([0x19]), self.on_device_info)
+        self.command(bytearray([0x19]), reply=self.on_device_info)
 
     def on_device_info(self, reply: bytes):
         self.device_info = DeviceInfo.parse(reply)
@@ -177,17 +190,17 @@ class BootstrapLoader(QObject):
         self.message.emit(BufferSize(self.device_info.max_buffer_size / 1000))
 
         self.message.emit(Unlock())
-        self.command(bytearray([0x21] + [0xFF] * 32), self.on_unlocked)
+        self.command(bytearray([0x21] + [0xFF] * 32), reply=self.on_unlocked)
 
     def on_unlocked(self, reply: bytes):
-        if not reply == self.OK:
+        if not reply == self.ok:
             raise ErrorReply(reply)
 
         self.message.emit(Erase())
-        self.command(bytearray([0x15]), self.on_erased)
+        self.command(bytearray([0x15]), reply=self.on_erased)
 
     def on_erased(self, reply: bytes):
-        if not reply == self.OK:
+        if not reply == self.ok:
             raise ErrorReply(reply)
 
         self.message.emit(WriteFirmware(self.firmware_size / 1000))
@@ -201,20 +214,23 @@ class BootstrapLoader(QObject):
 
         self.command(payload, self.on_programmed, timeout=300)
 
-    def on_programmed(self, reply: bytes):
+    def on_programmed(self, ack: bytes):
         try:
             self.next_batch()
         except StopIteration:
-            self.message.emit(Restart())
-            self.command(bytearray([0x40]), self.on_reset)
+            if self.bsl_reset:
+                self.message.emit(Restart())
+                self.command(bytearray([0x40]), self.on_reset)
+            else:
+                self.finished.emit(True)
 
-    def on_reset(self, reply: bytes):
+    def on_reset(self, ack: bytes):
         self.finished.emit(True)
 
 
 class UnexpectedReply(Message):
-    english = "Unexpected reply received"
-    german = "Unerwartete Antwort erhalten"
+    english = "Unexpected reply received: {0}"
+    german = "Unerwartete Antwort erhalten: {0}"
 
 
 class ChecksumError(Message):

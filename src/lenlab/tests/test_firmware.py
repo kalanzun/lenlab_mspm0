@@ -2,7 +2,7 @@ from PySide6.QtSerialPort import QSerialPort
 
 
 def test_resilience_to_false_baudrate(firmware, port: QSerialPort):
-    # send the BSL connect packet at 9600 Baud
+    # send the bsl connect packet at 9600 Baud
     port.setBaudRate(9_600)
     port.write(firmware.connect_packet)
     assert not port.waitForReadyRead(100), "Firmware should not reply"

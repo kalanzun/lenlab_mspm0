@@ -1,41 +1,45 @@
-from importlib import resources
-from logging import getLogger
-
 from PySide6.QtSerialPort import QSerialPort
-
-from lenlab.bsl import BootstrapLoader
-from lenlab.terminal import Terminal
-from lenlab.tests.spy import Spy
-
-logger = getLogger(__name__)
 
 
 def test_resilience_to_false_baudrate(bsl, port: QSerialPort):
+    # cold or warm bsl
+
     # send the knock packet at 1 MBaud
     port.setBaudRate(1_000_000)
     port.write(bsl.knock_packet)
-    assert not port.waitForReadyRead(100), "BSL should not reply"
+    assert not port.waitForReadyRead(100), "bsl should not reply"
 
-    # send the BSL connect packet at 9600 Baud
+    # send the bsl connect packet at 9600 Baud
     port.setBaudRate(9_600)
     port.write(bsl.connect_packet)
-    assert port.waitForReadyRead(100), "BSL should reply"
+    assert port.waitForReadyRead(100), "bsl should reply"
 
-    # the reply is either a single 0 or the first bytes of the ok_packet
-    reply = port.readAll().data()
-    assert len(reply)
-    assert bsl.ok_packet.startswith(reply), "Reply is not the first bytes of the ok packet"
+    # the reply is a single 0 or the ok_packet
+    n = port.bytesAvailable()
+    if n == 1:
+        reply = port.readAll().data()
+        assert reply == b"\x00"
+        assert not port.waitForReadyRead(100), "spurious data"
+
+    else:
+        while port.bytesAvailable() < 10:
+            assert port.waitForReadyRead(100)
+
+        reply = port.readAll().data()
+        assert reply == bsl.ok_packet
 
 
-def test_flash(flash, port: QSerialPort):
-    import lenlab
+def test_invalid_head(bsl, port: QSerialPort):
+    # assume warm bsl
+    port.write(b"Q")  # anything but 0x80
+    assert port.waitForReadyRead(100)
+    assert port.bytesAvailable() == 1
+    assert port.read(1).data() == b"Q"
 
-    firmware_bin = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
 
-    terminal = Terminal(port)
-    loader = BootstrapLoader(terminal)
-
-    loader.message.connect(logger.info)
-    spy = Spy(loader.finished)
-    loader.program(firmware_bin)
-    assert spy.run_until(1000)
+def test_zero_length(bsl, port: QSerialPort):
+    # assume warm bsl
+    port.write(b"\x80\x00\x00")
+    assert port.waitForReadyRead(100)
+    assert port.bytesAvailable() == 1
+    assert port.read(1).data() == b"S"

@@ -27,7 +27,7 @@ def find_launchpad(port_infos: list[QSerialPortInfo]) -> list[QSerialPortInfo]:
 # CRC32, ISO 3309
 # little endian, reversed polynom
 # These settings are compatible with the CRC peripheral on the microcontroller
-# and the BSL
+# and the bsl
 crc_polynom = 0xEDB88320
 
 

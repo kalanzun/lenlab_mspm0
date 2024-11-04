@@ -3,9 +3,9 @@ from PySide6.QtSerialPort import QSerialPort
 
 
 class Terminal(QObject):
-    ack = Signal(bytes)
+    ack = Signal(bytes)  # bsl only
     error = Signal(str)
-    reply = Signal(bytes)
+    reply = Signal(bytes)  # replies loose the prefix 'L'
 
     def __init__(self, port: QSerialPort):
         super().__init__()
@@ -21,7 +21,7 @@ class Terminal(QObject):
     def port_name(self) -> str:
         return self.port.portName()
 
-    def set_baud_rate(self, baud_rate: int):
+    def set_baud_rate(self, baud_rate: int) -> None:
         self.port.setBaudRate(baud_rate)
 
     def open(self) -> bool:
@@ -49,25 +49,23 @@ class Terminal(QObject):
 
     @Slot()
     def on_ready_read(self) -> None:
-        n = self.port.bytesAvailable()
-        if n == 1:
-            # If the OS delivered the single ack byte of a BSL core response alone
-            # and if this handler read it, the core response would become invalid
-            ack = self.port.peek(1).data()
-            if ack in b"\x00QRSTUV":  # 0x51 - 0x56
-                self.ack.emit(ack)  # note, it did not remove the ack from the buffer
+        while self.port.bytesAvailable() and self.port.peek(1).data() in b"L\x00QRSTUV":  # 0x51 - 0x56
+            ack = self.read(1)
+            if ack == b"\x00":
+                self.ack.emit(ack)
+            elif ack != b"L":
+                self.error.emit(f"error byte received: {ack}")
 
-        if n >= 8:
-            head = self.port.peek(4).data()
-            if head[0:1] == b"L" or head[0:2] == b"\x00\x08":
-                length = int.from_bytes(head[2:4], "little") + 8
-                if n == length:
+        n = self.port.bytesAvailable()
+        if n >= 7:
+            head = self.port.peek(3).data()
+            if head[0] == ord("l") or head[0] == 8:
+                length = int.from_bytes(head[1:3], "little") + 7
+                if n >= length:
                     reply = self.read(n)
                     self.reply.emit(reply)
-                elif n > length:
-                    self.read(n)
-                    self.error.emit(f"overlong packet received: {n=}, {head=}")
-
+                    if n > length:
+                        self.on_ready_read()
             else:
-                self.read(n)
-                self.error.emit(f"invalid packet received: {head=}")
+                data = self.read(n)
+                self.error.emit(f"invalid data received: {n=}, {data=}")

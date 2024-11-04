@@ -5,9 +5,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+static const uint16_t lenlab_label = 'L' + ('l' << 8);
+
 struct Packet {
-    uint8_t label;
-    uint8_t code;
+    uint16_t label;
     uint16_t length;
     uint8_t argument[4];
 };
