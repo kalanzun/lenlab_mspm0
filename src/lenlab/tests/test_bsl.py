@@ -3,6 +3,7 @@ from logging import getLogger
 
 from PySide6.QtSerialPort import QSerialPort
 
+import lenlab
 from lenlab.bsl import BootstrapLoader
 from lenlab.terminal import Terminal
 from lenlab.tests.spy import Spy
@@ -21,21 +22,19 @@ def test_resilience_to_false_baudrate(bsl, port: QSerialPort):
     port.write(bsl.connect_packet)
     assert port.waitForReadyRead(100), "BSL should reply"
 
-    # the reply is either a single 0 or the first bytes of the ok_packet
     reply = port.readAll().data()
-    assert len(reply)
-    assert bsl.ok_packet.startswith(reply), "Reply is not the first bytes of the ok packet"
+    assert len(reply), "No reply"
+    assert reply[0] == 0, "No success"
 
 
 def test_flash(flash, port: QSerialPort):
-    import lenlab
-
     firmware_bin = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
 
     terminal = Terminal(port)
+    terminal.open()
     loader = BootstrapLoader(terminal)
 
     loader.message.connect(logger.info)
     spy = Spy(loader.finished)
     loader.program(firmware_bin)
-    assert spy.run_until(1000)
+    assert spy.run_until_single_arg(1000), "no success or timeout"

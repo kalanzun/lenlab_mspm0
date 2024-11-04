@@ -12,19 +12,10 @@ from lenlab.tests.spy import Spy
 def terminal(port: QSerialPort) -> Terminal:
     terminal = Terminal(port)
     # port is already open
+    # open() also connects the signal handlers
+    terminal.open()
     yield terminal
     terminal.close()
-
-
-def test_bsl_connect(bsl, terminal: Terminal):
-    spy = Spy(terminal.reply)
-    ack = Spy(terminal.ack)
-    terminal.write(bsl.connect_packet)
-    reply = spy.run_until_single_arg()
-    if reply is None:
-        assert ack.get_single_arg() == b"\x00"
-    else:
-        assert reply == bsl.ok_packet
 
 
 def test_knock(firmware, terminal: Terminal):

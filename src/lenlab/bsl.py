@@ -78,8 +78,6 @@ class DeviceInfo:
 
 KB = 1024
 
-type Callback = Callable[[bytes], None] | None
-
 
 class BootstrapLoader(QObject):
     finished = Signal(bool)
@@ -88,14 +86,13 @@ class BootstrapLoader(QObject):
     batch_size = 12 * KB
 
     connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
-    ok_packet = bytes((0x00, 0x08, 0x02, 0x00, 0x3B, 0x06, 0x0D, 0xA7, 0xF7, 0x6B))
 
     OK = b"\x3b\x00"
 
     def __init__(self, terminal: Terminal):
         super().__init__()
 
-        self.callback: Callback = None
+        self.callback: Callable[..., None] | None = None
         self.device_info: DeviceInfo | None = None
         self.enumerate_batched = None
         self.firmware_size = 0
@@ -106,19 +103,14 @@ class BootstrapLoader(QObject):
 
         self.timer = SingleShotTimer(self.on_timeout)
 
-    @Slot(bytes)
-    def on_ack(self, packet: bytes):
+    @Slot()
+    def on_ack(self):
         try:
             if not self.timer.isActive():
                 raise UnexpectedReply()
 
             self.timer.stop()
-
-            ack = self.terminal.read(1)
-            if not ack == b"\x00":
-                raise ErrorReply(ack)
-
-            self.callback(ack)
+            self.callback()
 
         except Message as error:
             self.message.emit(error)
@@ -131,7 +123,6 @@ class BootstrapLoader(QObject):
                 raise UnexpectedReply()
 
             self.timer.stop()
-
             reply = unpack(BytesIO(packet))
             self.callback(reply)
 
@@ -144,7 +135,8 @@ class BootstrapLoader(QObject):
         self.message.emit(NoReply())
         self.finished.emit(False)
 
-    def command(self, command: bytearray, callback: Callback, timeout: int = 100):
+    def command(self, command: bytearray, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 100):
+        self.terminal.ack_mode = ack_mode
         self.terminal.write(pack(command))
 
         self.callback = callback
@@ -157,13 +149,13 @@ class BootstrapLoader(QObject):
         self.message.emit(Connect())
         self.terminal.port.clear()
         self.terminal.set_baud_rate(9_600)
-        self.command(bytearray([0x12]), self.on_connected)
+        self.command(bytearray([0x12]), self.on_connected, ack_mode=True)
 
-    def on_connected(self, reply: bytes):
+    def on_connected(self):
         self.message.emit(SetBaudRate())
-        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed)
+        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed, ack_mode=True)
 
-    def on_baud_rate_changed(self, reply: bytes):
+    def on_baud_rate_changed(self):
         self.terminal.set_baud_rate(3_000_000)
 
         self.message.emit(GetDeviceInfo())
@@ -199,16 +191,16 @@ class BootstrapLoader(QObject):
         payload.extend((i * self.batch_size).to_bytes(4, byteorder="little"))
         payload.extend(batch)
 
-        self.command(payload, self.on_programmed, timeout=300)
+        self.command(payload, self.on_programmed, ack_mode=True, timeout=300)
 
-    def on_programmed(self, reply: bytes):
+    def on_programmed(self):
         try:
             self.next_batch()
         except StopIteration:
             self.message.emit(Restart())
-            self.command(bytearray([0x40]), self.on_reset)
+            self.command(bytearray([0x40]), self.on_reset, ack_mode=True)
 
-    def on_reset(self, reply: bytes):
+    def on_reset(self):
         self.finished.emit(True)
 
 

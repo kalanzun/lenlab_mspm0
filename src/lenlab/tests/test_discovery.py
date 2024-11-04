@@ -49,10 +49,10 @@ def test_bsl_responsive(bsl):
     # previous tests have run discovery
     with closing(bsl.open_port()) as port:
         port.write(bsl.connect_packet)
-        while port.bytesAvailable() < len(bsl.ok_packet):
-            assert port.waitForReadyRead(100)
+        assert port.waitForReadyRead(100)
         reply = port.readAll().data()
-        assert reply == bsl.ok_packet
+        assert len(reply), "No reply"
+        assert reply[0] == 0, "No success"
         logger.info(f"{bsl.port_name}: BSL responsive")
 
 

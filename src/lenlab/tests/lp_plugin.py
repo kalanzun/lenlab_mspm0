@@ -80,7 +80,6 @@ class Launchpad:
     # shortcuts
     knock_packet = Protocol.knock_packet
     connect_packet = BootstrapLoader.connect_packet
-    ok_packet = BootstrapLoader.ok_packet
 
     @property
     def baud_rate(self) -> int:
@@ -113,14 +112,7 @@ class Launchpad:
                         logger.info(f"{launchpad.port_name}: firmware found")
                         yield launchpad
 
-                port.setBaudRate(cls.default_baudrate)
-                port.write(cls.connect_packet)
-                if port.waitForReadyRead(100):
-                    reply = port.readAll().data()
-                    if reply and cls.ok_packet.startswith(reply):
-                        launchpad = cls(QSerialPortInfo(port), bsl=True)
-                        logger.info(f"{launchpad.port_name}: BSL found")
-                        yield launchpad
+                # do not discover bsl (according to new specification)
 
             if not launchpad:
                 logger.info(f"{port_info.portName()}: nothing found")
