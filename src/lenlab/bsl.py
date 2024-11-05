@@ -152,11 +152,12 @@ class BootstrapLoader(QObject):
         self.command(bytearray([0x12]), self.on_connected, ack_mode=True)
 
     def on_connected(self):
-        self.message.emit(SetBaudRate())
-        self.command(bytearray([0x52, 9]), self.on_baud_rate_changed, ack_mode=True)
+        self.message.emit(SetBaudRate("1 MBaud"))
+        # 7: 1 MBaud
+        self.command(bytearray([0x52, 7]), self.on_baud_rate_changed, ack_mode=True)
 
     def on_baud_rate_changed(self):
-        self.terminal.set_baud_rate(3_000_000)
+        self.terminal.set_baud_rate(1_000_000)
 
         self.message.emit(GetDeviceInfo())
         self.command(bytearray([0x19]), self.on_device_info)
@@ -230,8 +231,8 @@ class Connect(Message):
 
 
 class SetBaudRate(Message):
-    english = "Set baudrate"
-    german = "Baudrate einstellen"
+    english = "Set baudrate: {0}"
+    german = "Baudrate einstellen: {0}"
 
 
 class GetDeviceInfo(Message):
