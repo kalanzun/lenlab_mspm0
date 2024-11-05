@@ -112,11 +112,7 @@ BSL payload:
 - 0x51 - 0x56 BSL error
 - L uppercase Lenlab firmware
 
-### Code
-
-- 8 BSL response
-
-## BSL acknowledgement
+### BSL acknowledgement
 
 BSL might send a single ack byte or a complete response packet. A single ack byte may be zero on success
 or one of the error codes 0x51 - 0x56 (QRSTUV). A complete response packet begins with ack success (zero)
@@ -124,9 +120,17 @@ and code eight.
 
 The BSL documentation specifies for each command whether the reply is a single ack or a complete response packet.
 
-## BSL connect
+## Receiver logic
 
-When freshly started, the only command BSL replies to is `connect`. It replies with the single success byte.
+Module `Terminal`
 
-When connected, BSL replies to `connect` with an error message; a complete response packet with the message 6
-"invalid command".
+> The receiver does not depend on timing.
+
+The single BSL ack byte for success (zero) is also a valid beginning of a complete BSL response packet.
+Therefore, the receiver is either in `ack_mode` and expects single ack bytes or not in `ack_mode`
+and expects complete packets. Lenlab and BSL packets have the same format and same receiver logic.
+
+> The receiver fails fast.
+
+The receiver does not search for a valid packet in the buffer. Any extra bytes front or back or any invalid prefix
+and the receiver emits an error and drops the buffer. 
