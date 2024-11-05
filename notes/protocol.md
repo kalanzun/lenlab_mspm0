@@ -7,7 +7,7 @@
 At 1 MBaud, the round-trip time to request and receive a 28 KB packet is about 320 ms.
 The effective transfer rate of the Lenlab protocol is close to 90 KB/s. 
 
-The serial communication through the debug chip on the launchpad shows a small rate of data corruption.
+The serial communication through the debug chip on the Launchpad shows a small rate of data corruption.
 Packets may arrive incomplete with corrupted data. There seem to be no corrupt but complete packets.
 
 | baudrate | errors per 100 MB |
@@ -17,7 +17,7 @@ Packets may arrive incomplete with corrupted data. There seem to be no corrupt b
 
 Test: `test_comm:test_28k` "Error" means an incomplete and corrupt packet.
 
-The application is required to detect and gracefully handle incomplete and corrupt packets.
+> The application is required to detect and gracefully handle incomplete and corrupt packets.
 
 ## Discovery
 
@@ -25,7 +25,7 @@ The application is required to detect and gracefully handle incomplete and corru
 > 
 > If not, send a BSL connect packet at 9600 Baud and see, if the BSL replies.
 > 
-> Repeat on all launchpad ports (in parallel).
+> Repeat on all Launchpad ports (in parallel).
 
 BSL is resilient to the knock packet at 1 MBaud. A BSL connect at 9600 Baud immediately after is successful.
 Test: `test_bsl.test_resilience_to_false_baudrate`
@@ -35,25 +35,25 @@ Test: `test_firmware.test_resilience_to_false_baudrate`
 
 ### Port discovery
 
-The USB interface of the XDS110 debug chip on the launchpad has two serial ports:
+The USB interface of the XDS110 debug chip on the Launchpad has two serial ports:
 
 - XDS110 Class Application/User UART
 - XDS110 Class Auxiliary Data Port
 
 The port information only differs in the description and only on Windows. The order is random.
-MacOS shows four ports per launchpad.
+MacOS shows four ports per Launchpad without description.
 
 Discovery opens both ports, sends commands, and selects the port which receives a reply.
 
-#### Scenarios
+### Scenarios
 
-- No launchpad connected: No port information found, no discovery.
-- New launchpad connected, no firmware: Discovery receives no reply, timeout triggers.
-- Launchpad with Lenlab firmware, freshly started: Discovery receives a reply, firmware connected.
+- No Launchpad connected: No port information found, no discovery.
+- New Launchpad connected, no firmware: Discovery receives no reply, timeout triggers.
+- Launchpad with Lenlab firmware: Discovery receives a reply, firmware connected.
 - Launchpad with BSL firmware: Discovery receives a reply, BSL connected.
-- Two launchpads connected: Discovery stops at the first reply. One launchpad wins the race.
+- Two Launchpads connected: Discovery stops at the first reply. One Launchpad wins the race.
 
-#### Counterfactual
+### Counterfactual
 
 - If the firmware supported different baud rates, discovery would take longer to send knock packets at all baud rates. 
 The firmware should fall back to the default baud rate or the user should reset the firmware.
@@ -65,7 +65,7 @@ valid packets from invalid data at a different baud rate and then reset the firm
 The test suite requires the hardware to do error rate and transfer rate measurement,
 as well as testing the firmware implementation.
 
-The test suit has a software launchpad, which generates transmission errors upon request
+The test suit has a software Launchpad, which generates transmission errors upon request
 to test the resilience of the Lenlab software.
 
 ## Simplification
@@ -81,10 +81,42 @@ or waits for the next oscilloscope trigger.
 
 ## Packet format
 
-### BSL acknowledge packet
+- ack byte (might be alone)
+- code byte
+- length two bytes
+- payload four + length bytes
 
-BSL replies to the connect command with an ack (single byte), if it's the first connect.
-Otherwise, it replies with a full ok response (10 bytes).
+Lenlab payload:
 
-Because the user might reset the launchpad to BSL mode while Lenlab is running,
-Lenlab should always expect both replies to the connect command.
+- argument four bytes
+- content length bytes
+
+BSL payload:
+
+- response length bytes
+- checksum four bytes
+
+### Ack
+
+- 0 BSL success
+- 0x51 - 0x56 BSL error
+- L uppercase Lenlab firmware
+
+### Code
+
+- 8 BSL response
+
+## BSL acknowledgement
+
+BSL might send a single ack byte or a complete response packet. A single ack byte may be zero on success
+or one of the error codes 0x51 - 0x56 (QRSTUV). A complete response packet begins with ack success (zero)
+and code eight.
+
+The BSL documentation specifies for each command whether the reply is a single ack or a complete response packet.
+
+## BSL connect
+
+When freshly started, the only command BSL replies to is `connect`. It replies with the single success byte.
+
+When connected, BSL replies to `connect` with an error message; a complete response packet with the message 6
+"invalid command".
