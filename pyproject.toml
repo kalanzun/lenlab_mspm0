@@ -10,8 +10,6 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.1.2",
     "pyside6>=6.8.0.2",
-    "pytest-repeat>=0.9.3",
-    "pytest>=8.3.3",
 ]
 
 [project.urls]
@@ -21,7 +19,13 @@ Home = "https://github.com/kalanzun/lenlab_mspm0"
 lenlab = "lenlab.cli:main"
 
 [project.entry-points.pytest11]
-lp_plugin = "lenlab.tests.lp_plugin"
+lp_plugin = "lenlab.lp_plugin"
+
+[dependency-groups]
+dev = [
+    "pytest-repeat>=0.9.3",
+    "pytest>=8.3.3",
+]
 
 [build-system]
 requires = ["hatchling>=1.12.0,<2"]

@@ -7,7 +7,7 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from lenlab.discovery import Discovery, Future
 from lenlab.launchpad import find_vid_pid
 from lenlab.terminal import Terminal
-from lenlab.tests.spy import Spy
+from lenlab.spy import Spy
 
 logger = getLogger(__name__)
 

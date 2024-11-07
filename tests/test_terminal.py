@@ -4,8 +4,8 @@ from PySide6.QtSerialPort import QSerialPort
 
 from lenlab.protocol import pack
 from lenlab.terminal import Terminal
-from lenlab.tests.memory import check_memory, memory_28k
-from lenlab.tests.spy import Spy
+from lenlab.memory import check_memory, memory_28k
+from lenlab.spy import Spy
 
 
 @pytest.fixture(scope="module")
