@@ -6,20 +6,22 @@ The MSPM0 Bootstrap Loader (BSL) provides a method to program and verify the dev
 User's Guide https://www.ti.com/lit/ug/slau887/slau887.pdf
 """
 
+import logging
 import struct
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from io import BytesIO
 from itertools import batched
-from typing import Self
+from typing import Self, cast
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from lenlab.launchpad import crc, last
-from lenlab.singleshot import SingleShotTimer
-from lenlab.terminal import Terminal
-
+from .launchpad import crc, last
 from .message import Message
+from .singleshot import SingleShotTimer
+from .terminal import Terminal
+
+logger = logging.getLogger(__name__)
 
 
 def pack(payload: bytes) -> bytes:
@@ -79,6 +81,73 @@ class DeviceInfo:
 KB = 1024
 
 
+class BSLDiscovery(QObject):
+    """
+    Discovery finishes if
+    - one result found
+    - timeout
+    - all terminals have had an error
+
+    forward result emission
+
+    catch error emissions and forward them as messages
+    count error emissions and emit an error if count reaches "all"
+
+    discovery closes the terminal on failure
+
+    discovery disconnects from the terminal on success
+    """
+
+    result = Signal(QObject)
+    error = Signal(str)
+    message = Signal(str)
+
+    def __init__(self, terminals: list[Terminal]):
+        super().__init__()
+
+        self.terminals = terminals
+
+        self.count = len(self.terminals)
+        self.timer = SingleShotTimer(self.on_timeout, timeout=300)
+
+    def start(self) -> None:
+        for terminal in self.terminals:
+            terminal.error.connect(self.on_error)
+            terminal.ack.connect(self.on_ack)
+            terminal.ack_mode = True
+
+            # on_error handles the error case
+            if terminal.open():
+                terminal.set_baud_rate(9_600)
+                terminal.write(BootstrapLoader.connect_packet)
+
+        if self.count:  # not every terminal sent an error
+            self.timer.start()
+
+    @Slot(str)
+    def on_error(self, error: str) -> None:
+        self.message.emit(error)
+        self.count -= 1
+        if self.count == 0:
+            self.timer.stop()
+            self.error.emit("discovery failed")
+
+    @Slot()
+    def on_ack(self) -> None:
+        self.timer.stop()
+        terminal = cast(Terminal, self.sender())
+        terminal.error.disconnect(self.on_error)
+        terminal.ack.disconnect(self.on_ack)
+        terminal.ack_mode = False
+        self.result.emit(terminal)
+
+    @Slot()
+    def on_timeout(self) -> None:
+        for terminal in self.terminals:
+            terminal.close()
+        self.error.emit("discovery timeout")
+
+
 class BootstrapLoader(QObject):
     finished = Signal(bool)
     message = Signal(Message)
@@ -89,17 +158,16 @@ class BootstrapLoader(QObject):
 
     OK = b"\x3b\x00"
 
-    def __init__(self, terminal: Terminal):
+    terminal: Terminal
+    callback: Callable[..., None]
+    device_info: DeviceInfo
+    enumerate_batched: enumerate
+    firmware_size: int
+
+    def __init__(self, discovery: BSLDiscovery):
         super().__init__()
 
-        self.callback: Callable[..., None] | None = None
-        self.device_info: DeviceInfo | None = None
-        self.enumerate_batched = None
-        self.firmware_size = 0
-
-        self.terminal = terminal
-        self.terminal.ack.connect(self.on_ack)
-        self.terminal.reply.connect(self.on_reply)
+        self.discovery = discovery
 
         self.timer = SingleShotTimer(self.on_timeout)
 
@@ -146,15 +214,28 @@ class BootstrapLoader(QObject):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
         self.firmware_size = len(firmware)
 
-        self.message.emit(Connect())
-        self.terminal.port.clear()
-        self.terminal.set_baud_rate(9_600)
-        self.command(bytearray([0x12]), self.on_connected, ack_mode=True)
+        self.discovery.error.connect(self.on_discovery_error)
+        self.discovery.result.connect(self.on_discovery)
 
-    def on_connected(self):
+        self.message.emit(Connect())
+        self.discovery.start()
+
+    @Slot(QObject)
+    def on_discovery(self, terminal):
+        self.message.emit(str(terminal))
+
+        self.terminal = terminal
+        self.terminal.ack.connect(self.on_ack)
+        self.terminal.reply.connect(self.on_reply)
+
         self.message.emit(SetBaudRate("1 MBaud"))
         # 7: 1 MBaud
         self.command(bytearray([0x52, 7]), self.on_baud_rate_changed, ack_mode=True)
+
+    @Slot(str)
+    def on_discovery_error(self, error: str) -> None:
+        self.message.emit(error)
+        self.finished.emit(False)
 
     def on_baud_rate_changed(self):
         self.terminal.set_baud_rate(1_000_000)

@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.protocol import pack
-from lenlab.terminal import Terminal
 from lenlab.memory import check_memory, memory_28k
+from lenlab.protocol import pack
 from lenlab.spy import Spy
+from lenlab.terminal import Terminal
 
 
 @pytest.fixture(scope="module")
@@ -74,4 +74,3 @@ def test_28k(firmware, terminal: Terminal, memory: np.ndarray):
     # FAILED src/lenlab/tests/test_terminal.py::test_28k[2481-8000] - AssertionError: no reply
     # FAILED src/lenlab/tests/test_terminal.py::test_28k[2493-8000] - AssertionError: no reply
     # FAILED src/lenlab/tests/test_terminal.py::test_28k[2494-8000] - AssertionError: no reply
-

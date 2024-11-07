@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.protocol import pack
 from lenlab.memory import KB, check_memory, memory_28k
+from lenlab.protocol import pack
 
 
 def read(port: QSerialPort, size: int, timeout: int = 300) -> bytes:
