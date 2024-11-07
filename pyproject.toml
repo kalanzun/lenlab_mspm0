@@ -16,7 +16,7 @@ dependencies = [
 Home = "https://github.com/kalanzun/lenlab_mspm0"
 
 [project.scripts]
-lenlab = "lenlab.cli:main"
+lenlab = "lenlab.scripts:main"
 
 [project.entry-points.pytest11]
 lp_plugin = "lenlab.lp_plugin"

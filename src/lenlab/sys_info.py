@@ -6,7 +6,8 @@ from contextlib import closing
 from PySide6.QtCore import QIODeviceBase, QSysInfo
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab import launchpad
+from . import cli
+from . import launchpad
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +60,11 @@ def pretty(obj: object, keys: list[str]) -> str:
     return pprint.pformat(info, sort_dicts=False, underscore_numbers=True)
 
 
-def test_sys_info(port_infos: list[QSerialPortInfo]):
-    # pytest --pyargs lenlab.tests.test_sys_info --log-cli-level INFO --log-format "%(levelname)s %(message)s"
+@cli.command
+def sys_info(args):
+    logging.basicConfig(level=logging.INFO)
+
+    port_infos = QSerialPortInfo.availablePorts()
     logger.info(f"platform\n{pretty(platform, platform_keys)}")
     logger.info(f"QSysInfo\n{pretty(QSysInfo, sys_info_keys)}")
 
