@@ -46,7 +46,10 @@ def bsl(request, port: QSerialPort) -> None:
 @pytest.fixture(scope="module")
 def port(request, port_infos: list[QSerialPortInfo]) -> QSerialPort:
     matches = find_launchpad(port_infos)
-    assert len(matches) == 1
+    if len(matches) == 0:
+        pytest.skip("no port")
+    elif len(matches) > 1:
+        pytest.skip("too many ports")
 
     port = QSerialPort(matches[0])
     assert port.open(QIODeviceBase.OpenModeFlag.ReadWrite), port.errorString()

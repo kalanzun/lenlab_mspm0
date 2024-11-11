@@ -1,7 +1,6 @@
-from PySide6.QtCore import QEventLoop
 from PySide6.QtTest import QSignalSpy
 
-from lenlab.singleshot import SingleShotTimer
+from lenlab.loop import loop_until
 
 
 class Spy(QSignalSpy):
@@ -18,16 +17,7 @@ class Spy(QSignalSpy):
         if self.count():
             return True
 
-        loop = QEventLoop()
-        _connection = self._signal.connect(lambda: loop.exit(0))
-        timer = SingleShotTimer(lambda: loop.exit(1), timeout)
-
-        timer.start()
-        _error = loop.exec()
-        timer.stop()
-        self._signal.disconnect(_connection)
-
-        return not _error
+        return loop_until(self._signal, timeout=timeout)
 
     def run_until_single_arg(self, timeout=100):
         if self.run_until(timeout):

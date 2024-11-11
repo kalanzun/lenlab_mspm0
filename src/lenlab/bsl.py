@@ -80,8 +80,9 @@ class DeviceInfo:
 
 
 class BootstrapLoader(QObject):
-    finished = Signal(bool)
     message = Signal(Message)
+    success = Signal()
+    error = Signal(Message)
 
     baud_rate = 9_600
 
@@ -118,8 +119,7 @@ class BootstrapLoader(QObject):
 
         except Message as error:
             self.terminal.close()
-            self.message.emit(error)
-            self.finished.emit(False)
+            self.error.emit(error)
 
     @Slot(bytes)
     def on_reply(self, packet: bytes):
@@ -133,19 +133,17 @@ class BootstrapLoader(QObject):
 
         except Message as error:
             self.terminal.close()
-            self.message.emit(error)
-            self.finished.emit(False)
+            self.error.emit(error)
 
-    @Slot(str)
-    def on_error(self, message: str):
-        self.message.emit(message)
-        self.finished.emit(False)
+    @Slot(Message)
+    def on_error(self, error: Message):
+        self.timer.stop()
+        self.error.emit(error)
 
     @Slot()
     def on_timeout(self):
         self.terminal.close()
-        self.message.emit(NoReply(self.terminal.port_name))
-        self.finished.emit(False)
+        self.error.emit(NoReply(self.terminal.port_name))
 
     def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 100):
         self.terminal.ack_mode = ack_mode
@@ -217,12 +215,13 @@ class BootstrapLoader(QObject):
             self.command(bytes([0x40]), self.on_reset, ack_mode=True)
 
     def on_reset(self):
-        self.finished.emit(True)
+        self.success.emit()
 
 
 class Programmer(QObject):
-    finished = Signal(bool)
     message = Signal(Message)
+    success = Signal()
+    error = Signal(Message)
 
     def __init__(self, bootstrap_loaders: list[BootstrapLoader]):
         super().__init__()
@@ -232,17 +231,21 @@ class Programmer(QObject):
     def program(self, firmware: bytes) -> None:
         for bsl in self.bootstrap_loaders:
             bsl.message.connect(self.message)
-            bsl.finished.connect(self.on_finished)
+            bsl.success.connect(self.on_success)
+            bsl.success.connect(self.success)
+            bsl.error.connect(self.message)
+            bsl.error.connect(self.on_error)
             bsl.program(firmware)
 
-    @Slot(bool)
-    def on_finished(self, success: bool) -> None:
-        if success:
-            self.finished.emit(True)
-        else:
-            self.count -= 1
-            if self.count == 0:
-                self.finished.emit(False)
+    @Slot()
+    def on_success(self):
+        self.message.emit(ProgrammingSuccessful())
+
+    @Slot(Message)
+    def on_error(self, error: Message) -> None:
+        self.count -= 1
+        if self.count == 0:
+            self.error.emit(ProgrammingFailed())
 
 
 class UnexpectedReply(Message):
@@ -313,3 +316,13 @@ class WriteFirmware(Message):
 class Restart(Message):
     english = "Restart"
     german = "Neustarten"
+
+
+class ProgrammingSuccessful(Message):
+    english = "Programming successful"
+    german = "Programmieren erfolgreich"
+
+
+class ProgrammingFailed(Message):
+    english = "Programming failed"
+    german = "Programmieren fehlgeschlagen"

@@ -40,17 +40,18 @@ class Probe(QObject):
             self.result.emit(self.terminal)
         else:
             self.terminal.close()
-            self.error.emit(f"unexpected reply {reply}")
+            self.error.emit(UnexpectedReply(reply))
 
     @Slot()
     def on_timeout(self) -> None:
         self.terminal.close()
-        self.error.emit("probe timeout")
+        self.error.emit(Timeout())
 
 
 class Discovery(QObject):
-    result = Signal(Terminal)
     message = Signal(Message)
+    result = Signal(Terminal)
+    error = Signal(Message)
 
     def __init__(self, probes: list[Probe]):
         super().__init__()
@@ -59,13 +60,28 @@ class Discovery(QObject):
 
     def start(self) -> None:
         for probe in self.probes:
-            probe.error.connect(self.on_error)
             probe.result.connect(self.result)
+            probe.error.connect(self.message)
+            probe.error.connect(self.on_error)
             probe.start()
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
-        self.message.emit(error)
         self.count -= 1
         if self.count == 0:
-            self.result.emit(None)
+            self.error.emit(Nothing())
+
+
+class UnexpectedReply(Message):
+    english = "Unexpected reply: {0}"
+    german = "Unerwartete Antwort: {0}"
+
+
+class Timeout(Message):
+    english = "Probe timeout"
+    german = "Probezeit abgelaufen"
+
+
+class Nothing(Message):
+    english = "Nothing found"
+    german = "Nichts gefunden"

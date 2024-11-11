@@ -9,7 +9,7 @@ import lenlab
 from . import cli
 from .bsl import BootstrapLoader, Programmer
 from .launchpad import find_vid_pid
-from .spy import Spy
+from .loop import loop_until
 from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
@@ -28,14 +28,8 @@ def flash(args):
 
     programmer = Programmer([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in port_infos])
     programmer.message.connect(logger.info)
-    spy = Spy(programmer.finished)
+    programmer.error.connect(logger.error)
+
     programmer.program(firmware_bin)
-    no_timeout = spy.run_until(600)
-    assert no_timeout, "At least one BootstrapLoader did not finish"
-
-    if spy.get_single_arg():
-        logger.info("Programming successful")
-        return 0
-
-    logger.error("Programming failed")
-    return 1
+    no_timeout = loop_until(programmer.success, programmer.error, timeout=600)
+    assert no_timeout, "at least one bootstrap loader did neither emit an error nor the success signal"
