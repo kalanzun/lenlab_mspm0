@@ -117,6 +117,7 @@ class BootstrapLoader(QObject):
             self.callback()
 
         except Message as error:
+            self.terminal.close()
             self.message.emit(error)
             self.finished.emit(False)
 
@@ -131,6 +132,7 @@ class BootstrapLoader(QObject):
             self.callback(reply)
 
         except Message as error:
+            self.terminal.close()
             self.message.emit(error)
             self.finished.emit(False)
 
@@ -141,6 +143,7 @@ class BootstrapLoader(QObject):
 
     @Slot()
     def on_timeout(self):
+        self.terminal.close()
         self.message.emit(NoReply(self.terminal.port_name))
         self.finished.emit(False)
 
@@ -170,11 +173,6 @@ class BootstrapLoader(QObject):
         # 7: 1 MBaud
         self.command(bytes([0x52, 7]), self.on_baud_rate_changed, ack_mode=True)
 
-    @Slot(str)
-    def on_discovery_error(self, error: str) -> None:
-        self.message.emit(error)
-        self.finished.emit(False)
-
     def on_baud_rate_changed(self):
         self.terminal.set_baud_rate(1_000_000)
 
@@ -196,7 +194,7 @@ class BootstrapLoader(QObject):
             raise ErrorReply(reply)
 
         self.message.emit(Erase())
-        self.command(bytes([0x15]), self.on_erased)
+        self.command(bytes([0x15]), self.on_erased, timeout=300)
 
     def on_erased(self, reply: bytes):
         if not reply == self.OK:
@@ -208,11 +206,7 @@ class BootstrapLoader(QObject):
     def next_batch(self):
         # batch is a tuple of ints (single bytes)
         i, batch = next(self.enumerate_batched)
-        payload = b"".join([
-            b"\x24",
-            (i * self.batch_size).to_bytes(4, byteorder="little"),
-            bytes(batch)
-        ])
+        payload = b"".join([b"\x24", (i * self.batch_size).to_bytes(4, byteorder="little"), bytes(batch)])
         self.command(payload, self.on_programmed, ack_mode=True, timeout=300)
 
     def on_programmed(self):

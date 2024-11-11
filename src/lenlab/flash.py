@@ -31,7 +31,7 @@ def flash(args):
     spy = Spy(programmer.finished)
     programmer.program(firmware_bin)
     no_timeout = spy.run_until(600)
-    assert no_timeout, "At least one BootstrapLoader did not emit finished."
+    assert no_timeout, "At least one BootstrapLoader did not finish"
 
     if spy.get_single_arg():
         logger.info("Programming successful")

@@ -1,10 +1,9 @@
-from contextlib import closing
 from logging import getLogger
 
 import pytest
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.discovery import Discovery, Future
+from lenlab.discovery import Discovery, Probe
 from lenlab.launchpad import find_vid_pid
 from lenlab.spy import Spy
 from lenlab.terminal import Terminal
@@ -12,75 +11,26 @@ from lenlab.terminal import Terminal
 logger = getLogger(__name__)
 
 
-def test_all_launchpad_discovery(launchpad, port_infos: list[QSerialPortInfo]):
+def test_discovery(request, port_infos: list[QSerialPortInfo]):
     matches = find_vid_pid(port_infos)
     if not matches:
-        pytest.skip("no port found")
-
-    result = list(launchpad.discover(matches))
-    if not result:
         pytest.skip("no launchpad found")
 
-    assert len(result) == 1
+    discovery = Discovery([Probe(Terminal(QSerialPort(port_info))) for port_info in matches])
+    discovery.message.connect(logger.info)
+    spy = Spy(discovery.result)
+    discovery.start()
+    no_timeout = spy.run_until(600)
+    assert no_timeout, "at least one probe did not finish"
 
-
-def test_single_launchpad_discovery(launchpad, port_infos: list[QSerialPortInfo]):
-    matches = find_vid_pid(port_infos)
-    if not matches:
-        pytest.skip("no port found")
-
-    result = next(launchpad.discover(matches), None)
-    if not result:
-        pytest.skip("no launchpad found")
-
-
-def test_firmware_responsive(firmware):
-    # previous tests have run discovery
-    with closing(firmware.open_port()) as port:
-        port.write(firmware.knock_packet)
-        while port.bytesAvailable() < len(firmware.knock_packet):
-            assert port.waitForReadyRead(100)
-        reply = port.readAll().data()
-        assert reply == firmware.knock_packet
-        logger.info(f"{firmware.port_name}: firmware responsive")
-
-
-def test_bsl_responsive(bsl):
-    # previous tests have run discovery
-    with closing(bsl.open_port()) as port:
-        port.write(bsl.connect_packet)
-        assert port.waitForReadyRead(100)
-        reply = port.readAll().data()
-        assert len(reply), "No reply"
-        assert reply[0] == 0, "No success"
-        logger.info(f"{bsl.port_name}: BSL responsive")
-
-
-def test_discovery(port_infos: list[QSerialPortInfo]):
-    matches = find_vid_pid(port_infos)
-    if not matches:
-        pytest.skip("no port found")
-
-    future = Future()
-    future.error.connect(logger.info)
-    spy = Spy(future.result)
-
-    for match in matches:
-        port = QSerialPort(match)
-        terminal = Terminal(port)
-        discovery = Discovery(terminal)
-        discovery.error.connect(future.error.emit)
-        discovery.result.connect(future.result.emit)
-        discovery.start()
-
-    if not spy.run_until(800):
-        pytest.skip("no launchpad found")
-
-    terminal = spy.get_single_arg()
-    assert terminal
-
-    if terminal.firmware:
-        logger.info(f"{terminal.port_name}: firmware found")
-
-    if terminal.bsl:
-        logger.info(f"{terminal.port_name}: bsl found")
+    result = spy.get_single_arg()
+    if request.config.getoption("fw"):
+        assert isinstance(result, Terminal)
+    elif request.config.getoption("bsl"):
+        assert result is None
+    else:
+        assert isinstance(result, Terminal) or result is None
+        if result is None:
+            logger.info("nothing found")
+        else:
+            logger.info("firmware found")

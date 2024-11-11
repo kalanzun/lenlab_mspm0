@@ -4,4 +4,5 @@ def pack(argument: bytes, length: int = 0) -> bytes:
 
 
 class Protocol:
+    baud_rate = 1_000_000
     knock_packet = pack(b"knock")

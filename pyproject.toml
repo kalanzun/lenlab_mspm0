@@ -18,9 +18,6 @@ Home = "https://github.com/kalanzun/lenlab_mspm0"
 [project.scripts]
 lenlab = "lenlab.scripts:main"
 
-[project.entry-points.pytest11]
-lp_plugin = "lenlab.lp_plugin"
-
 [dependency-groups]
 dev = [
     "pytest-repeat>=0.9.3",

@@ -66,7 +66,7 @@ def test_28k(firmware, terminal: Terminal, memory: np.ndarray):
     spy = Spy(terminal.reply)
     terminal.write(pack(b"mg28K"))  # get 28K
     reply = spy.run_until_single_arg(timeout=600)
-    assert reply is not None, "no reply"
+    assert reply is not None
     check_memory(b"mg28K", memory, reply)
 
     # 2024-11-05 four errors out of 8000 packets
