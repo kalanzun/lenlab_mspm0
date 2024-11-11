@@ -7,7 +7,7 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import lenlab
 
 from . import cli
-from .bsl import BootstrapLoader, BSLDiscovery
+from .bsl import BootstrapLoader, Programmer
 from .launchpad import find_vid_pid
 from .spy import Spy
 from .terminal import Terminal
@@ -21,15 +21,21 @@ def flash(args):
 
     app = QCoreApplication()  # noqa: F841
 
-    terminals = list()
-    for port_info in find_vid_pid(QSerialPortInfo.availablePorts()):
-        port = QSerialPort(port_info)
-        terminals.append(Terminal(port))
+    port_infos = find_vid_pid(QSerialPortInfo.availablePorts())
+    if not port_infos:
+        logger.error("No Launchpad found")
+        return 1
 
-    discovery = BSLDiscovery(terminals)
-    loader = BootstrapLoader(discovery)
+    programmer = Programmer([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in port_infos])
+    programmer.message.connect(logger.info)
+    spy = Spy(programmer.finished)
+    programmer.program(firmware_bin)
+    no_timeout = spy.run_until(600)
+    assert no_timeout, "At least one BootstrapLoader did not emit finished."
 
-    loader.message.connect(logger.info)
-    spy = Spy(loader.finished)
-    loader.program(firmware_bin)
-    spy.run_until_single_arg(500)
+    if spy.get_single_arg():
+        logger.info("Programming successful")
+        return 0
+
+    logger.error("Programming failed")
+    return 1

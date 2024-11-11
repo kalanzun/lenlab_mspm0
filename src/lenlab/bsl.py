@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, fields
 from io import BytesIO
 from itertools import batched
-from typing import Self, cast
+from typing import Self
 
 from PySide6.QtCore import QObject, Signal, Slot
 
@@ -28,7 +28,7 @@ def pack(payload: bytes) -> bytes:
     """Pack a packet for the Bootstrap Loader."""
     return b"".join(
         [
-            (0x80).to_bytes(1, byteorder="little"),
+            b"\x80",
             len(payload).to_bytes(2, byteorder="little"),
             payload,
             last(crc(payload)).to_bytes(4, byteorder="little"),
@@ -74,89 +74,25 @@ class DeviceInfo:
 
     @classmethod
     def parse(cls, reply: bytes) -> Self:
+        # the first letter of the type happens to be the format code for struct.unpack
         fmt = "<" + "".join(str(field.type)[0] for field in fields(cls))
         return cls(*struct.unpack(fmt, reply))
-
-
-KB = 1024
-
-
-class BSLDiscovery(QObject):
-    """
-    Discovery finishes if
-    - one result found
-    - timeout
-    - all terminals have had an error
-
-    forward result emission
-
-    catch error emissions and forward them as messages
-    count error emissions and emit an error if count reaches "all"
-
-    discovery closes the terminal on failure
-
-    discovery disconnects from the terminal on success
-    """
-
-    result = Signal(QObject)
-    error = Signal(str)
-    message = Signal(str)
-
-    def __init__(self, terminals: list[Terminal]):
-        super().__init__()
-
-        self.terminals = terminals
-
-        self.count = len(self.terminals)
-        self.timer = SingleShotTimer(self.on_timeout, timeout=300)
-
-    def start(self) -> None:
-        for terminal in self.terminals:
-            terminal.error.connect(self.on_error)
-            terminal.ack.connect(self.on_ack)
-            terminal.ack_mode = True
-
-            # on_error handles the error case
-            if terminal.open():
-                terminal.set_baud_rate(9_600)
-                terminal.write(BootstrapLoader.connect_packet)
-
-        if self.count:  # not every terminal sent an error
-            self.timer.start()
-
-    @Slot(str)
-    def on_error(self, error: str) -> None:
-        self.message.emit(error)
-        self.count -= 1
-        if self.count == 0:
-            self.timer.stop()
-            self.error.emit("discovery failed")
-
-    @Slot()
-    def on_ack(self) -> None:
-        self.timer.stop()
-        terminal = cast(Terminal, self.sender())
-        terminal.error.disconnect(self.on_error)
-        terminal.ack.disconnect(self.on_ack)
-        terminal.ack_mode = False
-        self.result.emit(terminal)
-
-    @Slot()
-    def on_timeout(self) -> None:
-        for terminal in self.terminals:
-            terminal.close()
-        self.error.emit("discovery timeout")
 
 
 class BootstrapLoader(QObject):
     finished = Signal(bool)
     message = Signal(Message)
 
+    baud_rate = 9_600
+
+    KB = 1024
     batch_size = 12 * KB
 
-    connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
-
+    CONNECT = b"\x12"
     OK = b"\x3b\x00"
+
+    # connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
+    connect_packet = pack(CONNECT)
 
     terminal: Terminal
     callback: Callable[..., None]
@@ -164,10 +100,10 @@ class BootstrapLoader(QObject):
     enumerate_batched: enumerate
     firmware_size: int
 
-    def __init__(self, discovery: BSLDiscovery):
+    def __init__(self, terminal: Terminal):
         super().__init__()
 
-        self.discovery = discovery
+        self.terminal = terminal
 
         self.timer = SingleShotTimer(self.on_timeout)
 
@@ -198,12 +134,17 @@ class BootstrapLoader(QObject):
             self.message.emit(error)
             self.finished.emit(False)
 
-    @Slot()
-    def on_timeout(self):
-        self.message.emit(NoReply())
+    @Slot(str)
+    def on_error(self, message: str):
+        self.message.emit(message)
         self.finished.emit(False)
 
-    def command(self, command: bytearray, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 100):
+    @Slot()
+    def on_timeout(self):
+        self.message.emit(NoReply(self.terminal.port_name))
+        self.finished.emit(False)
+
+    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 100):
         self.terminal.ack_mode = ack_mode
         self.terminal.write(pack(command))
 
@@ -214,23 +155,20 @@ class BootstrapLoader(QObject):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
         self.firmware_size = len(firmware)
 
-        self.discovery.error.connect(self.on_discovery_error)
-        self.discovery.result.connect(self.on_discovery)
-
-        self.message.emit(Connect())
-        self.discovery.start()
-
-    @Slot(QObject)
-    def on_discovery(self, terminal):
-        self.message.emit(str(terminal))
-
-        self.terminal = terminal
         self.terminal.ack.connect(self.on_ack)
         self.terminal.reply.connect(self.on_reply)
+        self.terminal.error.connect(self.on_error)
 
+        if self.terminal.open():
+            self.terminal.set_baud_rate(self.baud_rate)
+            self.message.emit(Connect(self.terminal.port_name))
+            self.command(self.CONNECT, self.on_connected, ack_mode=True, timeout=300)
+
+    def on_connected(self):
+        self.message.emit(Connected(self.terminal.port_name))
         self.message.emit(SetBaudRate("1 MBaud"))
         # 7: 1 MBaud
-        self.command(bytearray([0x52, 7]), self.on_baud_rate_changed, ack_mode=True)
+        self.command(bytes([0x52, 7]), self.on_baud_rate_changed, ack_mode=True)
 
     @Slot(str)
     def on_discovery_error(self, error: str) -> None:
@@ -241,7 +179,7 @@ class BootstrapLoader(QObject):
         self.terminal.set_baud_rate(1_000_000)
 
         self.message.emit(GetDeviceInfo())
-        self.command(bytearray([0x19]), self.on_device_info)
+        self.command(bytes([0x19]), self.on_device_info)
 
     def on_device_info(self, reply: bytes):
         self.device_info = DeviceInfo.parse(reply)
@@ -251,14 +189,14 @@ class BootstrapLoader(QObject):
         self.message.emit(BufferSize(self.device_info.max_buffer_size / 1000))
 
         self.message.emit(Unlock())
-        self.command(bytearray([0x21] + [0xFF] * 32), self.on_unlocked)
+        self.command(bytes([0x21] + [0xFF] * 32), self.on_unlocked)
 
     def on_unlocked(self, reply: bytes):
         if not reply == self.OK:
             raise ErrorReply(reply)
 
         self.message.emit(Erase())
-        self.command(bytearray([0x15]), self.on_erased)
+        self.command(bytes([0x15]), self.on_erased)
 
     def on_erased(self, reply: bytes):
         if not reply == self.OK:
@@ -268,11 +206,13 @@ class BootstrapLoader(QObject):
         self.next_batch()
 
     def next_batch(self):
+        # batch is a tuple of ints (single bytes)
         i, batch = next(self.enumerate_batched)
-        payload = bytearray([0x24])
-        payload.extend((i * self.batch_size).to_bytes(4, byteorder="little"))
-        payload.extend(batch)
-
+        payload = b"".join([
+            b"\x24",
+            (i * self.batch_size).to_bytes(4, byteorder="little"),
+            bytes(batch)
+        ])
         self.command(payload, self.on_programmed, ack_mode=True, timeout=300)
 
     def on_programmed(self):
@@ -280,10 +220,35 @@ class BootstrapLoader(QObject):
             self.next_batch()
         except StopIteration:
             self.message.emit(Restart())
-            self.command(bytearray([0x40]), self.on_reset, ack_mode=True)
+            self.command(bytes([0x40]), self.on_reset, ack_mode=True)
 
     def on_reset(self):
         self.finished.emit(True)
+
+
+class Programmer(QObject):
+    finished = Signal(bool)
+    message = Signal(Message)
+
+    def __init__(self, bootstrap_loaders: list[BootstrapLoader]):
+        super().__init__()
+        self.bootstrap_loaders = bootstrap_loaders
+        self.count = len(self.bootstrap_loaders)
+
+    def program(self, firmware: bytes) -> None:
+        for bsl in self.bootstrap_loaders:
+            bsl.message.connect(self.message)
+            bsl.finished.connect(self.on_finished)
+            bsl.program(firmware)
+
+    @Slot(bool)
+    def on_finished(self, success: bool) -> None:
+        if success:
+            self.finished.emit(True)
+        else:
+            self.count -= 1
+            if self.count == 0:
+                self.finished.emit(False)
 
 
 class UnexpectedReply(Message):
@@ -302,13 +267,18 @@ class ErrorReply(Message):
 
 
 class NoReply(Message):
-    english = "No reply received"
-    german = "Keine Antwort erhalten"
+    english = "No reply received on {0}"
+    german = "Keine Antwort erhalten auf {0}"
 
 
 class Connect(Message):
-    english = "Establish connection"
-    german = "Verbindung aufbauen"
+    english = "Establish connection on {0}"
+    german = "Verbindung aufbauen auf {0}"
+
+
+class Connected(Message):
+    english = "Connected on {0}"
+    german = "Verbunden auf {0}"
 
 
 class SetBaudRate(Message):
