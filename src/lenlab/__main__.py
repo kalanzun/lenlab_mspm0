@@ -1,5 +1,5 @@
 import sys
 
-from scripts import main
+from lenlab.cli import main
 
 sys.exit(main())

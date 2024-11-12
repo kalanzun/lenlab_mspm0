@@ -6,7 +6,7 @@ from contextlib import closing
 from PySide6.QtCore import QIODeviceBase, QSysInfo
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from . import cli, launchpad
+from . import launchpad
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,7 @@ def pretty(obj: object, keys: list[str]) -> str:
     return pprint.pformat(info, sort_dicts=False, underscore_numbers=True)
 
 
-@cli.command
-def sys_info(args):
+def sys_info():
     port_infos = QSerialPortInfo.availablePorts()
     logger.info(f"platform\n{pretty(platform, platform_keys)}")
     logger.info(f"QSysInfo\n{pretty(QSysInfo, sys_info_keys)}")

@@ -215,6 +215,7 @@ class BootstrapLoader(QObject):
             self.command(bytes([0x40]), self.on_reset, ack_mode=True)
 
     def on_reset(self):
+        self.terminal.close()
         self.success.emit()
 
 

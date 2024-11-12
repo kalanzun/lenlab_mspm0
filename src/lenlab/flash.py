@@ -1,12 +1,10 @@
 import logging
 from importlib import resources
 
-from PySide6.QtCore import QCoreApplication
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 import lenlab
 
-from . import cli
 from .bsl import BootstrapLoader, Programmer
 from .launchpad import find_vid_pid
 from .loop import loop_until
@@ -15,11 +13,8 @@ from .terminal import Terminal
 logger = logging.getLogger(__name__)
 
 
-@cli.command
-def flash(args):
+def flash():
     firmware_bin = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
-
-    app = QCoreApplication()  # noqa: F841
 
     port_infos = find_vid_pid(QSerialPortInfo.availablePorts())
     if not port_infos:

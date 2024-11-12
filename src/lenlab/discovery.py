@@ -37,15 +37,17 @@ class Probe(QObject):
         self.timer.stop()
 
         if reply == Protocol.knock_packet:
+            self.terminal.error.disconnect(self.on_error)
+            self.terminal.reply.disconnect(self.on_reply)
             self.result.emit(self.terminal)
         else:
             self.terminal.close()
-            self.error.emit(UnexpectedReply(reply))
+            self.error.emit(UnexpectedReply(self.terminal.port_name, reply))
 
     @Slot()
     def on_timeout(self) -> None:
         self.terminal.close()
-        self.error.emit(Timeout())
+        self.error.emit(Timeout(self.terminal.port_name))
 
 
 class Discovery(QObject):
@@ -73,13 +75,13 @@ class Discovery(QObject):
 
 
 class UnexpectedReply(Message):
-    english = "Unexpected reply: {0}"
-    german = "Unerwartete Antwort: {0}"
+    english = "Unexpected reply on {0}: {1}"
+    german = "Unerwartete Antwort auf {0}: {1}"
 
 
 class Timeout(Message):
-    english = "Probe timeout"
-    german = "Probezeit abgelaufen"
+    english = "Probe timeout on {0}"
+    german = "Probezeit abgelaufen auf {0}"
 
 
 class Nothing(Message):
