@@ -27,7 +27,7 @@ https://docs.astral.sh/uv/getting-started/installation/
 
 Schließen Sie das Terminal und starten Sie es neu, dann findet es die eben installierten Kommandos `uv` und `uvx`.
 
-Starten Sie Lenlab:
+## Lenlab Starten
 
 ```shell
 uvx lenlab
@@ -35,22 +35,52 @@ uvx lenlab
 
 `uvx` lädt Lenlab herunter und führt es aus.
 
+## Lenlab Testen
+
+Halten Sie die Taste S1 des Launchpads neben der grünen LED gedrückt und drücken Sie kurz auf die Taste RESET neben
+dem USB-Stecker. Der Mikrocontroller startet den "Bootstrap Loader" für das Programmieren (Flashen) einer
+neuen Firmware. Sie haben dann 10 Sekunden Zeit, das Programmieren zu starten. Danach schläft der Mikrocontroller ein
+und braucht ein neues S1 + RESET zum Aufwachen. Tipp: Den folgenden Befehl eingeben (ohne Enter),
+S1 + RESET am Launchpad drücken und dann am Computer Enter drücken.
+
+```shell
+uvx lenlab practice --log lenlab.log
+```
+
+`uvx lenlab practice` sammelt einige Information über Ihr System und die Verbindung zum Launchpad. Dann programmiert
+es die Firmware auf das Launchpad, startet die Firmware und testet die Kommunikation. Es überträgt etwa 28 MB Daten
+in etwa 6 Minuten. `lenlab practice` kann jederzeit mit Strg-C (Command-Punkt auf Mac) unterbrochen werden.
+
+Wenn es schreibt `ERROR:lenlab.flash:Programming failed`, versuchen Sie es bitte nochmal von Anfang an mit S1 + RESET.
+
+Mit `--log DATEINAME` speichert es die Ausgabe in der Logdatei unter "DATEINAME". Bitte senden Sie mir diese Datei
+per E-Mail. Die Datei befindet sich im Home-Verzeichnis, wenn Sie das Verzeichnis nicht gewechselt haben:
+
+- Windows: `C:\Users\BENUTZERNAME\DATEINAME` oder `C:\Benutzer\BENUTZERNAME\DATEINAME`
+- Mac: `/Users/BENUTZERNAME/DATEINAME`
+
+Der Befehl `pwd` zeigt den Namen des Verzeichnisses an, in dem das Terminal momentan arbeitet (Linux, Mac und Windows):
+
+```shell
+pwd
+```
+
+Wenn Sie lesen möchten, welche Informationen Sie verschicken:
+
+Windows:
+
+```shell
+ii lenlab.log
+```
+
+Mac:
+
+```shell
+open -e lenlab.log
+```
+
 ## Flashen
 
 ```shell
 uvx lenlab flash
-```
-
-## Testen
-
-```shell
-uvx lenlab test
-```
-
-## Stresstest
-
-Laufzeit etwa 10 Minuten.
-
-```shell
-uvx lenlab stress
 ```
