@@ -10,4 +10,5 @@ logger = logging.getLogger(__name__)
 def practice():
     sys_info()
     flash()
-    profile()
+    # profile(n=10_000)  # 54 minutes
+    profile(n=1_000)  # 6 minutes

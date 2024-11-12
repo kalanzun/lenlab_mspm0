@@ -37,7 +37,11 @@ class Terminal(QObject):
         # port.open emits a NoError on errorOccurred in any case
         # in case of an error, it emits errorOccurred a second time with the error
         # on_error_occurred handles the error case
-        return self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite)
+        if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+            self.port.clear()  # windows might have leftovers
+            return True
+
+        return False
 
     def close(self) -> None:
         if self.port.isOpen():

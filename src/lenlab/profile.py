@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from contextlib import closing
 
@@ -15,7 +16,7 @@ from .terminal import Terminal
 logger = logging.getLogger(__name__)
 
 
-def profile():
+def profile(n=200):  # 64s
     port_infos = QSerialPortInfo.availablePorts()
     matches = find_vid_pid(port_infos)
     if not matches:
@@ -43,34 +44,36 @@ def profile():
         assert reply == pack(b"mi28K")
         memory = memory_28k()
 
-        # 64s
-        n_iterations = 200
-        batch_size = 20
-
-        n_iterations = 10_000
-        batch_size = 100
+        batch = 10 if n < 1000 else 100
 
         start = time.time()
         error_count = 0
-        for i in range(n_iterations):
-            try:
-                spy = Spy(terminal.reply)
-                terminal.write(pack(b"mg28K"))  # get 28K
-                reply = spy.run_until_single_arg(timeout=600)
-                assert reply is not None, "reply timeout"
-                check_memory(b"mg28K", memory, reply)
-                # assert i % 7, "test error"
-                print(".", end="")
-                if (i + 1) % batch_size == 0:
-                    print(f" [{int(round((i + 1)/n_iterations*100))}%]")
-            except AssertionError as error:
-                error_count += 1
-                logger.error(error)
+        try:
+            for i in range(n):
+                try:
+                    spy = Spy(terminal.reply)
+                    terminal.write(pack(b"mg28K"))  # get 28K
+                    reply = spy.run_until_single_arg(timeout=600)
+                    assert reply is not None, "reply timeout"
+                    check_memory(b"mg28K", memory, reply)
+                    # assert i % 7, "test error"
+                    print(".", end="")
+                    if (i + 1) % batch == 0:
+                        print(f" [{int(round((i + 1)/n*100))}%]")
+                    else:
+                        sys.stdout.flush()  # print the dot right now
+                except AssertionError as error:
+                    error_count += 1
+                    logger.error(error)
+        except KeyboardInterrupt:
+            logger.error("keyboard interrupt")
+            pass
 
         runtime = time.time() - start
-        net_transfer_rate = int(round(28 * n_iterations / runtime))
+        i += 1
+        net_transfer_rate = int(round(28 * i / runtime))
         runtime = int(round(runtime))
-        logger.info(f"{n_iterations=}")
+        logger.info(f"{i=}")  # actual number of iterations
         logger.info(f"{error_count=}")
         logger.info(f"{runtime=}s")
         logger.info(f"{net_transfer_rate=}KB/s")
