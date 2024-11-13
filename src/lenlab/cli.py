@@ -43,6 +43,15 @@ def flash():
     return 0
 
 
+@command
+def exercise():
+    from lenlab.exercise import exercise
+
+    cli_app = QCoreApplication()  # noqa: F841
+    exercise()
+    return 0
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
 
