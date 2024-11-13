@@ -15,6 +15,8 @@ Packets may arrive incomplete with corrupted data. There seem to be no corrupt b
 | 4 MBaud   | 120                        |
 | 1 MBaud   | 1                          |
 
+Test: `test_protocol.test_28k`
+
 > The application detects and gracefully handles incomplete and corrupt packets.
 
 ## Discovery
