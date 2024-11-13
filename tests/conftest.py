@@ -18,13 +18,13 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def firmware(request):
     if not request.config.getoption("fw"):
         pytest.skip("no firmware")
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def bsl(request):
     if not request.config.getoption("bsl"):
         pytest.skip("no BSL")
