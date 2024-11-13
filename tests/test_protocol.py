@@ -8,6 +8,25 @@ connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
 knock_packet = b"Lk\x00\x00nock"
 
 
+@pytest.fixture(scope="module")
+def send(port):
+    def send(command: bytes):
+        port.write(command)
+
+    return send
+
+
+@pytest.fixture(scope="module")
+def receive(port):
+    def receive(n: int, timeout: int = 100) -> bytes:
+        while port.bytesAvailable() < n:
+            if not port.waitForReadyRead(timeout):
+                raise TimeoutError(f"{port.bytesAvailable()} bytes of {n} bytes received")
+        return port.read(n).data()
+
+    return receive
+
+
 def test_bsl_resilience_to_false_baud_rate(bsl, port: QSerialPort):
     # send the knock packet at 1 MBaud
     port.setBaudRate(1_000_000)

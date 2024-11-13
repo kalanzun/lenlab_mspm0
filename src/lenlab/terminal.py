@@ -1,10 +1,12 @@
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
+from .message import Message
+
 
 class Terminal(QObject):
     ack = Signal()
-    error = Signal(str)
+    error = Signal(Message)
     reply = Signal(bytes)
 
     def __init__(self, port: QSerialPort | None = None):
@@ -59,7 +61,7 @@ class Terminal(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         else:
-            self.error.emit(self.port.errorString())
+            self.error.emit(CommunicationError(self.port.errorString()))
 
     @Slot()
     def on_ready_read(self) -> None:
@@ -73,7 +75,7 @@ class Terminal(QObject):
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)
-                    self.error.emit(f"overlong packet received: {n=}, {packet=}")
+                    self.error.emit(OverlongPacket(n, packet[:12]))
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
@@ -83,4 +85,19 @@ class Terminal(QObject):
 
         else:
             packet = self.read(n)
-            self.error.emit(f"invalid packet received: {n=}, {packet=}")
+            self.error.emit(InvalidPacket(n, packet[:12]))
+
+
+class CommunicationError(Message):
+    english = "Communication error: {0}"
+    german = "Kommunikationsfehler: {0}"
+
+
+class OverlongPacket(Message):
+    english = "Overlong packet received: length = {0}, packet = {1}"
+    german = "Überlanges Paket empfangen: Länge = {0}, Paket = {1}"
+
+
+class InvalidPacket(Message):
+    english = "Invalid packet received: length = {0}, packet = {1}"
+    german = "Ungültiges Paket empfangen: Länge = {0}, Paket = {1}"

@@ -2,7 +2,7 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.launchpad import port_description
+from lenlab.launchpad import find_launchpad
 
 
 def pytest_addoption(parser):
@@ -42,18 +42,15 @@ def port_infos():
     return QSerialPortInfo.availablePorts()
 
 
-@pytest.fixture(scope="session")
-def port_info(port_infos):
-    for port_info in port_infos:
-        if port_info.description() == port_description:
-            return port_info
+@pytest.fixture(scope="module")
+def port(port_infos):
+    matches = find_launchpad(port_infos)
+    if len(matches) == 0:
+        pytest.skip("no launchpad")
+    elif len(matches) > 1:
+        pytest.skip("too many launchpads")
 
-    pytest.skip("no port")
-
-
-@pytest.fixture(scope="session")
-def port(port_info):
-    port = QSerialPort(port_info)
+    port = QSerialPort(matches[0])
     if not port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
         pytest.skip(port.errorString())
 
@@ -62,22 +59,3 @@ def port(port_info):
 
     yield port
     port.close()
-
-
-@pytest.fixture(scope="session")
-def send(port):
-    def send(command: bytes):
-        port.write(command)
-
-    return send
-
-
-@pytest.fixture(scope="session")
-def receive(port):
-    def receive(n: int, timeout: int = 100) -> bytes:
-        while port.bytesAvailable() < n:
-            if not port.waitForReadyRead(timeout):
-                raise TimeoutError(f"{port.bytesAvailable()} bytes of {n} bytes received")
-        return port.read(n).data()
-
-    return receive

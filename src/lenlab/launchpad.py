@@ -1,9 +1,29 @@
+from PySide6.QtSerialPort import QSerialPortInfo
+
 KB = 1024
 
 ti_vid = 0x0451
 ti_pid = 0xBEF3
 
 port_description = "XDS110 Class Application/User UART"
+
+
+def find_vid_pid(port_infos: list[QSerialPortInfo], vid: int = ti_vid, pid: int = ti_pid) -> list[QSerialPortInfo]:
+    return [
+        port_info
+        for port_info in port_infos
+        if port_info.vendorIdentifier() == vid and port_info.productIdentifier() == pid
+    ]
+
+
+def find_description(port_infos: list[QSerialPortInfo], description: str = port_description) -> list[QSerialPortInfo]:
+    return [port_info for port_info in port_infos if port_info.description() == description]
+
+
+def find_launchpad(port_infos: list[QSerialPortInfo]) -> list[QSerialPortInfo]:
+    ti_ports = find_vid_pid(port_infos)
+    matches = find_description(ti_ports)
+    return matches if matches else ti_ports
 
 
 # CRC32, ISO 3309

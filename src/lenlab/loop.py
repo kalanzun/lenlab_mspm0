@@ -1,6 +1,6 @@
 from PySide6.QtCore import QEventLoop
 
-from lenlab.singleshot import SingleShotTimer
+from .singleshot import SingleShotTimer
 
 
 class Loop(QEventLoop):
