@@ -1,8 +1,12 @@
 #include "terminal.h"
 
+#include "memory.h"
+
 #include "ti_msp_dl_config.h"
 
 static const struct Packet knock = { .label = 'L', .code = 'k', .length = 0, .argument = { 'n', 'o', 'c', 'k' } }; // knock
+static const struct Packet mi28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'i', '2', '8', 'K' } }; // init 28K
+static const struct Packet mg28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'g', '2', '8', 'K' } }; // get 28K
 
 struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
@@ -72,6 +76,22 @@ void terminal_tick(void)
     }
 }
 
+static void terminal_init28K(void)
+{
+    uint32_t* restrict payload = (uint32_t*)&memory.payload;
+
+    memory.packet.label = 'L';
+    memory.packet.code = 'm';
+    memory.packet.length = sizeof(memory.payload);
+    packet_copyArgument(&memory.packet, &mg28K); // get 28K
+
+    DL_CRC_setSeed32(CRC, CRC_SEED);
+    for (uint32_t i = 0; i < sizeof(memory.payload) / sizeof(*payload); i++) {
+        DL_CRC_feedData32(CRC, 0);
+        payload[i] = DL_CRC_getResult32(CRC);
+    }
+}
+
 void terminal_main(void)
 {
     if (!terminal.rx_flag) {
@@ -80,6 +100,14 @@ void terminal_main(void)
             case 'k':
                 if (packet_compareArgument(&terminal.cmd, &knock)) {
                     terminal_transmitPacket(&knock);
+                }
+                break;
+            case 'm':
+                if (packet_compareArgument(&terminal.cmd, &mi28K)) { // init 28K
+                    terminal_init28K();
+                    terminal_transmitPacket(&mi28K);
+                } else if (packet_compareArgument(&terminal.cmd, &mg28K)) { // get 28K
+                    terminal_transmitPacket(&memory.packet);
                 }
                 break;
             }
