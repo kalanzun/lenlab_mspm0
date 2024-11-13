@@ -8,7 +8,7 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from .discovery import Discovery, Probe
 from .launchpad import find_vid_pid
 from .loop import Loop
-from .protocol import pack, make_memory_28k, check_memory_28k
+from .protocol import check_memory_28k, make_memory_28k, pack
 from .spy import Spy
 from .terminal import Terminal
 
@@ -36,8 +36,10 @@ def profile(n=200):  # 64s
 
     logger.info(f"Firmware found on {terminal.port_name}")
 
-    estimation = int(round(64 / 200 * n))
-    logger.info(f"Start profiling in {n} iterations. Estimated runtime {estimation} seconds.")
+    estimation = int(round(64 / 200 * n / 60))
+    logger.info(
+        f"Start profiling in {n} iterations. Estimated runtime {estimation} minute{'' if estimation == 1 else 's'}."
+    )
     # logger.info(f"You may cancel with Ctrl+C or Command+.")
 
     with closing(terminal):
