@@ -1,1 +1,7 @@
 .idea/
+
+.theia/
+.settings/
+.clangd
+Debug/
+targetConfigs/
