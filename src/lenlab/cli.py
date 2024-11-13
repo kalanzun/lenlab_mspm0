@@ -17,6 +17,9 @@ def app():
 
 @command
 def sys_info():
+    from lenlab.sys_info import sys_info
+
+    sys_info()
     return 0
 
 
