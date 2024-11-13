@@ -2,6 +2,8 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
+from lenlab.launchpad import port_description
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -42,7 +44,6 @@ def port_infos():
 
 @pytest.fixture(scope="session")
 def port_info(port_infos):
-    port_description = "XDS110 Class Application/User UART"
     for port_info in port_infos:
         if port_info.description() == port_description:
             return port_info
