@@ -36,6 +36,10 @@ def profile():
 
 @command
 def flash():
+    from lenlab.flash import flash
+
+    cli_app = QCoreApplication()  # noqa: F841
+    flash()
     return 0
 
 

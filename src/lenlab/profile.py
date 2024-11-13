@@ -19,7 +19,7 @@ def profile(n=200):  # 64s
     port_infos = QSerialPortInfo.availablePorts()
     matches = find_vid_pid(port_infos)  # let's test discovery and give all launchpad ports
     if not matches:
-        logger.error("No launchpad")
+        logger.error("No Launchpad found")
         return
 
     discovery = Discovery([Probe(Terminal(QSerialPort(port_info))) for port_info in port_infos])

@@ -41,3 +41,11 @@ def crc(values, seed=0xFFFFFFFF, n_bits=8):
             checksum = (checksum >> 1) ^ (crc_polynom & mask)
 
         yield checksum
+
+
+def last(iterator):
+    _item = None
+    for _item in iterator:
+        pass
+
+    return _item

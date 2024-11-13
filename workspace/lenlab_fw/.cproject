@@ -81,6 +81,7 @@
                             <tool id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.873850343" name="Arm Hex Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex">
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.TOOL_ENABLE.1880840452" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.TOOL_ENABLE" value="true" valueType="boolean"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT.577341704" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT" value="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FORMAT.BINARY" valueType="enumerated"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FILE.909624773" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.OUTPUT_FILE" value="${PROJECT_ROOT}/../../src/lenlab/${ProjName}.bin" valueType="string"/>
                                 <outputType id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.outputType__BIN.1709523973" name="Binary File" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.hex.outputType__BIN"/>
                             </tool>
                             <tool id="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.objcopy.2147045116" name="Arm Objcopy Utility" superClass="com.ti.ccstudio.buildDefinitions.TMS470_TICLANG_4.0.objcopy"/>
