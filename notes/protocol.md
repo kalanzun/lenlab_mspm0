@@ -136,4 +136,4 @@ and expects complete packets. Lenlab and BSL packets have the same format and sa
 The receiver does not search for a valid packet in the buffer. Any extra bytes front or back or any invalid prefix
 and the receiver emits an error and clears the buffer. 
 
-Test: `test_rx`
+Test: `test_rx` and `test_terminal`
