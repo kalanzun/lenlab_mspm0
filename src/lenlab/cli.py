@@ -2,6 +2,8 @@ import logging
 import sys
 from argparse import ArgumentParser
 
+from PySide6.QtCore import QCoreApplication
+
 commands = {}
 
 
@@ -25,6 +27,10 @@ def sys_info():
 
 @command
 def profile():
+    from lenlab.profile import profile
+
+    cli_app = QCoreApplication()  # noqa: F841
+    profile()
     return 0
 
 
@@ -33,7 +39,7 @@ def flash():
     return 0
 
 
-def main(argv):
+def main():
     logging.basicConfig(level=logging.INFO)
 
     parser = ArgumentParser()
@@ -51,7 +57,7 @@ def main(argv):
         nargs="?",
     )
 
-    options = parser.parse_args(argv)
+    options = parser.parse_args()
     if options.log:
         handler = logging.FileHandler(options.log, mode="w", encoding="utf-8")
         logging.getLogger().addHandler(handler)
@@ -60,4 +66,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())
