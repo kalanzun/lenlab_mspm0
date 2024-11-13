@@ -1,13 +1,19 @@
 [project]
 name = "lenlab"
-version = "8.0b0"
-description = "Add your description here"
+dynamic = ["version", "description"]
 readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
+# 3.12 adds the type keyword and itertools.batched
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.1.3",
     "pyside6>=6.8.0.2",
 ]
+
+[project.urls]
+Home = "https://github.com/kalanzun/lenlab_mspm0"
 
 [project.scripts]
 lenlab = "lenlab.cli:main"
@@ -21,6 +27,13 @@ dev = [
 [build-system]
 requires = ["hatchling>=1.12.0,<2"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "workspace/lenlab_fw/version.h"
+pattern = '#define VERSION "(?P<version>[^"]+)"'
+
+[tool.uv]
+cache-keys = [{ file = "workspace/lenlab_fw/version.h" }]
 
 [tool.pytest.ini_options]
 addopts = [
