@@ -14,8 +14,7 @@ from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
 
-
-def profile(n=200):  # 64s
+def open_terminal():
     port_infos = QSerialPortInfo.availablePorts()
     matches = find_vid_pid(port_infos)  # let's test discovery and give all launchpad ports
     if not matches:
@@ -30,6 +29,13 @@ def profile(n=200):  # 64s
     loop.run_until(discovery.result, discovery.error, timeout=600)
 
     terminal = spy.get_single_arg()
+    # implicitly del discovery here
+    # terminal doesn't work otherwise
+    return terminal
+
+
+def profile(n=200):  # 64s
+    terminal = open_terminal()
     if terminal is None:
         logger.error("No firmware found")
         return
@@ -70,28 +76,28 @@ def profile(n=200):  # 64s
                 else:
                     sys.stdout.flush()  # print the dot right now
 
-                packet_times.append(int(round((time.time() - packet_start) * 1000)))
+                packet_times.append(int(round((time.time() - packet_start) * 1000)))  # ms
             except AssertionError as error:
                 error_count += 1
                 logger.error(error)
 
-        runtime = time.time() - start
-        i += 1
-        net_transfer_rate = int(round(28 * i / runtime))
-        runtime = int(round(runtime))
+    runtime = time.time() - start
+    i += 1
+    net_transfer_rate = int(round(28 * i / runtime))
+    runtime = int(round(runtime))
 
-        logger.info(f"{i=}")  # actual number of iterations
-        logger.info(f"{error_count=}")
-        logger.info(f"{runtime=}s")
-        logger.info(f"{net_transfer_rate=}KB/s")
+    logger.info(f"{i=}")  # actual number of iterations
+    logger.info(f"{error_count=}")
+    logger.info(f"{runtime=}s")
+    logger.info(f"{net_transfer_rate=}KB/s")
 
-        packet_times.sort()
-        median_packet_time = packet_times[len(packet_times) // 2]
-        min_packet_time = packet_times[0]
-        max_packet_time = packet_times[-1]
-        highest_percentile = packet_times[-len(packet_times) // 100]
+    packet_times.sort()
+    median_packet_time = packet_times[len(packet_times) // 2]
+    min_packet_time = packet_times[0]
+    max_packet_time = packet_times[-1]
+    highest_percentile = packet_times[-len(packet_times) // 100]
 
-        logger.info(f"{median_packet_time=}ms")
-        logger.info(f"{min_packet_time=}ms")
-        logger.info(f"{max_packet_time=}ms")
-        logger.info(f"{highest_percentile=}ms")
+    logger.info(f"{median_packet_time=}ms")
+    logger.info(f"{min_packet_time=}ms")
+    logger.info(f"{max_packet_time=}ms")
+    logger.info(f"{highest_percentile=}ms")
