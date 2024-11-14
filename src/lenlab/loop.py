@@ -10,6 +10,8 @@ class Loop(QEventLoop):
 
         timer.start()
         return_code = self.exec()
+        if return_code == 130 or return_code == -1:  # -1: exec() failed
+            raise RuntimeError("interrupted")
 
         timer.stop()
         for signal, connection in zip(signals, connections, strict=True):

@@ -1,4 +1,5 @@
 import logging
+import signal
 import sys
 from argparse import ArgumentParser
 
@@ -29,7 +30,9 @@ def sys_info():
 def profile():
     from lenlab.profile import profile
 
-    cli_app = QCoreApplication()  # noqa: F841
+    cli_app = QCoreApplication()
+    signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))
+    # the signal will stop any local event loops, too
     profile()
     return 0
 
@@ -38,7 +41,9 @@ def profile():
 def flash():
     from lenlab.flash import flash
 
-    cli_app = QCoreApplication()  # noqa: F841
+    cli_app = QCoreApplication()
+    signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))
+    # the signal will stop any local event loops, too
     flash()
     return 0
 
@@ -47,7 +52,9 @@ def flash():
 def exercise():
     from lenlab.exercise import exercise
 
-    cli_app = QCoreApplication()  # noqa: F841
+    cli_app = QCoreApplication()
+    signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))
+    # the signal will stop any local event loops, too
     exercise()
     return 0
 

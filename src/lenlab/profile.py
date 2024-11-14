@@ -45,7 +45,7 @@ def profile(n=200):  # 64s
     estimation = int(round(64 / 200 * n / 60))
     estimation = f"{estimation} minute{'' if estimation == 1 else 's'}"
     logger.info(f"Start profiling in {n} iterations. Estimated runtime {estimation}.")
-    # logger.info(f"You may cancel with Ctrl+C or Command+.")
+    logger.info(f"You may cancel with Ctrl+C or Command+.")
 
     with closing(terminal):
         spy = Spy(terminal.reply)
@@ -59,26 +59,29 @@ def profile(n=200):  # 64s
         start = time.time()
         error_count = 0
         packet_times = []
-        for i in range(n):
-            try:
-                packet_start = time.time()
+        try:
+            for i in range(n):
+                try:
+                    packet_start = time.time()
 
-                spy = Spy(terminal.reply)
-                terminal.write(pack(b"mg28K"))  # get 28K
-                reply = spy.run_until_single_arg(timeout=400)
-                assert reply is not None, "No reply"
-                check_memory_28k(reply, memory_28k)
-                # assert i % 7, "test error"
-                print(".", end="")
-                if (i + 1) % batch == 0:
-                    print(f" [{int(round((i + 1)/n*100))}%]")
-                else:
-                    sys.stdout.flush()  # print the dot right now
+                    spy = Spy(terminal.reply)
+                    terminal.write(pack(b"mg28K"))  # get 28K
+                    reply = spy.run_until_single_arg(timeout=400)
+                    assert reply is not None, "No reply"
+                    check_memory_28k(reply, memory_28k)
+                    # assert i % 7, "test error"
+                    print(".", end="")
+                    if (i + 1) % batch == 0:
+                        print(f" [{int(round((i + 1)/n*100))}%]")
+                    else:
+                        sys.stdout.flush()  # print the dot right now
 
-                packet_times.append(int(round((time.time() - packet_start) * 1000)))  # ms
-            except AssertionError as error:
-                error_count += 1
-                logger.error(error)
+                    packet_times.append(int(round((time.time() - packet_start) * 1000)))  # ms
+                except AssertionError as error:
+                    error_count += 1
+                    logger.error(error)
+        except RuntimeError as error:
+            logger.error(error)
 
     runtime = time.time() - start
     i += 1
