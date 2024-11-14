@@ -26,8 +26,8 @@ The USB interface of the XDS110 debug chip on the Launchpad has two serial ports
 - XDS110 Class Application/User UART
 - XDS110 Class Auxiliary Data Port
 
-The port information (QtSerialPortInfo) only differs in the description and only on Windows. The order is random.
-MacOS shows four ports per Launchpad without description.
+The port information (QtSerialPortInfo) only differs in the description and only on Windows if the TI driver
+is installed. The order is random. MacOS shows four ports per Launchpad without description.
 
 > Discovery opens all ports, sends a command, and selects the port which receives a reply.
 
