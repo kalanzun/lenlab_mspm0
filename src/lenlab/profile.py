@@ -14,6 +14,7 @@ from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
 
+
 def open_terminal():
     port_infos = QSerialPortInfo.availablePorts()
     matches = find_vid_pid(port_infos)  # let's test discovery and give all launchpad ports
@@ -21,7 +22,7 @@ def open_terminal():
         logger.error("No Launchpad found")
         return
 
-    discovery = Discovery([Probe(Terminal(QSerialPort(port_info))) for port_info in port_infos])
+    discovery = Discovery([Probe(Terminal(QSerialPort(port_info))) for port_info in matches])
     discovery.message.connect(logger.info)
     spy = Spy(discovery.result)
     discovery.start()
@@ -30,7 +31,7 @@ def open_terminal():
 
     terminal = spy.get_single_arg()
     # implicitly del discovery here
-    # terminal doesn't work otherwise
+    # terminal doesn't work otherwise (but why?)
     return terminal
 
 
@@ -41,11 +42,9 @@ def profile(n=200):  # 64s
         return
 
     logger.info(f"Firmware found on {terminal.port_name}")
-
     estimation = int(round(64 / 200 * n / 60))
-    logger.info(
-        f"Start profiling in {n} iterations. Estimated runtime {estimation} minute{'' if estimation == 1 else 's'}."
-    )
+    estimation = f"{estimation} minute{'' if estimation == 1 else 's'}"
+    logger.info(f"Start profiling in {n} iterations. Estimated runtime {estimation}.")
     # logger.info(f"You may cancel with Ctrl+C or Command+.")
 
     with closing(terminal):

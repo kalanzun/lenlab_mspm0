@@ -156,8 +156,8 @@ class BootstrapLoader(QObject):
         self.terminal.error.connect(self.on_error)
 
         if self.terminal.open():
-            self.terminal.set_baud_rate(9_600)
             self.message.emit(Connect(self.terminal.port_name))
+            self.terminal.set_baud_rate(9_600)
             self.command(self.CONNECT, self.on_connected, ack_mode=True, timeout=300)
 
     def on_connected(self):

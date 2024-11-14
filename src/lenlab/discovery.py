@@ -14,6 +14,7 @@ class Probe(QObject):
         super().__init__()
 
         self.terminal = terminal
+        self.unsuccessful = False
 
         self.timer = SingleShotTimer(self.on_timeout, timeout=300)
 
@@ -23,13 +24,16 @@ class Probe(QObject):
 
         # on_error handles the error case
         if self.terminal.open():
+            self.timer.start()
             self.terminal.set_baud_rate(1_000_000)
             self.terminal.write(pack(b"knock"))
-            self.timer.start()
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
         self.timer.stop()
+        self.terminal.close()
+        # a terminal might send more than one error
+        self.unsuccessful = True
         self.error.emit(error)
 
     @Slot(bytes)
@@ -42,11 +46,13 @@ class Probe(QObject):
             self.result.emit(self.terminal)
         else:
             self.terminal.close()
+            self.unsuccessful = True
             self.error.emit(UnexpectedReply(self.terminal.port_name, reply))
 
     @Slot()
     def on_timeout(self) -> None:
         self.terminal.close()
+        self.unsuccessful = True
         self.error.emit(Timeout(self.terminal.port_name))
 
 
@@ -58,7 +64,6 @@ class Discovery(QObject):
     def __init__(self, probes: list[Probe]):
         super().__init__()
         self.probes = probes
-        self.count = len(self.probes)
 
     def start(self) -> None:
         for probe in self.probes:
@@ -69,8 +74,7 @@ class Discovery(QObject):
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
-        self.count -= 1
-        if self.count == 0:
+        if all(probe.unsuccessful for probe in self.probes):
             self.error.emit(Nothing())
 
 

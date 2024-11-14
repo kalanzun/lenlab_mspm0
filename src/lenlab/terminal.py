@@ -1,7 +1,11 @@
+import logging
+
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
 from .message import Message
+
+logger = logging.getLogger(__name__)
 
 
 class Terminal(QObject):
@@ -24,6 +28,7 @@ class Terminal(QObject):
         return self.port.bytesAvailable()
 
     def set_baud_rate(self, baud_rate: int):
+        logger.debug(f"{self.port_name}: set_baud_rate:  {baud_rate}")
         self.port.setBaudRate(baud_rate)
 
     def open(self) -> bool:
@@ -37,7 +42,9 @@ class Terminal(QObject):
         # port.open emits a NoError on errorOccurred in any case
         # in case of an error, it emits errorOccurred a second time with the error
         # on_error_occurred handles the error case
+        logger.debug(f"{self.port_name}: open")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
+            logger.debug(f"{self.port_name}: clear")
             self.port.clear()  # windows might have leftovers
             return True
 
@@ -45,6 +52,7 @@ class Terminal(QObject):
 
     def close(self) -> None:
         if self.port.isOpen():
+            logger.debug(f"{self.port_name}: close")
             self.port.close()
 
     def peek(self, n: int) -> bytes:
@@ -61,7 +69,7 @@ class Terminal(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         else:
-            self.error.emit(CommunicationError(self.port.errorString()))
+            self.error.emit(CommunicationError(self.port_name, self.port.errorString()))
 
     @Slot()
     def on_ready_read(self) -> None:
@@ -89,8 +97,8 @@ class Terminal(QObject):
 
 
 class CommunicationError(Message):
-    english = "Communication error: {0}"
-    german = "Kommunikationsfehler: {0}"
+    english = "Communication error on {0}: {1}"
+    german = "Kommunikationsfehler auf {0}: {1}"
 
 
 class OverlongPacket(Message):
