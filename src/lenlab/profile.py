@@ -66,7 +66,7 @@ def profile(n=200):  # 64s
 
                     spy = Spy(terminal.reply)
                     terminal.write(pack(b"mg28K"))  # get 28K
-                    reply = spy.run_until_single_arg(timeout=400)
+                    reply = spy.run_until_single_arg()
                     assert reply is not None, "No reply"
                     check_memory_28k(reply, memory_28k)
                     # assert i % 7, "test error"

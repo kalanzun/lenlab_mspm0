@@ -64,7 +64,7 @@ def memory_28k(terminal: Terminal) -> np.ndarray:
 def test_28k(firmware, terminal: Terminal, memory_28k: np.ndarray):
     spy = Spy(terminal.reply)
     terminal.write(pack(b"mg28K"))  # get 28K
-    reply = spy.run_until_single_arg(timeout=400)
+    reply = spy.run_until_single_arg()
     assert reply is not None
     check_memory_28k(reply, memory_28k)
 

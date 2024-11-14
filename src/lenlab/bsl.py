@@ -140,12 +140,15 @@ class BootstrapLoader(QObject):
         self.terminal.close()
         self.error.emit(NoReply(self.terminal.port_name))
 
-    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 100):
+    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 0):
         self.terminal.ack_mode = ack_mode
         self.terminal.write(pack(command))
 
         self.callback = callback
-        self.timer.start(timeout)
+        if timeout:
+            self.timer.start(timeout)
+        else:
+            self.timer.start()
 
     def program(self, firmware: bytes):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
@@ -158,7 +161,7 @@ class BootstrapLoader(QObject):
         if self.terminal.open():
             self.message.emit(Connect(self.terminal.port_name))
             self.terminal.set_baud_rate(9_600)
-            self.command(self.CONNECT, self.on_connected, ack_mode=True, timeout=300)
+            self.command(self.CONNECT, self.on_connected, ack_mode=True)
 
     def on_connected(self):
         self.message.emit(Connected(self.terminal.port_name))
@@ -187,7 +190,7 @@ class BootstrapLoader(QObject):
             raise ErrorReply(reply)
 
         self.message.emit(Erase())
-        self.command(bytes([0x15]), self.on_erased, timeout=300)
+        self.command(bytes([0x15]), self.on_erased)
 
     def on_erased(self, reply: bytes):
         if not reply == self.OK:
@@ -200,7 +203,7 @@ class BootstrapLoader(QObject):
         # batch is a tuple of ints (single bytes)
         i, batch = next(self.enumerate_batched)
         payload = b"".join([b"\x24", (i * self.batch_size).to_bytes(4, byteorder="little"), bytes(batch)])
-        self.command(payload, self.on_programmed, ack_mode=True, timeout=300)
+        self.command(payload, self.on_programmed, ack_mode=True)
 
     def on_programmed(self):
         try:

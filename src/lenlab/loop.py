@@ -4,7 +4,7 @@ from .singleshot import SingleShotTimer
 
 
 class Loop(QEventLoop):
-    def run_until(self, *signals, timeout: int = 100) -> bool:
+    def run_until(self, *signals, timeout: int = 0) -> bool:
         connections = [signal.connect(lambda: self.exit(0)) for signal in signals]
         timer = SingleShotTimer(lambda: self.exit(1), timeout)
 

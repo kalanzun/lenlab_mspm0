@@ -28,5 +28,5 @@ def flash():
 
     programmer.program(firmware_bin)
     loop = Loop()
-    event = loop.run_until(programmer.success, programmer.error, timeout=600)
+    event = loop.run_until(programmer.success, programmer.error, timeout=800)
     assert event, "At least one bootstrap loader did neither emit an error nor the success signal"

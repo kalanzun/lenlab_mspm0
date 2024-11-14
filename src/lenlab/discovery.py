@@ -16,7 +16,7 @@ class Probe(QObject):
         self.terminal = terminal
         self.unsuccessful = False
 
-        self.timer = SingleShotTimer(self.on_timeout, timeout=300)
+        self.timer = SingleShotTimer(self.on_timeout)
 
     def start(self) -> None:
         self.terminal.error.connect(self.on_error)

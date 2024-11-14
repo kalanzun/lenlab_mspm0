@@ -18,7 +18,7 @@ def send(port):
 
 @pytest.fixture(scope="module")
 def receive(port):
-    def receive(n: int, timeout: int = 100) -> bytes:
+    def receive(n: int, timeout: int = 400) -> bytes:
         while port.bytesAvailable() < n:
             if not port.waitForReadyRead(timeout):
                 raise TimeoutError(f"{port.bytesAvailable()} bytes of {n} bytes received")
@@ -31,12 +31,12 @@ def test_bsl_resilience_to_false_baud_rate(bsl, port: QSerialPort):
     # send the knock packet at 1 MBaud
     port.setBaudRate(1_000_000)
     port.write(knock_packet)
-    assert not port.waitForReadyRead(100), "BSL should not reply"
+    assert not port.waitForReadyRead(400), "BSL should not reply"
 
     # send the BSL connect packet at 9600 Baud
     port.setBaudRate(9_600)
     port.write(connect_packet)
-    assert port.waitForReadyRead(100), "BSL should reply"
+    assert port.waitForReadyRead(400), "BSL should reply"
 
     # assume cold BSL
     # warm BSL for further tests
@@ -48,12 +48,12 @@ def test_firmware_resilience_to_false_baud_rate(firmware, port: QSerialPort):
     # send the BSL connect packet at 9600 Baud
     port.setBaudRate(9_600)
     port.write(connect_packet)
-    assert not port.waitForReadyRead(100), "Firmware should not reply"
+    assert not port.waitForReadyRead(400), "Firmware should not reply"
 
     # send the knock packet at 1 MBaud
     port.setBaudRate(1_000_000)
     port.write(knock_packet)
-    assert port.waitForReadyRead(100), "Firmware should reply"
+    assert port.waitForReadyRead(400), "Firmware should reply"
 
     reply = port.readAll().data()
     assert reply == knock_packet
@@ -81,5 +81,5 @@ def test_28k(firmware, send, receive, memory_28k):
     # 1 MBaud: about 2 invalid packets per 100 MB
     #     round trip time: 320 ms, net transfer rate 90 KB/s
     send(pack(b"mg28K"))  # get 28K
-    reply = receive(28 * KB, timeout=400)
+    reply = receive(28 * KB)
     check_memory_28k(reply, memory_28k)
