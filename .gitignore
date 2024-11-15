@@ -1,4 +1,6 @@
 .idea/
+.venv/
+dist/
 
 .theia/
 .settings/
