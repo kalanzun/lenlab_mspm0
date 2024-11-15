@@ -3,7 +3,10 @@ import signal
 import sys
 from argparse import ArgumentParser
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QLocale
+from PySide6.QtWidgets import QApplication
+
+from lenlab.message import Message
 
 commands = {}
 
@@ -15,7 +18,17 @@ def command(func):
 
 @command
 def app():
-    return 0
+    from lenlab.app.window import MainWindow
+
+    gui_app = QApplication(sys.argv)
+
+    if QLocale().language() == QLocale.Language.German:
+        Message.language = "german"
+
+    window = MainWindow()
+    window.show()
+
+    return gui_app.exec()
 
 
 @command
