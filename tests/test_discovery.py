@@ -3,11 +3,11 @@ from logging import getLogger
 import pytest
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.discovery import Discovery, Probe
-from lenlab.launchpad import find_vid_pid
+from lenlab.launchpad.discovery import Discovery, Probe
+from lenlab.launchpad.launchpad import find_vid_pid
+from lenlab.launchpad.terminal import Terminal
 from lenlab.loop import Loop
 from lenlab.spy import Spy
-from lenlab.terminal import Terminal
 
 logger = getLogger(__name__)
 

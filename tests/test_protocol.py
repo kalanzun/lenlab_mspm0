@@ -1,8 +1,8 @@
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad import KB
-from lenlab.protocol import check_memory_28k, make_memory_28k, pack
+from lenlab.launchpad.launchpad import KB
+from lenlab.launchpad.protocol import check_memory_28k, make_memory_28k, pack
 
 connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
 knock_packet = b"Lk\x00\x00nock"

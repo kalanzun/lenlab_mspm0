@@ -2,7 +2,7 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from lenlab.launchpad import find_launchpad
+from lenlab.launchpad.launchpad import find_launchpad
 
 
 def pytest_addoption(parser):

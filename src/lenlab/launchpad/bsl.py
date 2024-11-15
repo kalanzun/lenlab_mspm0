@@ -16,9 +16,9 @@ from typing import Self
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from ..message import Message
+from ..singleshot import SingleShotTimer
 from .launchpad import KB, crc, last
-from .message import Message
-from .singleshot import SingleShotTimer
 from .terminal import Terminal
 
 logger = logging.getLogger(__name__)

@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.protocol import check_memory_28k, make_memory_28k, pack
+from lenlab.launchpad.protocol import check_memory_28k, make_memory_28k, pack
+from lenlab.launchpad.terminal import Terminal
 from lenlab.spy import Spy
-from lenlab.terminal import Terminal
 
 
 @pytest.fixture(scope="module")

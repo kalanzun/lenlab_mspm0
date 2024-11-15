@@ -5,10 +5,10 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 import lenlab
 
-from .bsl import BootstrapLoader, Programmer
-from .launchpad import find_vid_pid
-from .loop import Loop
-from .terminal import Terminal
+from ..launchpad.bsl import BootstrapLoader, Programmer
+from ..launchpad.launchpad import find_vid_pid
+from ..launchpad.terminal import Terminal
+from ..loop import Loop
 
 logger = logging.getLogger(__name__)
 

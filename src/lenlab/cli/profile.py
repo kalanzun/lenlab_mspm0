@@ -5,12 +5,12 @@ from contextlib import closing
 
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from .discovery import Discovery, Probe
-from .launchpad import find_vid_pid
-from .loop import Loop
-from .protocol import check_memory_28k, make_memory_28k, pack
-from .spy import Spy
-from .terminal import Terminal
+from ..launchpad.discovery import Discovery, Probe
+from ..launchpad.launchpad import find_vid_pid
+from ..launchpad.protocol import check_memory_28k, make_memory_28k, pack
+from ..launchpad.terminal import Terminal
+from ..loop import Loop
+from ..spy import Spy
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def profile(n=200):  # 64s
     estimation = int(round(64 / 200 * n / 60))
     estimation = f"{estimation} minute{'' if estimation == 1 else 's'}"
     logger.info(f"Start profiling in {n} iterations. Estimated runtime {estimation}.")
-    logger.info(f"You may cancel with Ctrl+C or Command+.")
+    logger.info("You may cancel with Ctrl+C or Command+.")
 
     with closing(terminal):
         spy = Spy(terminal.reply)

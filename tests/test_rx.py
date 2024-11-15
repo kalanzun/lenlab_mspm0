@@ -1,7 +1,7 @@
 import pytest
 
+from lenlab.launchpad.terminal import Terminal
 from lenlab.spy import Spy
-from lenlab.terminal import Terminal
 
 
 class StaticReplyTerminal(Terminal):

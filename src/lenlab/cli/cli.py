@@ -20,7 +20,7 @@ def app():
 
 @command
 def sys_info():
-    from lenlab.sys_info import sys_info
+    from lenlab.cli.sys_info import sys_info
 
     sys_info()
     return 0
@@ -28,7 +28,7 @@ def sys_info():
 
 @command
 def profile():
-    from lenlab.profile import profile
+    from lenlab.cli.profile import profile
 
     cli_app = QCoreApplication()
     signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))
@@ -39,7 +39,7 @@ def profile():
 
 @command
 def flash():
-    from lenlab.flash import flash
+    from lenlab.cli.flash import flash
 
     cli_app = QCoreApplication()
     signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))
@@ -50,7 +50,7 @@ def flash():
 
 @command
 def exercise():
-    from lenlab.exercise import exercise
+    from lenlab.cli.exercise import exercise
 
     cli_app = QCoreApplication()
     signal.signal(signal.SIGINT, lambda signum, frame: cli_app.exit(130))

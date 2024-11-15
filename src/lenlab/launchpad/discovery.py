@@ -1,8 +1,8 @@
 from PySide6.QtCore import QObject, Signal, Slot
 
-from .message import Message
+from ..message import Message
+from ..singleshot import SingleShotTimer
 from .protocol import pack
-from .singleshot import SingleShotTimer
 from .terminal import Terminal
 
 

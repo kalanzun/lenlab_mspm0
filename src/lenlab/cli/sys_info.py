@@ -6,7 +6,7 @@ from contextlib import closing
 from PySide6.QtCore import QIODeviceBase, QSysInfo
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
-from . import launchpad
+from ..launchpad import launchpad
 
 logger = logging.getLogger(__name__)
 

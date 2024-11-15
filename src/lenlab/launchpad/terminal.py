@@ -3,7 +3,7 @@ import logging
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
-from .message import Message
+from ..message import Message
 
 logger = logging.getLogger(__name__)
 
