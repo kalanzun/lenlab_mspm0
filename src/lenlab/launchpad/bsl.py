@@ -172,10 +172,11 @@ class BootstrapLoader(QObject):
         self.error.emit(NoReply(self.terminal.port_name))
 
     def cancel(self) -> None:
-        self.timer.stop()
-        self.terminal.close()
-        self.unsuccessful = True
-        self.error.emit(Cancelled(self.terminal.port_name))
+        if not self.unsuccessful:
+            self.timer.stop()
+            self.terminal.close()
+            self.unsuccessful = True
+            self.error.emit(Cancelled(self.terminal.port_name))
 
     def on_connected(self):
         self.message.emit(Connected(self.terminal.port_name))
@@ -237,6 +238,7 @@ class Programmer(QObject):
     error = Signal(Message)
 
     bootstrap_loaders: list[BootstrapLoader]
+    n_messages: int
 
     def program(self):
         port_infos = QSerialPortInfo.availablePorts()
@@ -245,6 +247,7 @@ class Programmer(QObject):
             self.error.emit(NoLaunchpad())
             return
 
+        self.n_messages = 2 * len(matches) + 7  # two messages for each bsl and 7 more for the successful one
         self.start([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in matches])
 
     def start(self, bootstrap_loaders: list[BootstrapLoader]) -> None:
@@ -261,7 +264,9 @@ class Programmer(QObject):
 
     @Slot()
     def on_success(self):
-        self.message.emit(ProgrammingSuccessful())
+        for bsl in self.bootstrap_loaders:
+            if bsl is not self.sender():
+                bsl.cancel()
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
@@ -347,11 +352,6 @@ class Restart(Message):
 class NoLaunchpad(Message):
     english = "No Launchpad found"
     german = "Kein Launchpad gefunden"
-
-
-class ProgrammingSuccessful(Message):
-    english = "Programming successful"
-    german = "Programmieren erfolgreich"
 
 
 class ProgrammingFailed(Message):

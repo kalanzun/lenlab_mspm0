@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -17,30 +18,29 @@ from .figure import LaunchpadFigure
 class ProgrammerWidget(QWidget):
     title = "Programmer"
 
+    programmer: Programmer
+
     def __init__(self):
         super().__init__()
-
-        self.programmer = None
 
         introduction = QLabel(self)
         introduction.setText(str(Introduction()))
 
         self.program_button = QPushButton("Program")
         self.program_button.clicked.connect(self.on_program_clicked)
-
-        self.result = MessageBanner(button=False)
-        self.result.set_warning(Start())
-
+        self.progress_bar = QProgressBar()
         self.messages = QPlainTextEdit()
         self.messages.setReadOnly(True)
+        self.banner = MessageBanner(button=False)
 
         figure = LaunchpadFigure()
 
         program_layout = QVBoxLayout()
         program_layout.addWidget(introduction)
         program_layout.addWidget(self.program_button)
-        program_layout.addWidget(self.result)
+        program_layout.addWidget(self.progress_bar)
         program_layout.addWidget(self.messages)
+        program_layout.addWidget(self.banner)
 
         layout = QHBoxLayout()
         layout.addLayout(program_layout)
@@ -51,8 +51,10 @@ class ProgrammerWidget(QWidget):
     @Slot()
     def on_program_clicked(self):
         self.program_button.setEnabled(False)
+        self.progress_bar.setMaximum(1)
+        self.progress_bar.setValue(0)
         self.messages.clear()
-        self.result.set_warning(Programming())
+        self.banner.hide()
 
         self.programmer = Programmer()
         self.programmer.message.connect(self.on_message)
@@ -60,20 +62,22 @@ class ProgrammerWidget(QWidget):
         self.programmer.error.connect(self.on_error)
 
         self.programmer.program()
+        self.progress_bar.setMaximum(self.programmer.n_messages - 1)
 
     @Slot(Message)
     def on_message(self, message: Message):
+        self.progress_bar.setValue(self.progress_bar.value() + 1)
         self.messages.appendPlainText(str(message))
 
     @Slot()
     def on_success(self):
         self.program_button.setEnabled(True)
-        self.result.set_info(Successful())
+        self.banner.set_success(Successful())
 
     @Slot(Message)
     def on_error(self, error: Message):
         self.program_button.setEnabled(True)
-        self.result.set_error(error)
+        self.banner.set_error(error)
 
 
 class Introduction(Message):

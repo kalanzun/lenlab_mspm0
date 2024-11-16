@@ -11,7 +11,7 @@ class MessageBanner(QWidget):
     def __init__(self, button=True):
         super().__init__()
 
-        # self.setHidden(True)
+        self.setHidden(True)
         self.setAutoFillBackground(True)
 
         self.symbol_widget = QSvgWidget()
@@ -32,7 +32,7 @@ class MessageBanner(QWidget):
         self.setLayout(layout)
 
     @Slot(Message)
-    def set_info(self, message: Message):
+    def set_success(self, message: Message):
         self.setPalette(QPalette(QColor(0, 0x80, 0)))
         self.symbol_widget.load(symbols.info)
         self.text_label.setText(str(message))

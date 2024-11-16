@@ -57,10 +57,11 @@ class Probe(QObject):
         self.error.emit(Timeout(self.terminal.port_name))
 
     def cancel(self) -> None:
-        self.timer.stop()
-        self.terminal.close()
-        self.unsuccessful = True
-        self.error.emit(Cancelled(self.terminal.port_name))
+        if not self.unsuccessful:
+            self.timer.stop()
+            self.terminal.close()
+            self.unsuccessful = True
+            self.error.emit(Cancelled(self.terminal.port_name))
 
 
 class Discovery(QObject):
@@ -90,15 +91,15 @@ class Discovery(QObject):
             probe.start()
 
     @Slot(Message)
-    def on_error(self, error: Message) -> None:
-        if all(probe.unsuccessful for probe in self.probes):
-            self.error.emit(Nothing())
-
-    @Slot(Message)
     def on_result(self, result: Terminal) -> None:
         for probe in self.probes:
             if probe is not self.sender():
                 probe.cancel()
+
+    @Slot(Message)
+    def on_error(self, error: Message) -> None:
+        if all(probe.unsuccessful for probe in self.probes):
+            self.error.emit(Nothing())
 
 
 class UnexpectedReply(Message):
