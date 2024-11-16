@@ -8,21 +8,7 @@ from . import symbols
 
 
 class MessageBanner(QWidget):
-    """
-    palette_by_category = {
-        Category.ERROR: QPalette(QColor(0x80, 0, 0)),
-        Category.WARNING: QPalette(QColor(0x80, 0x80, 0)),
-        Category.INFO: QPalette(QColor(0, 0x80, 0)),
-    }
-
-    symbol_by_category = {
-        Category.ERROR: symbols.error,
-        Category.WARNING: symbols.warning,
-        Category.INFO: symbols.info,
-    }
-    """
-
-    def __init__(self):
+    def __init__(self, button=True):
         super().__init__()
 
         # self.setHidden(True)
@@ -36,7 +22,8 @@ class MessageBanner(QWidget):
 
         body = QVBoxLayout()
         body.addWidget(self.text_label)
-        body.addWidget(self.retry_button, 0, Qt.AlignmentFlag.AlignRight)
+        if button:
+            body.addWidget(self.retry_button, 0, Qt.AlignmentFlag.AlignRight)
 
         layout = QHBoxLayout()
         layout.addWidget(self.symbol_widget)
@@ -45,7 +32,21 @@ class MessageBanner(QWidget):
         self.setLayout(layout)
 
     @Slot(Message)
-    def set_message(self, message: Message):
+    def set_info(self, message: Message):
+        self.setPalette(QPalette(QColor(0, 0x80, 0)))
+        self.symbol_widget.load(symbols.info)
+        self.text_label.setText(str(message))
+        self.show()
+
+    @Slot(Message)
+    def set_warning(self, message: Message):
+        self.setPalette(QPalette(QColor(0x80, 0x80, 0)))
+        self.symbol_widget.load(symbols.warning)
+        self.text_label.setText(str(message))
+        self.show()
+
+    @Slot(Message)
+    def set_error(self, message: Message):
         self.setPalette(QPalette(QColor(0x80, 0, 0)))
         self.symbol_widget.load(symbols.error)
         self.text_label.setText(str(message))

@@ -3,12 +3,8 @@ import sys
 import time
 from contextlib import closing
 
-from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
-
-from ..launchpad.discovery import Discovery, Probe
-from ..launchpad.launchpad import find_vid_pid
+from ..launchpad.discovery import Discovery
 from ..launchpad.protocol import check_memory_28k, make_memory_28k, pack
-from ..launchpad.terminal import Terminal
 from ..loop import Loop
 from ..spy import Spy
 
@@ -16,16 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 def open_terminal():
-    port_infos = QSerialPortInfo.availablePorts()
-    matches = find_vid_pid(port_infos)  # let's test discovery and give all launchpad ports
-    if not matches:
-        logger.error("No Launchpad found")
-        return
-
-    discovery = Discovery([Probe(Terminal(QSerialPort(port_info))) for port_info in matches])
+    discovery = Discovery()
     discovery.message.connect(logger.info)
     spy = Spy(discovery.result)
-    discovery.start()
+    discovery.discover()
     loop = Loop()
     loop.run_until(discovery.result, discovery.error, timeout=600)
 

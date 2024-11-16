@@ -1,7 +1,9 @@
 from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from ..message import Message
 from ..singleshot import SingleShotTimer
+from .launchpad import find_vid_pid
 from .protocol import pack
 from .terminal import Terminal
 
@@ -15,7 +17,6 @@ class Probe(QObject):
 
         self.terminal = terminal
         self.unsuccessful = False
-
         self.timer = SingleShotTimer(self.on_timeout)
 
     def start(self) -> None:
@@ -55,19 +56,35 @@ class Probe(QObject):
         self.unsuccessful = True
         self.error.emit(Timeout(self.terminal.port_name))
 
+    def cancel(self) -> None:
+        self.timer.stop()
+        self.terminal.close()
+        self.unsuccessful = True
+        self.error.emit(Cancelled(self.terminal.port_name))
+
 
 class Discovery(QObject):
     message = Signal(Message)
     result = Signal(Terminal)
     error = Signal(Message)
 
-    def __init__(self, probes: list[Probe]):
-        super().__init__()
+    probes: list[Probe]
+
+    def discover(self):
+        port_infos = QSerialPortInfo.availablePorts()
+        matches = find_vid_pid(port_infos)
+        if not matches:
+            self.error.emit(NoLaunchpad())
+            return
+
+        self.start([Probe(Terminal(QSerialPort(port_info))) for port_info in matches])
+
+    def start(self, probes: list[Probe]) -> None:
         self.probes = probes
 
-    def start(self) -> None:
         for probe in self.probes:
             probe.result.connect(self.result)
+            probe.result.connect(self.on_result)
             probe.error.connect(self.message)
             probe.error.connect(self.on_error)
             probe.start()
@@ -76,6 +93,12 @@ class Discovery(QObject):
     def on_error(self, error: Message) -> None:
         if all(probe.unsuccessful for probe in self.probes):
             self.error.emit(Nothing())
+
+    @Slot(Message)
+    def on_result(self, result: Terminal) -> None:
+        for probe in self.probes:
+            if probe is not self.sender():
+                probe.cancel()
 
 
 class UnexpectedReply(Message):
@@ -86,6 +109,16 @@ class UnexpectedReply(Message):
 class Timeout(Message):
     english = "Probe timeout on {0}"
     german = "Probezeit abgelaufen auf {0}"
+
+
+class NoLaunchpad(Message):
+    english = "No Launchpad found"
+    german = "Kein Launchpad gefunden"
+
+
+class Cancelled(Message):
+    english = "Cancelled on {0}"
+    german = "Abgebrochen auf {0}"
 
 
 class Nothing(Message):

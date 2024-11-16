@@ -4,7 +4,7 @@ from ..model.lenlab import Lenlab
 from .banner import MessageBanner
 from .bode import BodePlotter
 from .oscilloscope import Oscilloscope
-from .programmer import Programmer
+from .programmer import ProgrammerWidget
 from .voltmeter import Voltmeter
 
 
@@ -20,7 +20,7 @@ class MainWindow(QMainWindow):
         self.lenlab = Lenlab()
         # self.lenlab.error.connect(message_banner.set_message)
 
-        programmer = Programmer()
+        programmer = ProgrammerWidget()
         voltmeter = Voltmeter(self.lenlab)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)

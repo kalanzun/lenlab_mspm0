@@ -10,15 +10,19 @@ import logging
 import struct
 from collections.abc import Callable
 from dataclasses import dataclass, fields
+from importlib import resources
 from io import BytesIO
 from itertools import batched
 from typing import Self
 
 from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
+
+import lenlab
 
 from ..message import Message
 from ..singleshot import SingleShotTimer
-from .launchpad import KB, crc, last
+from .launchpad import KB, crc, find_vid_pid, last
 from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
@@ -100,8 +104,31 @@ class BootstrapLoader(QObject):
         super().__init__()
 
         self.terminal = terminal
-
+        self.unsuccessful = False
         self.timer = SingleShotTimer(self.on_timeout)
+
+    def start(self, firmware: bytes):
+        self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
+        self.firmware_size = len(firmware)
+
+        self.terminal.ack.connect(self.on_ack)
+        self.terminal.reply.connect(self.on_reply)
+        self.terminal.error.connect(self.on_error)
+
+        if self.terminal.open():
+            self.message.emit(Connect(self.terminal.port_name))
+            self.terminal.set_baud_rate(9_600)
+            self.command(self.CONNECT, self.on_connected, ack_mode=True)
+
+    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 0):
+        self.terminal.ack_mode = ack_mode
+        self.terminal.write(pack(command))
+
+        self.callback = callback
+        if timeout:
+            self.timer.start(timeout)
+        else:
+            self.timer.start()
 
     @Slot()
     def on_ack(self):
@@ -114,6 +141,7 @@ class BootstrapLoader(QObject):
 
         except Message as error:
             self.terminal.close()
+            self.unsuccessful = True
             self.error.emit(error)
 
     @Slot(bytes)
@@ -128,40 +156,26 @@ class BootstrapLoader(QObject):
 
         except Message as error:
             self.terminal.close()
+            self.unsuccessful = True
             self.error.emit(error)
 
     @Slot(Message)
     def on_error(self, error: Message):
         self.timer.stop()
+        self.unsuccessful = True
         self.error.emit(error)
 
     @Slot()
     def on_timeout(self):
         self.terminal.close()
+        self.unsuccessful = True
         self.error.emit(NoReply(self.terminal.port_name))
 
-    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 0):
-        self.terminal.ack_mode = ack_mode
-        self.terminal.write(pack(command))
-
-        self.callback = callback
-        if timeout:
-            self.timer.start(timeout)
-        else:
-            self.timer.start()
-
-    def program(self, firmware: bytes):
-        self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
-        self.firmware_size = len(firmware)
-
-        self.terminal.ack.connect(self.on_ack)
-        self.terminal.reply.connect(self.on_reply)
-        self.terminal.error.connect(self.on_error)
-
-        if self.terminal.open():
-            self.message.emit(Connect(self.terminal.port_name))
-            self.terminal.set_baud_rate(9_600)
-            self.command(self.CONNECT, self.on_connected, ack_mode=True)
+    def cancel(self) -> None:
+        self.timer.stop()
+        self.terminal.close()
+        self.unsuccessful = True
+        self.error.emit(Cancelled(self.terminal.port_name))
 
     def on_connected(self):
         self.message.emit(Connected(self.terminal.port_name))
@@ -222,19 +236,28 @@ class Programmer(QObject):
     success = Signal()
     error = Signal(Message)
 
-    def __init__(self, bootstrap_loaders: list[BootstrapLoader]):
-        super().__init__()
-        self.bootstrap_loaders = bootstrap_loaders
-        self.count = len(self.bootstrap_loaders)
+    bootstrap_loaders: list[BootstrapLoader]
 
-    def program(self, firmware: bytes) -> None:
+    def program(self):
+        port_infos = QSerialPortInfo.availablePorts()
+        matches = find_vid_pid(port_infos)
+        if not matches:
+            self.error.emit(NoLaunchpad())
+            return
+
+        self.start([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in matches])
+
+    def start(self, bootstrap_loaders: list[BootstrapLoader]) -> None:
+        self.bootstrap_loaders = bootstrap_loaders
+        firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
+
         for bsl in self.bootstrap_loaders:
             bsl.message.connect(self.message)
             bsl.success.connect(self.on_success)
             bsl.success.connect(self.success)
             bsl.error.connect(self.message)
             bsl.error.connect(self.on_error)
-            bsl.program(firmware)
+            bsl.start(firmware)
 
     @Slot()
     def on_success(self):
@@ -242,8 +265,7 @@ class Programmer(QObject):
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
-        self.count -= 1
-        if self.count == 0:
+        if all(bsl.unsuccessful for bsl in self.bootstrap_loaders):
             self.error.emit(ProgrammingFailed())
 
 
@@ -265,6 +287,11 @@ class ErrorReply(Message):
 class NoReply(Message):
     english = "No reply received on {0}"
     german = "Keine Antwort erhalten auf {0}"
+
+
+class Cancelled(Message):
+    english = "Cancelled on {0}"
+    german = "Abgebrochen auf {0}"
 
 
 class Connect(Message):
@@ -315,6 +342,11 @@ class WriteFirmware(Message):
 class Restart(Message):
     english = "Restart"
     german = "Neustarten"
+
+
+class NoLaunchpad(Message):
+    english = "No Launchpad found"
+    german = "Kein Launchpad gefunden"
 
 
 class ProgrammingSuccessful(Message):
