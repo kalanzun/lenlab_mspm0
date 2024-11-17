@@ -66,7 +66,8 @@ def profile(n=200):  # 64s
                     else:
                         sys.stdout.flush()  # print the dot right now
 
-                    packet_times.append(int(round((time.time() - packet_start) * 1000)))  # ms
+                    packet_time = int(round((time.time() - packet_start) * 1000))  # ms
+                    packet_times.append(packet_time)
                 except AssertionError as error:
                     error_count += 1
                     logger.error(error)

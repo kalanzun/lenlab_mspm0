@@ -8,7 +8,9 @@ ti_pid = 0xBEF3
 port_description = "XDS110 Class Application/User UART"
 
 
-def find_vid_pid(port_infos: list[QSerialPortInfo], vid: int = ti_vid, pid: int = ti_pid) -> list[QSerialPortInfo]:
+def find_vid_pid(
+    port_infos: list[QSerialPortInfo], vid: int = ti_vid, pid: int = ti_pid
+) -> list[QSerialPortInfo]:
     return [
         port_info
         for port_info in port_infos
@@ -16,7 +18,9 @@ def find_vid_pid(port_infos: list[QSerialPortInfo], vid: int = ti_vid, pid: int 
     ]
 
 
-def find_description(port_infos: list[QSerialPortInfo], description: str = port_description) -> list[QSerialPortInfo]:
+def find_description(
+    port_infos: list[QSerialPortInfo], description: str = port_description
+) -> list[QSerialPortInfo]:
     return [port_info for port_info in port_infos if port_info.description() == description]
 
 

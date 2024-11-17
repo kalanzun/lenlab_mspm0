@@ -22,7 +22,7 @@ def test_discovery(request, port_infos: list[QSerialPortInfo]):
 
     loop = Loop()
     event = loop.run_until(discovery.result, discovery.error, timeout=600)
-    assert event, "at least one probe did neither emit an error nor the success signal"
+    assert event, ">= 1 probe did not emit"
 
     terminal = spy.get_single_arg()
     if request.config.getoption("fw"):

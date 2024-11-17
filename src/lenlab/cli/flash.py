@@ -14,4 +14,4 @@ def flash():
 
     loop = Loop()
     event = loop.run_until(programmer.success, programmer.error, timeout=800)
-    assert event, "At least one bootstrap loader did neither emit an error nor the success signal"
+    assert event, ">= 1 BSL did not emit"

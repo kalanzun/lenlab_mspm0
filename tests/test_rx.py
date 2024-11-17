@@ -99,7 +99,9 @@ def test_invalid_postfix(packet):
     assert terminal.capture_error()
 
 
-@pytest.mark.parametrize("packet", [b"L", knock, knock + b"\x00", b"Q", b"QQQQ", b"\x00\x08", b"\x00\x00"])
+@pytest.mark.parametrize(
+    "packet", [b"L", knock, knock + b"\x00", b"Q", b"QQQQ", b"\x00\x08", b"\x00\x00"]
+)
 def test_invalid_bytes_ack_mode(packet):
     terminal = StaticReplyTerminal(packet)
     count = terminal.capture_ack()

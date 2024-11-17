@@ -120,7 +120,13 @@ class BootstrapLoader(QObject):
             self.terminal.set_baud_rate(9_600)
             self.command(self.CONNECT, self.on_connected, ack_mode=True)
 
-    def command(self, command: bytes, callback: Callable[..., None], ack_mode: bool = False, timeout: int = 0):
+    def command(
+        self,
+        command: bytes,
+        callback: Callable[..., None],
+        ack_mode: bool = False,
+        timeout: int = 0,
+    ):
         self.terminal.ack_mode = ack_mode
         self.terminal.write(pack(command))
 
@@ -217,7 +223,13 @@ class BootstrapLoader(QObject):
     def next_batch(self):
         # batch is a tuple of ints (single bytes)
         i, batch = next(self.enumerate_batched)
-        payload = b"".join([b"\x24", (i * self.batch_size).to_bytes(4, byteorder="little"), bytes(batch)])
+        payload = b"".join(
+            [
+                b"\x24",
+                (i * self.batch_size).to_bytes(4, byteorder="little"),
+                bytes(batch),
+            ]
+        )
         self.command(payload, self.on_programmed, ack_mode=True)
 
     def on_programmed(self):
@@ -247,7 +259,8 @@ class Programmer(QObject):
             self.error.emit(NoLaunchpad())
             return
 
-        self.n_messages = 2 * len(matches) + 7  # two messages for each bsl and 7 more for the successful one
+        # two messages for each bsl and 7 more for the successful one
+        self.n_messages = 2 * len(matches) + 7
         self.start([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in matches])
 
     def start(self, bootstrap_loaders: list[BootstrapLoader]) -> None:

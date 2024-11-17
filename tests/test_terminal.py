@@ -67,9 +67,3 @@ def test_28k(firmware, terminal: Terminal, memory_28k: np.ndarray):
     reply = spy.run_until_single_arg()
     assert reply is not None
     check_memory_28k(reply, memory_28k)
-
-    # 2024-11-05 four errors out of 8000 packets
-    # FAILED src/lenlab/tests/test_terminal.py::test_28k[2480-8000] - AssertionError: no reply
-    # FAILED src/lenlab/tests/test_terminal.py::test_28k[2481-8000] - AssertionError: no reply
-    # FAILED src/lenlab/tests/test_terminal.py::test_28k[2493-8000] - AssertionError: no reply
-    # FAILED src/lenlab/tests/test_terminal.py::test_28k[2494-8000] - AssertionError: no reply

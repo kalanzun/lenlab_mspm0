@@ -65,9 +65,18 @@ def sys_info():
     logger.info(f"QSysInfo\n{pretty(QSysInfo, sys_info_keys)}")
 
     for port_info in port_infos:
-        if port_info.vendorIdentifier() == launchpad.ti_vid and port_info.productIdentifier() == launchpad.ti_pid:
-            description = " description matches" if port_info.description() == launchpad.port_description else ""
-            logger.info(f"QSerialPortInfo Launchpad{description}\n{pretty(port_info, port_info_keys)}")
+        if (
+            port_info.vendorIdentifier() == launchpad.ti_vid
+            and port_info.productIdentifier() == launchpad.ti_pid
+        ):
+            description = (
+                " description matches"
+                if port_info.description() == launchpad.port_description
+                else ""
+            )
+            logger.info(
+                f"QSerialPortInfo Launchpad{description}\n{pretty(port_info, port_info_keys)}"
+            )
 
             port = QSerialPort(port_info)
             if port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
