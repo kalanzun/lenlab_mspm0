@@ -1,5 +1,5 @@
-from PySide6.QtCharts import QChartView
-from PySide6.QtCore import QIODevice, QSaveFile, Slot
+from PySide6.QtCharts import QChartView, QLineSeries, QValueAxis
+from PySide6.QtCore import QIODevice, QSaveFile, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -25,11 +25,34 @@ class Voltmeter(QWidget):
 
         self.lenlab = lenlab
 
+        self.ch1 = QLineSeries()
+        self.ch1.setName("Channel 1")
+        self.ch2 = QLineSeries()
+        self.ch2.setName("Channel 2")
+        for i in range(100):
+            self.ch1.append(i, 3.0)
+            self.ch2.append(i, i / 100)
+
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        chart = self.chart_view.chart()
+
+        x_axis = QValueAxis()
+        x_axis.setRange(0, 100)
+        chart.addAxis(x_axis, Qt.AlignmentFlag.AlignBottom)
+
+        y_axis = QValueAxis()
+        y_axis.setRange(0, 3.3)
+        chart.addAxis(y_axis, Qt.AlignmentFlag.AlignLeft)
+
+        for ch in (self.ch1, self.ch2):
+            chart.addSeries(ch)
+            ch.attachAxis(x_axis)
+            ch.attachAxis(y_axis)
+
         main_layout.addWidget(self.chart_view, stretch=1)
 
         sidebar_layout = QVBoxLayout()
@@ -64,9 +87,17 @@ class Voltmeter(QWidget):
 
         # channels
         checkbox = QCheckBox("Channel 1")
+        checkbox.setChecked(True)
+        checkbox.checkStateChanged.connect(
+            lambda state: self.ch1.setVisible(state == Qt.CheckState.Checked)
+        )
         sidebar_layout.addWidget(checkbox)
 
         checkbox = QCheckBox("Channel 2")
+        checkbox.setChecked(True)
+        checkbox.checkStateChanged.connect(
+            lambda state: self.ch2.setVisible(state == Qt.CheckState.Checked)
+        )
         sidebar_layout.addWidget(checkbox)
 
         # save
