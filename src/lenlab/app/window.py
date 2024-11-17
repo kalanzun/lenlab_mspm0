@@ -12,13 +12,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        message_banner = MessageBanner()
-        # self.launchpad.ready.connect(message_banner.hide)
-        # self.launchpad.error.connect(message_banner.set_message)
-        # message_banner.retry_button.clicked.connect(self.launchpad.retry)
-
         self.lenlab = Lenlab()
-        # self.lenlab.error.connect(message_banner.set_message)
+
+        message_banner = MessageBanner()
+        self.lenlab.error.connect(message_banner.set_error)
+        self.lenlab.ready.connect(message_banner.hide)
+        message_banner.retry_button.clicked.connect(self.lenlab.retry)
 
         programmer = ProgrammerWidget()
         voltmeter = Voltmeter(self.lenlab)
@@ -42,3 +41,4 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
         self.setWindowTitle("Lenlab")
+        self.lenlab.retry()
