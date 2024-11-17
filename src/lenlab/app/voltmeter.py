@@ -1,10 +1,14 @@
 from PySide6.QtCharts import QChartView
+from PySide6.QtCore import QIODevice, QSaveFile, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -26,7 +30,7 @@ class Voltmeter(QWidget):
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        main_layout.addWidget(self.chart_view)
+        main_layout.addWidget(self.chart_view, stretch=1)
 
         sidebar_layout = QVBoxLayout()
         main_layout.addLayout(sidebar_layout)
@@ -65,4 +69,46 @@ class Voltmeter(QWidget):
         checkbox = QCheckBox("Channel 2")
         sidebar_layout.addWidget(checkbox)
 
+        # save
+        button = QPushButton("Save")
+        button.clicked.connect(self.save)
+        sidebar_layout.addWidget(button)
+
+        self.auto_save = QCheckBox("Automatic save")
+        sidebar_layout.addWidget(self.auto_save)
+
+        self.file_name = QLineEdit()
+        self.file_name.setReadOnly(True)
+        sidebar_layout.addWidget(self.file_name)
+
+        button = QPushButton("Reset")
+        sidebar_layout.addWidget(button)
+
         sidebar_layout.addStretch(1)
+
+    @Slot()
+    def save(self):
+        file_name, selected_filter = QFileDialog.getSaveFileName(
+            self, "Save", "voltmeter.csv", "CSV (*.csv)"
+        )
+        if not file_name:  # cancelled
+            return
+
+        file = QSaveFile(file_name)
+
+        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
+            QMessageBox.critical(
+                self, "Save", f"Fehler beim Speichern der Daten\n{file.errorString()}"
+            )
+            return
+
+        file.write(b"Hello!\n")
+
+        if not file.commit():
+            QMessageBox.critical(
+                self, "Save", f"Fehler beim Speichern der Daten\n{file.errorString()}"
+            )
+            return
+
+        self.auto_save.setChecked(False)
+        self.file_name.setText(file_name)
