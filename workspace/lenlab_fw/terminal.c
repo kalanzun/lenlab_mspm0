@@ -4,11 +4,7 @@
 
 #include "ti_msp_dl_config.h"
 
-static const struct Packet knock = { .label = 'L', .code = 'k', .length = 0, .argument = { 'n', 'o', 'c', 'k' } }; // knock
-static const struct Packet mi28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'i', '2', '8', 'K' } }; // init 28K
-static const struct Packet mg28K = { .label = 'L', .code = 'm', .length = 0, .argument = { 'g', '2', '8', 'K' } }; // get 28K
-
-struct Terminal terminal = { .rx_flag = false, .tx_flag = false, .rx_stalled = false };
+struct Terminal terminal = { .rpl = { .label = 'L' }, .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
 static void terminal_receive(uint32_t address, uint32_t size)
 {
@@ -83,7 +79,7 @@ static void terminal_init28K(void)
     memory.packet.label = 'L';
     memory.packet.code = 'm';
     memory.packet.length = sizeof(memory.payload);
-    packet_copyArgument(&memory.packet, &mg28K); // get 28K
+    memory.packet.arg = ARG_STR("g28K");
 
     DL_CRC_setSeed32(CRC, CRC_SEED);
     for (uint32_t i = 0; i < sizeof(memory.payload) / sizeof(*payload); i++) {
@@ -92,21 +88,30 @@ static void terminal_init28K(void)
     }
 }
 
+static void terminal_sendReply(uint8_t code, uint32_t arg)
+{
+    terminal.rpl.code = code;
+    terminal.rpl.length = 0;
+    terminal.rpl.arg = arg;
+
+    terminal_transmitReply();
+}
+
 void terminal_main(void)
 {
     if (!terminal.rx_flag) {
         if (terminal.cmd.label == 'L' && terminal.cmd.length == 0) {
             switch (terminal.cmd.code) {
-            case 'k':
-                if (packet_compareArgument(&terminal.cmd, &knock)) {
-                    terminal_transmitPacket(&knock);
+            case 'k': // knock
+                if (terminal.cmd.arg == ARG_STR("nock")) {
+                    terminal_sendReply('k', ARG_STR("nock"));
                 }
                 break;
-            case 'm':
-                if (packet_compareArgument(&terminal.cmd, &mi28K)) { // init 28K
+            case 'm': // memory
+                if (terminal.cmd.arg == ARG_STR("i28K")) { // init 28K
                     terminal_init28K();
-                    terminal_transmitPacket(&mi28K);
-                } else if (packet_compareArgument(&terminal.cmd, &mg28K)) { // get 28K
+                    terminal_sendReply('m', ARG_STR("i28K"));
+                } else if (terminal.cmd.arg == ARG_STR("g28K")) { // get 28K
                     terminal_transmitPacket(&memory.packet);
                 }
                 break;
