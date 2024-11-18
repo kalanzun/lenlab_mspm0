@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 from ..model.lenlab import Lenlab
 from .banner import MessageBanner
 from .bode import BodePlotter
+from .figure import PinAssignmentWidget
 from .oscilloscope import Oscilloscope
 from .programmer import ProgrammerWidget
 from .voltmeter import Voltmeter
@@ -20,12 +21,14 @@ class MainWindow(QMainWindow):
         message_banner.retry_button.clicked.connect(self.lenlab.retry)
 
         programmer = ProgrammerWidget()
+        pins = PinAssignmentWidget()
         voltmeter = Voltmeter(self.lenlab)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 
         tab_widget = QTabWidget()
         tab_widget.addTab(programmer, programmer.title)
+        tab_widget.addTab(pins, pins.title)
         tab_widget.addTab(voltmeter, voltmeter.title)
         tab_widget.addTab(oscilloscope, oscilloscope.title)
         tab_widget.addTab(bode, bode.title)

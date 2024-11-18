@@ -86,14 +86,14 @@ class Voltmeter(QWidget):
         layout.addWidget(button)
 
         # channels
-        checkbox = QCheckBox("Channel 1")
+        checkbox = QCheckBox("Channel 1 (PA 24)")
         checkbox.setChecked(True)
         checkbox.checkStateChanged.connect(
             lambda state: self.ch1.setVisible(state == Qt.CheckState.Checked)
         )
         sidebar_layout.addWidget(checkbox)
 
-        checkbox = QCheckBox("Channel 2")
+        checkbox = QCheckBox("Channel 2 (PA 17)")
         checkbox.setChecked(True)
         checkbox.checkStateChanged.connect(
             lambda state: self.ch2.setVisible(state == Qt.CheckState.Checked)

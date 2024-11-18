@@ -23,11 +23,11 @@ class MessageBanner(QWidget):
         body = QVBoxLayout()
         body.addWidget(self.text_label)
         if button:
-            body.addWidget(self.retry_button, 0, Qt.AlignmentFlag.AlignRight)
+            body.addWidget(self.retry_button, alignment=Qt.AlignmentFlag.AlignRight)
 
         layout = QHBoxLayout()
         layout.addWidget(self.symbol_widget)
-        layout.addLayout(body, 1)
+        layout.addLayout(body)
 
         self.setLayout(layout)
 

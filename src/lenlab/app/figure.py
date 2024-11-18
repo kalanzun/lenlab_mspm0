@@ -1,9 +1,13 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from PySide6.QtCharts import QChart, QLineSeries
 from PySide6.QtCore import QPoint, QPointF, QRect, QSize
 from PySide6.QtGui import QColor, QPainter, QPen, Qt
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+
+from lenlab.app.banner import MessageBanner
+from lenlab.message import Message
 
 white = QColor(0xF0, 0xF0, 0xF0)
 black = QColor(0x10, 0x10, 0x10)
@@ -16,12 +20,24 @@ def save_and_restore(painter):
     painter.restore()
 
 
+def find_chart_colors(n=4):
+    chart = QChart()
+    for _ in range(n):
+        channel = QLineSeries()
+        chart.addSeries(channel)
+        yield channel.color()
+
+
 class LaunchpadFigure(QWidget):
     def sizeHint(self):
         width = 96
         horizontal_scale = 4
         vertical_scale = 6
         return QSize(width * horizontal_scale, width * vertical_scale)
+
+    def minimumSizeHint(self):
+        size = self.sizeHint()
+        return QSize(size.width() // 2, size.height() // 2)
 
     @staticmethod
     def draw_switch(painter: QPainter):
@@ -138,6 +154,12 @@ class LaunchpadFigure(QWidget):
             painter.translate(60 - 7 - 2.5, 53)
             self.draw_header(painter)
 
+        # pin arrow
+        with save_and_restore(painter):
+            painter.translate(7, 68)
+            painter.rotate(-90)
+            self.draw_arrow(painter)
+
         # green LED
         with save_and_restore(painter):
             painter.translate(3, 38)
@@ -170,32 +192,39 @@ class LaunchpadFigure(QWidget):
         painter.setPen(self.palette().toolTipText().color())
         self.draw_label(painter, 48 * 2, (-22 - 4) * 2, "Reset")
         self.draw_label(painter, -22 * 2, (46 - 6) * 2, "S1")
+        self.draw_label(painter, (7 - 22) * 2, (68 - 6) * 2, "Pins")
 
 
 @dataclass
 class Pin:
-    index: int
-    label: str = ""
-    color: QColor | None = None
+    label: str
+    fg: QColor
+    bg: QColor
+    name: str = ""
 
 
 class PinAssignmentFigure(QWidget):
     unit = 32
 
-    pins = {
-        1: Pin(1, "3V3", QColor(0xC0, 0, 0)),
-        21: Pin(21, "5V", QColor(0xC0, 0, 0)),
-        22: Pin(22, "GND", black),
-        26: Pin(26, "ADC1", QColor(0, 0xC0, 0)),
-        27: Pin(27, "ADC0", QColor(0xC0, 0xC0, 0)),
-        30: Pin(30, "DAC", QColor(0, 0, 0xC0)),
-    }
+    def __init__(self):
+        super().__init__()
 
-    def get_pin(self, index):
-        return self.pins.get(index, Pin(index))
+        channel_colors = list(find_chart_colors(4))
+
+        self.pins = {
+            1: Pin("3V3", white, QColor(0xC0, 0, 0)),
+            21: Pin("5V", white, QColor(0xC0, 0, 0)),
+            22: Pin("GND", white, black),
+            27: Pin("ADC0", black, channel_colors[0], name="PA 24"),
+            28: Pin("ADC1", black, channel_colors[1], name="PA 17"),
+            30: Pin("DAC", black, channel_colors[2], name="PA 15"),
+        }
 
     def sizeHint(self):
-        return QSize(10 * self.unit, 12 * self.unit)
+        return QSize(12 * self.unit, 12 * self.unit)
+
+    def minimumSizeHint(self):
+        return self.sizeHint()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -217,7 +246,7 @@ class PinAssignmentFigure(QWidget):
             self.draw_labels(painter, right=True)
 
     def draw_pin_header(self, painter: QPainter):
-        painter.setPen(white)
+        painter.setPen(self.palette().toolTipText().color())
         margin = self.unit // 2
         painter.drawRect(-margin, -margin, self.unit + 2 * margin, 9 * self.unit + 2 * margin)
 
@@ -227,18 +256,21 @@ class PinAssignmentFigure(QWidget):
 
     def draw_labels(self, painter: QPainter, right=False):
         for i in range(10):
-            pin = self.get_pin(i + (21 if right else 1))
-            if pin.color:
+            pin = self.pins.get(i + (21 if right else 1), None)
+            if pin:
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.setBrush(pin.color or white)
+                painter.setBrush(pin.bg)
 
                 rect = QRect(QPoint(0, 0), QSize(64, 24))
-                rect.moveCenter(QPoint(96 if right else -96, 0))
+                rect.moveCenter(QPoint(56 if right else -56, 0))
                 painter.drawRect(rect)
 
-            painter.setPen(white)
-            self.draw_text_center(painter, 36 if right else -36, 0, str(pin.index))
-            self.draw_text_center(painter, 96 if right else -96, 0, pin.label)
+                painter.setPen(pin.fg)
+                self.draw_text_center(painter, 56 if right else -56, 0, pin.label)
+
+                if pin.name:
+                    painter.setPen(self.palette().toolTipText().color())
+                    self.draw_text_center(painter, 128 if right else -128, 0, str(pin.name))
 
             painter.translate(0, self.unit)
 
@@ -250,21 +282,57 @@ class PinAssignmentFigure(QWidget):
         painter.drawText(rect.bottomLeft(), text)
 
 
+class PinAssignmentWidget(QWidget):
+    title = "Pin Assignment"
+
+    def __init__(self):
+        super().__init__()
+
+        pins = PinAssignmentFigure()
+        board = LaunchpadFigure()
+
+        banner = MessageBanner(button=False)
+        banner.set_error(Voltage())
+
+        left = QVBoxLayout()
+        left.addStretch()
+        left.addWidget(banner)
+        left.addWidget(pins, alignment=Qt.AlignmentFlag.AlignCenter)
+        left.addStretch()
+
+        right = QVBoxLayout()
+        right.addStretch()
+        right.addWidget(board)
+        right.addStretch()
+
+        layout = QHBoxLayout()
+        layout.addStretch()
+        layout.addLayout(left)
+        layout.addLayout(right)
+        layout.addStretch()
+
+        self.setLayout(layout)
+
+
+class Voltage(Message):
+    english = """Maximum pin voltage: 3.3 V
+    
+    Never directly connect a pin to the 5 V pin or the solar cell.
+    Use a voltage divider circuit."""
+
+    german = """Maximalspannung an den Pins: 3.3 V
+    
+    Verbinden Sie einen Pin niemals direkt mit dem 5-V-Pin oder der Solarzelle.
+    Verwenden Sie eine Spannungsteiler-Schaltung."""
+
+
 def main():
-    from PySide6.QtWidgets import QApplication, QHBoxLayout
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication([])
 
-    figure1 = LaunchpadFigure()
-    figure2 = PinAssignmentFigure()
-
-    layout = QHBoxLayout()
-    layout.addWidget(figure1)
-    layout.addWidget(figure2)
-
-    window = QWidget()
-    window.setLayout(layout)
-    window.show()
+    widget = PinAssignmentWidget()
+    widget.show()
 
     app.exec()
 
