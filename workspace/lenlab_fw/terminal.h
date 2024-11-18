@@ -13,6 +13,12 @@ struct Terminal {
 
 extern struct Terminal terminal;
 
+void terminal_receiveCommand(void);
+
+void terminal_transmitPacket(const struct Packet* packet);
+
+void terminal_sendReply(uint8_t code, uint32_t arg);
+
 void terminal_init(void);
 
 void terminal_tick(void);

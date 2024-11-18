@@ -1,7 +1,6 @@
 #include "terminal.h"
 
-#include "memory.h"
-#include "version.h"
+#include "interpreter.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -23,7 +22,7 @@ static void terminal_receivePacket(struct Packet* packet)
     terminal_receive((uint32_t)packet, sizeof(*packet));
 }
 
-static void terminal_receiveCommand(void)
+void terminal_receiveCommand(void)
 {
     terminal_receivePacket(&terminal.cmd);
 }
@@ -38,7 +37,7 @@ static void terminal_transmit(uint32_t address, uint32_t size)
     DL_DMA_enableChannel(DMA, DMA_CH_TX_CHAN_ID);
 }
 
-static void terminal_transmitPacket(const struct Packet* packet)
+void terminal_transmitPacket(const struct Packet* packet)
 {
     terminal_transmit((uint32_t)packet, packet->length + 8);
 }
@@ -48,7 +47,7 @@ static void terminal_transmitReply(void)
     terminal_transmitPacket(&terminal.rpl);
 }
 
-static void terminal_sendReply(uint8_t code, uint32_t arg)
+void terminal_sendReply(uint8_t code, uint32_t arg)
 {
     terminal.rpl.code = code;
     terminal.rpl.length = 0;
@@ -82,76 +81,6 @@ void terminal_tick(void)
     }
 }
 
-static void terminal_init28K(void)
-{
-    uint32_t* restrict payload = (uint32_t*)&memory.payload;
-
-    memory.packet.label = 'L';
-    memory.packet.code = 'm';
-    memory.packet.length = sizeof(memory.payload);
-    memory.packet.arg = ARG_STR("g28K");
-
-    DL_CRC_setSeed32(CRC, CRC_SEED);
-    for (uint32_t i = 0; i < sizeof(memory.payload) / sizeof(*payload); i++) {
-        DL_CRC_feedData32(CRC, 0);
-        payload[i] = DL_CRC_getResult32(CRC);
-    }
-}
-
-static void terminal_version(void)
-{
-    const char version[] = VERSION;
-    uint8_t i = 0;
-
-    uint32_t arg = 0;
-
-    // handle any version string length
-    if (version[i])
-        i++;
-    if (version[i])
-        i++;
-
-    arg += version[i];
-    if (version[i])
-        i++;
-    arg += version[i] << 8;
-    if (version[i])
-        i++;
-    arg += version[i] << 16;
-    if (version[i])
-        i++;
-    arg += version[i] << 24;
-
-    terminal_sendReply(VERSION[0], arg);
-}
-
-static void terminal_handleCommand(void)
-{
-    if (terminal.cmd.label == 'L' && terminal.cmd.length == 0) {
-        switch (terminal.cmd.code) {
-        case 'k': // knock
-            if (terminal.cmd.arg == ARG_STR("nock")) {
-                terminal_sendReply('k', ARG_STR("nock"));
-            }
-            break;
-        case VERSION[0]: // 8
-            if (terminal.cmd.arg == ARG_STR("ver?")) { // version
-                terminal_version();
-            }
-            break;
-        case 'm': // memory
-            if (terminal.cmd.arg == ARG_STR("i28K")) { // init 28K
-                terminal_init28K();
-                terminal_sendReply('m', ARG_STR("i28K"));
-            } else if (terminal.cmd.arg == ARG_STR("g28K")) { // get 28K
-                terminal_transmitPacket(&memory.packet);
-            }
-            break;
-        }
-    }
-    terminal_receiveCommand();
-}
-
 void TERMINAL_UART_INST_IRQHandler(void)
 {
     switch (DL_UART_Main_getPendingInterrupt(TERMINAL_UART_INST)) {
@@ -160,7 +89,7 @@ void TERMINAL_UART_INST_IRQHandler(void)
         break;
     case DL_UART_MAIN_IIDX_DMA_DONE_RX:
         terminal.rx_flag = false;
-        terminal_handleCommand();
+        interpreter_handleCommand();
         break;
     default:
         break;
