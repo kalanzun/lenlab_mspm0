@@ -22,3 +22,6 @@ class Message(Exception):
         template = getattr(self, self.language)
         template = "\n".join(line.strip() for line in template.splitlines())
         return template.format(*self.args)
+
+    def __eq__(self, other):
+        return str(self) == str(other)

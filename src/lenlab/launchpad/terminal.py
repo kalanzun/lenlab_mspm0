@@ -44,7 +44,7 @@ class Terminal(QObject):
         # on_error_occurred handles the error case
         logger.debug(f"{self.port_name}: open")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-            logger.debug(f"{self.port_name}: clear")
+            logger.debug(f"{self.port_name}: open successful")
             self.port.clear()  # windows might have leftovers
             return True
 
@@ -68,8 +68,13 @@ class Terminal(QObject):
     def on_error_occurred(self, error: QSerialPort.SerialPortError) -> None:
         if error is QSerialPort.SerialPortError.NoError:
             pass
+        elif error is QSerialPort.SerialPortError.PermissionError:
+            self.error.emit(TerminalPermissionError())
+        elif error is QSerialPort.SerialPortError.ResourceError:
+            self.error.emit(TerminalResourceError())
         else:
-            self.error.emit(CommunicationError(self.port_name, self.port.errorString()))
+            logger.debug(f"{self.port_name}: {self.port.errorString()}")
+            self.error.emit(TerminalError(self.port_name, self.port.errorString()))
 
     @Slot()
     def on_ready_read(self) -> None:
@@ -96,9 +101,25 @@ class Terminal(QObject):
             self.error.emit(InvalidPacket(n, packet[:12]))
 
 
-class CommunicationError(Message):
-    english = "Communication error on {0}: {1}"
-    german = "Kommunikationsfehler auf {0}: {1}"
+class TerminalError(Message):
+    english = "Error on {0}: {1}"
+    german = "Fehler auf {0}: {1}"
+
+
+class TerminalPermissionError(Message):
+    english = """Permission error
+        Lenlab requires unique access to the serial communication with the Launchpad.
+        Maybe another instance of Lenlab is running and blocks the access?"""
+    german = """Keine Zugriffsberechtigung
+        Lenlab braucht alleinigen Zugriff auf die serielle Kommunikation mit dem Launchpad.
+        Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Zugriff?"""
+
+
+class TerminalResourceError(Message):
+    english = """Connection lost
+        The Launchpad vanished. Please reconnect it to the computer."""
+    german = """Verbindung verloren
+        Das Launchpad ist verschwunden. Bitte wieder mit dem Computer verbinden."""
 
 
 class OverlongPacket(Message):

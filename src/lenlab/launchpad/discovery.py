@@ -1,3 +1,6 @@
+import logging
+from importlib import metadata
+
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
@@ -7,10 +10,13 @@ from .launchpad import find_vid_pid
 from .protocol import pack
 from .terminal import Terminal
 
+logger = logging.getLogger(__name__)
+
 
 class Probe(QObject):
     result = Signal(Terminal)
     error = Signal(Message)
+    timeout = Signal()
 
     def __init__(self, terminal: Terminal):
         super().__init__()
@@ -20,56 +26,70 @@ class Probe(QObject):
         self.timer = SingleShotTimer(self.on_timeout)
 
     def start(self) -> None:
-        self.terminal.error.connect(self.on_error)
         self.terminal.reply.connect(self.on_reply)
+        self.terminal.error.connect(self.on_error)
 
         # on_error handles the error case
         if self.terminal.open():
             self.timer.start()
             self.terminal.set_baud_rate(1_000_000)
-            self.terminal.write(pack(b"knock"))
+            self.terminal.write(pack(b"8ver?"))
 
-    @Slot(Message)
-    def on_error(self, error: Message) -> None:
+    def fail(self, error: Message):
         self.timer.stop()
         self.terminal.close()
-        # a terminal might send more than one error
         self.unsuccessful = True
         self.error.emit(error)
 
     @Slot(bytes)
     def on_reply(self, reply: bytes) -> None:
-        self.timer.stop()
+        if reply[0:4] == b"L8\x00\x00":
+            version = "8." + reply[4:8].strip(b"\x00").decode("ascii", errors="strict")
+            if version == metadata.version("lenlab"):
+                self.timer.stop()
+                self.terminal.reply.disconnect(self.on_reply)
+                self.terminal.error.disconnect(self.on_error)
+                self.result.emit(self.terminal)
+            else:
+                self.fail(InvalidFirmwareVersion(version, metadata.version("lenlab")))
 
-        if reply == pack(b"knock"):
-            self.terminal.error.disconnect(self.on_error)
-            self.terminal.reply.disconnect(self.on_reply)
-            self.result.emit(self.terminal)
         else:
-            self.terminal.close()
-            self.unsuccessful = True
-            self.error.emit(UnexpectedReply(self.terminal.port_name, reply))
+            self.fail(UnexpectedReply(self.terminal.port_name, reply))
+
+    @Slot(Message)
+    def on_error(self, error: Message) -> None:
+        if self.unsuccessful:
+            return
+
+        self.fail(error)
 
     @Slot()
     def on_timeout(self) -> None:
+        logger.info(f"probe timeout on {self.terminal.port_name}")
         self.terminal.close()
         self.unsuccessful = True
-        self.error.emit(Timeout(self.terminal.port_name))
+        self.timeout.emit()
 
     def cancel(self) -> None:
-        if not self.unsuccessful:
-            self.timer.stop()
-            self.terminal.close()
-            self.unsuccessful = True
-            self.error.emit(Cancelled(self.terminal.port_name))
+        if self.unsuccessful:
+            return
+
+        logger.info(f"probe cancelled on {self.terminal.port_name}")
+        self.timer.stop()
+        self.terminal.close()
+        self.unsuccessful = True
 
 
 class Discovery(QObject):
-    message = Signal(Message)
     result = Signal(Terminal)
     error = Signal(Message)
 
     probes: list[Probe]
+
+    def __init__(self):
+        super().__init__()
+
+        self.comm_errors = list()
 
     def discover(self):
         port_infos = QSerialPortInfo.availablePorts()
@@ -84,22 +104,51 @@ class Discovery(QObject):
         self.probes = probes
 
         for probe in self.probes:
-            probe.result.connect(self.result)
             probe.result.connect(self.on_result)
-            probe.error.connect(self.message)
             probe.error.connect(self.on_error)
+            probe.timeout.connect(self.on_timeout)
             probe.start()
 
-    @Slot(Message)
+    @Slot(Terminal)
     def on_result(self, result: Terminal) -> None:
+        self.result.emit(result)
         for probe in self.probes:
             if probe is not self.sender():
                 probe.cancel()
 
     @Slot(Message)
     def on_error(self, error: Message) -> None:
+        if isinstance(error, InvalidFirmwareVersion | UnexpectedReply):
+            # these cancel discovery
+            self.error.emit(error)
+            for probe in self.probes:
+                if probe is not self.sender():
+                    probe.cancel()
+        else:
+            # collect them and emit them if discovery fails
+            self.comm_errors.append(error)
+            self.on_timeout()
+
+    @Slot()
+    def on_timeout(self) -> None:
         if all(probe.unsuccessful for probe in self.probes):
-            self.error.emit(Nothing())
+            if not self.comm_errors:
+                self.error.emit(NoFirmware())
+            elif all(error == self.comm_errors[0] for error in self.comm_errors):
+                # true for length 1
+                self.error.emit(self.comm_errors[0])
+            else:
+                content = "\n\n".join(str(error) for error in self.comm_errors)
+                self.error.emit(TerminalErrors(content))
+
+
+class InvalidFirmwareVersion(Message):
+    english = """Invalid firmware version: {0}
+        This Lenlab requires version {1}.
+        Please write the current version to the Launchpad with the Programmer."""
+    german = """Ungültige Firmware-Version: {0}
+        Dieses Lenlab benötigt Version {1}.
+        Bitte die aktuelle Version mit dem Programmierer auf das Launchpad schreiben."""
 
 
 class UnexpectedReply(Message):
@@ -107,21 +156,22 @@ class UnexpectedReply(Message):
     german = "Unerwartete Antwort auf {0}: {1}"
 
 
-class Timeout(Message):
-    english = "Probe timeout on {0}"
-    german = "Probezeit abgelaufen auf {0}"
-
-
 class NoLaunchpad(Message):
-    english = "No Launchpad found"
-    german = "Kein Launchpad gefunden"
+    english = """No Launchpad found
+        Please connect the Launchpad via USB to the computer."""
+    german = """Kein Launchpad gefunden
+        Bitte das Launchpad über USB mit dem Computer verbinden."""
 
 
-class Cancelled(Message):
-    english = "Cancelled on {0}"
-    german = "Abgebrochen auf {0}"
+class NoFirmware(Message):
+    english = """No reply from the Launchpad
+        Lenlab requires the Lenlab firmware on the Launchpad.
+        Please write the firmware on the Launchpad with the Programmer."""
+    german = """Keine Antwort vom Launchpad
+        Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
+        Bitte die Firmware mit dem Programmierer auf das Launchpad schreiben."""
 
 
-class Nothing(Message):
-    english = "Nothing found"
-    german = "Nichts gefunden"
+class TerminalErrors(Message):
+    english = "{0}"
+    german = "{0}"

@@ -11,22 +11,17 @@ from ..spy import Spy
 logger = logging.getLogger(__name__)
 
 
-def open_terminal():
+def profile(n=200):  # 64s
     discovery = Discovery()
-    discovery.message.connect(logger.info)
     spy = Spy(discovery.result)
+    discovery.error.connect(logger.error)
     discovery.discover()
     loop = Loop()
     loop.run_until(discovery.result, discovery.error, timeout=600)
 
     terminal = spy.get_single_arg()
-    # implicitly del discovery here
-    # terminal doesn't work otherwise (but why?)
-    return terminal
+    del discovery
 
-
-def profile(n=200):  # 64s
-    terminal = open_terminal()
     if terminal is None:
         logger.error("No firmware found")
         return
