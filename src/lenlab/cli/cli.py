@@ -2,11 +2,14 @@ import logging
 import signal
 import sys
 from argparse import ArgumentParser
+from importlib import metadata
 
 from PySide6.QtCore import QCoreApplication, QLocale
 from PySide6.QtWidgets import QApplication
 
 from lenlab.message import Message
+
+logger = logging.getLogger(__name__)
 
 commands = {}
 
@@ -73,8 +76,6 @@ def exercise():
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-
     parser = ArgumentParser()
 
     keys = list(commands.keys())
@@ -90,10 +91,18 @@ def main():
         nargs="?",
     )
 
+    logging.basicConfig(level=logging.INFO)
+
     options = parser.parse_args()
     if options.log:
         handler = logging.FileHandler(options.log, mode="w", encoding="utf-8")
         logging.getLogger().addHandler(handler)
+
+    try:
+        version = metadata.version("lenlab")
+        logger.info(f"Lenlab {version}")
+    except metadata.PackageNotFoundError:
+        logger.info("Lenlab development version")
 
     return commands[options.command]()
 
