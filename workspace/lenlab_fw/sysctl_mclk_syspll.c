@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "voltmeter.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -9,6 +10,7 @@ int main(void)
     SYSCFG_DL_init();
 
     terminal_init();
+    voltmeter_init();
 
     while (1) {
         if (blink == 0)

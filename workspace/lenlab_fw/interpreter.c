@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "terminal.h"
 #include "version.h"
+#include "voltmeter.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -73,6 +74,15 @@ void interpreter_handleCommand(void)
                 interpreter_init28K();
             } else if (cmd->arg == ARG_STR("g28K")) { // get 28K
                 terminal_transmitPacket(&memory.packet);
+            }
+            break;
+        case 'v': // voltmeter
+            if (cmd->arg == ARG_STR("strt")) { // start
+                voltmeter_start();
+            } else if (cmd->arg == ARG_STR("next")) { // next
+                voltmeter_next();
+            } else if (cmd->arg == ARG_STR("stop")) { // stop
+                voltmeter_stop();
             }
             break;
         }
