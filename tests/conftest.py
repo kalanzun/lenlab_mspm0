@@ -3,6 +3,7 @@ from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from lenlab.launchpad.launchpad import find_launchpad
+from lenlab.launchpad.terminal import Terminal
 
 
 def pytest_addoption(parser):
@@ -59,3 +60,12 @@ def port(port_infos):
 
     yield port
     port.close()
+
+
+@pytest.fixture(scope="module")
+def terminal(port: QSerialPort) -> Terminal:
+    terminal = Terminal(port)
+    # port is already open, but open() also connects the signal handlers
+    terminal.open()
+    yield terminal
+    terminal.close()

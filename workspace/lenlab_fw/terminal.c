@@ -1,6 +1,7 @@
 #include "terminal.h"
 
 #include "memory.h"
+#include "version.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -47,6 +48,15 @@ void terminal_transmitReply(void)
     terminal_transmitPacket(&terminal.rpl);
 }
 
+static void terminal_sendReply(uint8_t code, uint32_t arg)
+{
+    terminal.rpl.code = code;
+    terminal.rpl.length = 0;
+    terminal.rpl.arg = arg;
+
+    terminal_transmitReply();
+}
+
 void terminal_init(void)
 {
     NVIC_EnableIRQ(TERMINAL_UART_INST_INT_IRQN);
@@ -88,13 +98,31 @@ static void terminal_init28K(void)
     }
 }
 
-static void terminal_sendReply(uint8_t code, uint32_t arg)
+static void terminal_version(void)
 {
-    terminal.rpl.code = code;
-    terminal.rpl.length = 0;
-    terminal.rpl.arg = arg;
+    const char version[] = VERSION;
+    uint8_t i = 0;
 
-    terminal_transmitReply();
+    uint32_t arg = 0;
+
+    // handle any version string length
+    if (version[i])
+        i++;
+    if (version[i])
+        i++;
+
+    arg += version[i];
+    if (version[i])
+        i++;
+    arg += version[i] << 8;
+    if (version[i])
+        i++;
+    arg += version[i] << 16;
+    if (version[i])
+        i++;
+    arg += version[i] << 24;
+
+    terminal_sendReply(VERSION[0], arg);
 }
 
 void terminal_main(void)
@@ -105,6 +133,11 @@ void terminal_main(void)
             case 'k': // knock
                 if (terminal.cmd.arg == ARG_STR("nock")) {
                     terminal_sendReply('k', ARG_STR("nock"));
+                }
+                break;
+            case VERSION[0]: // 8
+                if (terminal.cmd.arg == ARG_STR("ver?")) { // version
+                    terminal_version();
                 }
                 break;
             case 'm': // memory

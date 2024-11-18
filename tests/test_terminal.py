@@ -1,20 +1,9 @@
 import numpy as np
 import pytest
-from PySide6.QtSerialPort import QSerialPort
 
 from lenlab.launchpad.protocol import check_memory_28k, make_memory_28k, pack
 from lenlab.launchpad.terminal import Terminal
 from lenlab.spy import Spy
-
-
-@pytest.fixture(scope="module")
-def terminal(port: QSerialPort) -> Terminal:
-    terminal = Terminal(port)
-    # port is already open
-    # open() also connects the signal handlers
-    terminal.open()
-    yield terminal
-    terminal.close()
 
 
 def test_knock(firmware, terminal: Terminal):
