@@ -9,14 +9,13 @@
 /**
  * Import the modules used in this configuration.
  */
-const CRC    = scripting.addModule("/ti/driverlib/CRC");
-const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
-const GPIO1  = GPIO.addInstance();
-const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
-const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
-const TIMER1 = TIMER.addInstance();
-const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
-const UART1  = UART.addInstance();
+const CRC     = scripting.addModule("/ti/driverlib/CRC");
+const GPIO    = scripting.addModule("/ti/driverlib/GPIO", {}, false);
+const GPIO1   = GPIO.addInstance();
+const SYSCTL  = scripting.addModule("/ti/driverlib/SYSCTL");
+const SYSTICK = scripting.addModule("/ti/driverlib/SYSTICK");
+const UART    = scripting.addModule("/ti/driverlib/UART", {}, false);
+const UART1   = UART.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -71,12 +70,11 @@ SYSCTL.SYSPLL_Qdiv           = 5;
 SYSCTL.forceDefaultClkConfig = true;
 SYSCTL.clockTreeEn           = true;
 
-TIMER1.timerClkDiv      = 8;
-TIMER1.timerMode        = "PERIODIC";
-TIMER1.interrupts       = ["ZERO"];
-TIMER1.timerClkPrescale = 200;
-TIMER1.timerPeriod      = "20ms";
-TIMER1.$name            = "TICK_TIMER";
+SYSTICK.periodEnable      = true;
+SYSTICK.period            = 1600000;
+SYSTICK.interruptEnable   = true;
+SYSTICK.systickEnable     = true;
+SYSTICK.interruptPriority = "1";
 
 UART1.$name                             = "TERMINAL_UART";
 UART1.targetBaudRate                    = 1000000;
@@ -86,6 +84,7 @@ UART1.txFifoThreshold                   = "DL_UART_TX_FIFO_LEVEL_3_4_EMPTY";
 UART1.enabledInterrupts                 = ["DMA_DONE_RX","DMA_DONE_TX"];
 UART1.enabledDMARXTriggers              = "DL_UART_DMA_INTERRUPT_RX";
 UART1.enabledDMATXTriggers              = "DL_UART_DMA_INTERRUPT_TX";
+UART1.interruptPriority                 = "2";
 UART1.peripheral.$assign                = "UART0";
 UART1.peripheral.rxPin.$assign          = "PA11";
 UART1.peripheral.txPin.$assign          = "PA10";
@@ -121,4 +120,3 @@ Board.peripheral.$suggestSolution            = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution   = "PA20";
 Board.peripheral.swdioPin.$suggestSolution   = "PA19";
 GPIO1.associatedPins[0].pin.$suggestSolution = "PA0";
-TIMER1.peripheral.$suggestSolution           = "TIMA0";

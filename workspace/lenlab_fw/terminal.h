@@ -13,14 +13,8 @@ struct Terminal {
 
 extern struct Terminal terminal;
 
-void terminal_receiveCommand(void);
-
-void terminal_transmitReply(void);
-
 void terminal_init(void);
 
 void terminal_tick(void);
-
-void terminal_main(void);
 
 #endif
