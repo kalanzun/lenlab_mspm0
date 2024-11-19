@@ -1,5 +1,5 @@
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
@@ -36,38 +36,40 @@ class VoltmeterWidget(QWidget):
         self.lenlab.ready.connect(self.voltmeter.set_terminal)
         self.voltmeter.new_records.connect(self.on_new_records)
 
+        self.unit = 1  # second
+        self.channels = list()
+
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)
 
-        self.channels = [QLineSeries() for _ in self.labels]
-        for channel, label in zip(self.channels, self.labels, strict=False):
-            channel.setName(label)
-        self.unit = 1  # second
-
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        chart = self.chart_view.chart()
+        self.chart = self.chart_view.chart()
         # chart.setTheme(QChart.ChartTheme.ChartThemeLight)  # default, grid lines faint
         # chart.setTheme(QChart.ChartTheme.ChartThemeDark)  # odd gradient
         # chart.setTheme(QChart.ChartTheme.ChartThemeBlueNcs)  # grid lines faint
-        chart.setTheme(QChart.ChartTheme.ChartThemeQt)  # light and dark green, stronger grid lines
+        self.chart.setTheme(
+            QChart.ChartTheme.ChartThemeQt
+        )  # light and dark green, stronger grid lines
 
         self.x_axis = QValueAxis()
         self.x_axis.setRange(0.0, 4.0)
         self.x_axis.setTickCount(5)
         self.x_axis.setLabelFormat("%g")
         self.x_axis.setTitleText("time [seconds]")
-        chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
+        self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
         self.y_axis.setRange(0.0, 3.3)
         self.y_axis.setTickCount(5)
         self.y_axis.setLabelFormat("%g")
         self.y_axis.setTitleText("voltage [volts]")
-        chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
+        self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
-        for channel in self.channels:
-            chart.addSeries(channel)
+        self.channels = [QLineSeries() for _ in self.labels]
+        for channel, label in zip(self.channels, self.labels, strict=True):
+            channel.setName(label)
+            self.chart.addSeries(channel)
             channel.attachAxis(self.x_axis)
             channel.attachAxis(self.y_axis)
 
@@ -115,13 +117,17 @@ class VoltmeterWidget(QWidget):
         sidebar_layout.addWidget(self.time_field)
 
         # channels
+        checkboxes = [BoolCheckBox(label) for label in self.labels]
         self.fields = [QLineEdit() for _ in self.labels]
 
-        for channel, field, label in zip(self.channels, self.fields, self.labels, strict=False):
-            checkbox = BoolCheckBox(label)
+        for (
+            checkbox,
+            field,
+            channel,
+        ) in zip(checkboxes, self.fields, self.channels, strict=True):
             checkbox.setChecked(True)
-            checkbox.check_changed.connect(channel.setVisible)
             sidebar_layout.addWidget(checkbox)
+            checkbox.check_changed.connect(channel.setVisible)
 
             field.setReadOnly(True)
             sidebar_layout.addWidget(field)
@@ -171,30 +177,31 @@ class VoltmeterWidget(QWidget):
     def on_new_records(self, new_records: list[tuple[float, float, float]]):
         unit = self.get_time_unit(new_records[-1][0])
         if unit != self.unit:
-            for channel in self.channels:
-                channel.clear()
-            self.unit = unit
-            for time, *values in self.voltmeter.records:
-                for channel, value in zip(self.channels, values, strict=False):
-                    channel.append((time / unit), value)
+            for i, channel in enumerate(self.channels):
+                channel.replace(
+                    list(
+                        QPointF(time / unit, values[i]) for time, *values in self.voltmeter.records
+                    )
+                )
 
-            if unit >= 60.0 * 60.0:
+            self.unit = unit
+            if self.unit >= 60.0 * 60.0:
                 self.x_axis.setTitleText("time [hours]")
-            elif unit >= 60.0:
+            elif self.unit >= 60.0:
                 self.x_axis.setTitleText("time [minutes]")
             else:
                 self.x_axis.setTitleText("time [seconds]")
 
         else:
             for time, *values in new_records:
-                for channel, value in zip(self.channels, values, strict=False):
+                for channel, value in zip(self.channels, values, strict=True):
                     channel.append((time / unit), value)
 
         time, *values = new_records[-1]
         self.x_axis.setMax(self.get_upper_limit(time / unit))
 
         self.time_field.setText(f"{time:g} s")
-        for field, value in zip(self.fields, values, strict=False):
+        for field, value in zip(self.fields, values, strict=True):
             field.setText(f"{value:.3f} V")
 
     def save(self) -> bool:
