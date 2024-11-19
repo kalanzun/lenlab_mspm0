@@ -11,7 +11,7 @@ struct VoltmeterPoint {
 
 struct VoltmeterReply {
     struct Packet packet;
-    struct VoltmeterPoint points[64];
+    struct VoltmeterPoint points[128];
 };
 
 enum VoltmeterFlag {
