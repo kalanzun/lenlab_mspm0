@@ -60,13 +60,13 @@ ADC121.repeatMode          = true;
 ADC121.trigSrc             = "DL_ADC12_TRIG_SRC_EVENT";
 ADC121.adcMem0chansel      = "DL_ADC12_INPUT_CHAN_3";
 ADC121.adcMem0avgen        = true;
-ADC121.hwNumerator         = "DL_ADC12_HW_AVG_NUM_ACC_32";
-ADC121.hwDenominator       = "DL_ADC12_HW_AVG_DEN_DIV_BY_32";
-ADC121.sampleTime0         = "2 ms";
 ADC121.enabledInterrupts   = ["DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED"];
 ADC121.subChanID           = 1;
 ADC121.adcMem0trig         = "DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT";
 ADC121.interruptPriority   = "2";
+ADC121.sampleTime0         = "300 us";
+ADC121.hwNumerator         = "DL_ADC12_HW_AVG_NUM_ACC_16";
+ADC121.hwDenominator       = "DL_ADC12_HW_AVG_DEN_DIV_BY_16";
 ADC121.peripheral.$assign  = "ADC0";
 ADC121.adcPin3Config.$name = "ti_driverlib_gpio_GPIOPinGeneric2";
 

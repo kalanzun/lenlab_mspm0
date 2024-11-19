@@ -27,22 +27,26 @@ struct Voltmeter voltmeter = {
     },
     .ping_pong = false,
     .point_index = 0,
+    .interval = 0,
     .time = 0,
 };
 
-void voltmeter_start(void)
+void voltmeter_start(uint32_t interval)
 {
     struct Voltmeter* const self = &voltmeter;
 
-    if (DL_TimerG_isRunning(VOLT_TIMER_INST)) {
-        DL_TimerG_stopCounter(VOLT_TIMER_INST);
+    if (DL_Timer_isRunning(VOLT_TIMER_INST)) {
+        DL_Timer_stopCounter(VOLT_TIMER_INST);
     }
 
     self->ping_pong = 0;
     self->point_index = 0;
+    self->interval = interval;
     self->time = 0;
 
-    DL_TimerG_startCounter(VOLT_TIMER_INST);
+    // VOLT_TIMER_INST_LOAD_VALUE = (1 s * 50000 Hz) - 1
+    DL_Timer_setLoadValue(VOLT_TIMER_INST, interval * 50 - 1);
+    DL_Timer_startCounter(VOLT_TIMER_INST);
     terminal_sendReply('v', ARG_STR("strt"));
 }
 
@@ -55,7 +59,7 @@ void voltmeter_next(void)
     // UART interrupt and ADC interrupt run at the same priority
     // so _next and _main cannot interrupt each other
 
-    if (!DL_TimerG_isRunning(VOLT_TIMER_INST)) {
+    if (!DL_Timer_isRunning(VOLT_TIMER_INST)) {
         terminal_sendReply('v', ARG_STR("err!"));
         return;
     }
@@ -73,7 +77,7 @@ void voltmeter_next(void)
 
 void voltmeter_stop(void)
 {
-    DL_TimerG_stopCounter(VOLT_TIMER_INST);
+    DL_Timer_stopCounter(VOLT_TIMER_INST);
     terminal_sendReply('v', ARG_STR("stop"));
 }
 
@@ -94,12 +98,12 @@ static void voltmeter_handleADCResult(void)
 
     self->point_index = self->point_index + 1;
     if (self->point_index == LENGTH(reply->points)) {
-        DL_TimerG_stopCounter(VOLT_TIMER_INST);
+        DL_Timer_stopCounter(VOLT_TIMER_INST);
         return;
     }
 
     point->time = self->time;
-    self->time += 1;
+    self->time += self->interval;
 
     point->ch1 = DL_ADC12_getMemResult(ADC12_0_INST, DL_ADC12_MEM_IDX_0);
     point->ch2 = DL_ADC12_getMemResult(ADC12_1_INST, DL_ADC12_MEM_IDX_0);

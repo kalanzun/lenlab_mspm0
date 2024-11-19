@@ -23,6 +23,8 @@ class VoltmeterWidget(QWidget):
     title = "Voltmeter"
 
     labels = ("Channel 1 (PA 24)", "Channel 2 (PA 17)")
+    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
+    intervals = [20, 50, 100, 200, 500, 1000]
 
     error = Signal(Message)
 
@@ -78,22 +80,16 @@ class VoltmeterWidget(QWidget):
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
-        label = QLabel("Sample rate")
+        label = QLabel("Interval")
         layout.addWidget(label)
 
-        self.sample_rate = QComboBox()
-        self.voltmeter.started_changed.connect(self.sample_rate.setDisabled)
-        layout.addWidget(self.sample_rate)
+        self.interval = QComboBox()
+        self.voltmeter.started_changed.connect(self.interval.setDisabled)
+        layout.addWidget(self.interval)
 
-        self.sample_rate.addItem("20ms")
-        self.sample_rate.addItem("50ms")
-        self.sample_rate.addItem("100ms")
-        self.sample_rate.addItem("200ms")
-        self.sample_rate.addItem("500ms")
-        self.sample_rate.addItem("1s")
-        self.sample_rate.addItem("2s")
-
-        self.sample_rate.setCurrentIndex(5)
+        for interval in self.intervals:
+            self.interval.addItem(f"{interval} ms")
+        self.interval.setCurrentIndex(len(self.intervals) - 1)
 
         # start / stop
         layout = QHBoxLayout()
@@ -101,7 +97,7 @@ class VoltmeterWidget(QWidget):
 
         button = QPushButton("Start")
         self.voltmeter.started_changed.connect(button.setDisabled)
-        button.clicked.connect(self.voltmeter.start)
+        button.clicked.connect(self.on_start_clicked)
         layout.addWidget(button)
 
         button = QPushButton("Stop")
@@ -132,7 +128,7 @@ class VoltmeterWidget(QWidget):
 
         # save
         button = QPushButton("Save")
-        button.clicked.connect(self.on_save)
+        button.clicked.connect(self.on_save_clicked)
         sidebar_layout.addWidget(button)
 
         self.auto_save = BoolCheckBox("Automatic save")
@@ -146,12 +142,16 @@ class VoltmeterWidget(QWidget):
 
         button = QPushButton("Reset")
         self.voltmeter.started_changed.connect(button.setDisabled)
-        button.clicked.connect(self.on_reset)
+        button.clicked.connect(self.on_reset_clicked)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
 
-    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
+    @Slot()
+    def on_start_clicked(self):
+        index = self.interval.currentIndex()
+        interval = self.intervals[index]
+        self.voltmeter.start(interval)
 
     def get_upper_limit(self, value: float) -> float:
         for x in self.limits:
@@ -193,12 +193,36 @@ class VoltmeterWidget(QWidget):
         time, *values = new_records[-1]
         self.x_axis.setMax(self.get_upper_limit(time / unit))
 
-        self.time_field.setText(f"{time:.3g} s")
+        self.time_field.setText(f"{time:g} s")
         for field, value in zip(self.fields, values, strict=False):
-            field.setText(f"{value:.3g} V")
+            field.setText(f"{value:.3f} V")
+
+    def save(self) -> bool:
+        file_name, selected_filter = QFileDialog.getSaveFileName(
+            self, "Save", "voltmeter.csv", "CSV (*.csv)"
+        )
+        if not file_name:  # cancelled
+            return False
+
+        self.voltmeter.set_file_name(file_name)
+        if self.voltmeter.save():
+            self.file_name.setText(file_name)
+            self.auto_save.setChecked(False)
+            self.auto_save.setEnabled(True)
+        else:
+            self.file_name.setText("")
+            self.auto_save.setChecked(False)
+            self.auto_save.setEnabled(False)
+            return False
+
+        return True
 
     @Slot()
-    def on_reset(self):
+    def on_save_clicked(self):
+        self.save()
+
+    @Slot()
+    def on_reset_clicked(self):
         if self.voltmeter.unsaved:
             dialog = QMessageBox()
             dialog.setWindowTitle("Lenlab")
@@ -232,27 +256,3 @@ class VoltmeterWidget(QWidget):
         self.file_name.setText("")
         self.auto_save.setChecked(False)
         self.auto_save.setEnabled(False)
-
-    def save(self) -> bool:
-        file_name, selected_filter = QFileDialog.getSaveFileName(
-            self, "Save", "voltmeter.csv", "CSV (*.csv)"
-        )
-        if not file_name:  # cancelled
-            return False
-
-        self.voltmeter.set_file_name(file_name)
-        if self.voltmeter.save():
-            self.file_name.setText(file_name)
-            self.auto_save.setChecked(False)
-            self.auto_save.setEnabled(True)
-        else:
-            self.file_name.setText("")
-            self.auto_save.setChecked(False)
-            self.auto_save.setEnabled(False)
-            return False
-
-        return True
-
-    @Slot()
-    def on_save(self):
-        self.save()

@@ -11,7 +11,7 @@ struct VoltmeterPoint {
 
 struct VoltmeterReply {
     struct Packet packet;
-    struct VoltmeterPoint points[8];
+    struct VoltmeterPoint points[64];
 };
 
 enum VoltmeterFlag {
@@ -26,10 +26,11 @@ struct Voltmeter {
     struct VoltmeterReply reply[2];
     bool ping_pong;
     uint8_t point_index;
+    uint32_t interval;
     uint32_t time;
 };
 
-void voltmeter_start(void);
+void voltmeter_start(uint32_t interval);
 
 void voltmeter_next(void);
 

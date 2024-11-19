@@ -77,12 +77,12 @@ void interpreter_handleCommand(void)
             }
             break;
         case 'v': // voltmeter
-            if (cmd->arg == ARG_STR("strt")) { // start
-                voltmeter_start();
-            } else if (cmd->arg == ARG_STR("next")) { // next
+            if (cmd->arg == ARG_STR("next")) { // next
                 voltmeter_next();
             } else if (cmd->arg == ARG_STR("stop")) { // stop
                 voltmeter_stop();
+            } else { // assume start and interval argument
+                voltmeter_start(cmd->arg);
             }
             break;
         }

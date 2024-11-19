@@ -6,7 +6,7 @@ from PySide6.QtCore import QIODevice, QObject, QSaveFile, Signal, Slot
 
 from lenlab.launchpad.terminal import Terminal
 
-from ..launchpad.protocol import pack
+from ..launchpad.protocol import pack, pack_uint32
 from ..message import Message
 from ..singleshot import SingleShotTimer
 
@@ -48,18 +48,19 @@ class Voltmeter(QObject):
         self.terminal.reply.connect(self.on_reply)
 
     @Slot()
-    def start(self):
+    def start(self, interval: int = 1000):
         if self.start_requested or self.started:
             return
 
+        self.interval = interval
         if self.records:
-            self.offset = self.records[-1][0] + 1
+            self.offset = self.records[-1][0] + interval
         else:
             self.offset = 0.0
 
         self.start_requested = True
         self.stop_requested = False
-        self.command(START)
+        self.command(pack_uint32(b"v", interval))
 
     @Slot()
     def stop(self):
@@ -128,7 +129,7 @@ class Voltmeter(QObject):
     def add_new_records(self, records: bytes):
         new_records = list()
         for record in batched(records, 8):
-            time = int.from_bytes(record[:4], byteorder="little") * 1.0 + self.offset
+            time = int.from_bytes(record[:4], byteorder="little") / 1000.0 + self.offset
             value1 = int.from_bytes(record[4:6], byteorder="little") / 2**12 * 3.3
             value2 = int.from_bytes(record[6:8], byteorder="little") / 2**12 * 3.3
             new_records.append((time, value1, value2))
@@ -152,7 +153,7 @@ class Voltmeter(QObject):
         file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n".encode("ascii"))
         file.write("Zeit; Kanal_1; Kanal_2\n".encode("ascii"))
         for record in self.records:
-            file.write(f"{record[0]:.3g}; {record[1]:.3g}; {record[2]:.3g}\n".encode("ascii"))
+            file.write(f"{record[0]:f}; {record[1]:f}; {record[2]:f}\n".encode("ascii"))
 
         if not file.commit():
             logger.error(SaveError(file.errorString()))
