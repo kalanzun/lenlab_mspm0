@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         programmer = ProgrammerWidget()
         pins = PinAssignmentWidget()
         voltmeter = VoltmeterWidget(self.lenlab)
+        voltmeter.error.connect(message_banner.set_error)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 

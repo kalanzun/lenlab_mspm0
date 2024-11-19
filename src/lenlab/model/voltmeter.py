@@ -1,11 +1,16 @@
+import logging
+from importlib import metadata
 from itertools import batched
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QIODevice, QObject, QSaveFile, Signal, Slot
 
 from lenlab.launchpad.terminal import Terminal
 
 from ..launchpad.protocol import pack
+from ..message import Message
 from ..singleshot import SingleShotTimer
+
+logger = logging.getLogger(__name__)
 
 START = pack(b"vstrt")
 NEXT = pack(b"vnext")
@@ -16,15 +21,23 @@ ERROR = pack(b"verr!")
 class Voltmeter(QObject):
     terminal: Terminal
 
-    new_point = Signal(float, float, float)
+    started_changed = Signal(bool)
+    new_records = Signal(list)
 
     def __init__(self):
         super().__init__()
+        self.interval = 0
         self.offset = 0.0
-        self.points = list()
+        self.records = list()
+
+        self.started = False
+        self.unsaved = 0
+        self.file_name = None
+        self.auto_save = False
 
         self.command_queue = list()
         self.busy = False
+        self.start_requested = False
         self.stop_requested = False
 
         self.next_timer = SingleShotTimer(self.on_next_timeout, interval=200)
@@ -36,23 +49,37 @@ class Voltmeter(QObject):
 
     @Slot()
     def start(self):
-        if self.points:
-            self.offset = self.points[-1][0] + 1
+        if self.start_requested or self.started:
+            return
+
+        if self.records:
+            self.offset = self.records[-1][0] + 1
         else:
             self.offset = 0.0
 
+        self.start_requested = True
         self.stop_requested = False
         self.command(START)
 
     @Slot()
     def stop(self):
+        if self.stop_requested or not self.started:
+            return
+
         self.next_timer.stop()
+        self.start_requested = False
         self.stop_requested = True
         self.command(STOP)
 
     @Slot()
     def reset(self):
-        del self.points[:]
+        if self.started:
+            return
+
+        del self.records[:]
+        self.unsaved = 0
+        self.file_name = None
+        self.auto_save = False
 
     def next_command(self):
         if not self.busy and self.command_queue:
@@ -70,31 +97,84 @@ class Voltmeter(QObject):
 
         if reply == START:
             if not self.stop_requested:
+                self.started = True
+                self.started_changed.emit(True)
                 self.next_timer.start()
 
         elif reply[1:2] == b"v" and (reply[4:8] == b" red" or reply[4:8] == b" blu"):
-            self.add_points(reply)
+            if len(reply) > 8:
+                self.add_new_records(reply[8:])
             if not self.stop_requested:
                 self.next_timer.start()
 
         elif reply == STOP:
-            pass
+            # auto_save the last records regardless the limit
+            if self.auto_save and self.unsaved:
+                self.save()
+
+            self.started = False
+            self.started_changed.emit(False)
 
         elif reply == ERROR:
-            print("Error reply")
+            # voltmeter got a next command but wasn't running
+            logger.error("voltmeter error reply")
 
-        else:
-            print(reply)
-            raise AssertionError()
+        self.next_command()
 
     @Slot()
     def on_next_timeout(self):
         self.command(NEXT)
 
-    def add_points(self, reply: bytes):
-        for point in batched(reply[8:], 8):
-            time = int.from_bytes(point[:4], byteorder="little") * 1.0 + self.offset
-            value1 = int.from_bytes(point[4:6], byteorder="little") / 2**12 * 3.3
-            value2 = int.from_bytes(point[6:8], byteorder="little") / 2**12 * 3.3
-            self.points.append([time, value1, value2])
-            self.new_point.emit(time, value1, value2)
+    def add_new_records(self, records: bytes):
+        new_records = list()
+        for record in batched(records, 8):
+            time = int.from_bytes(record[:4], byteorder="little") * 1.0 + self.offset
+            value1 = int.from_bytes(record[4:6], byteorder="little") / 2**12 * 3.3
+            value2 = int.from_bytes(record[6:8], byteorder="little") / 2**12 * 3.3
+            new_records.append((time, value1, value2))
+
+        self.records.extend(new_records)
+        self.unsaved += len(new_records)
+        self.do_auto_save()
+        self.new_records.emit(new_records)
+
+    def set_file_name(self, file_name):
+        self.file_name = file_name
+
+    def save(self):
+        file = QSaveFile(self.file_name)
+
+        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
+            logger.error(OpenError(file.errorString()))
+            return False
+
+        version = metadata.version("lenlab")
+        file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n".encode("ascii"))
+        file.write("Zeit; Kanal_1; Kanal_2\n".encode("ascii"))
+        for record in self.records:
+            file.write(f"{record[0]:.3g}; {record[1]:.3g}; {record[2]:.3g}\n".encode("ascii"))
+
+        if not file.commit():
+            logger.error(SaveError(file.errorString()))
+            return False
+
+        self.unsaved = 0
+        return True
+
+    def set_auto_save(self, state: bool):
+        self.auto_save = state
+        self.do_auto_save()
+
+    def do_auto_save(self):
+        if self.auto_save and self.unsaved >= 5:
+            self.save()
+
+
+class OpenError(Message):
+    english = """Error opening file for saving: {0}"""
+    german = """Fehler beim Öffnen der Datei fürs Speichern: {0}"""
+
+
+class SaveError(Message):
+    english = """Error when saving: {0}"""
+    german = """Fehler beim Speichern: {0}"""

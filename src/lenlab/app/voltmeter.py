@@ -1,8 +1,7 @@
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import QIODevice, QSaveFile, Qt, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -14,12 +13,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..message import Message
 from ..model.lenlab import Lenlab
 from ..model.voltmeter import Voltmeter
+from .checkbox import BoolCheckBox
 
 
 class VoltmeterWidget(QWidget):
     title = "Voltmeter"
+
+    labels = ("Channel 1 (PA 24)", "Channel 2 (PA 17)")
+
+    error = Signal(Message)
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -27,21 +32,23 @@ class VoltmeterWidget(QWidget):
         self.lenlab = lenlab
         self.voltmeter = Voltmeter()
         self.lenlab.ready.connect(self.voltmeter.set_terminal)
-        self.voltmeter.new_point.connect(self.on_new_point)
+        self.voltmeter.new_records.connect(self.on_new_records)
 
         main_layout = QHBoxLayout()
         self.setLayout(main_layout)
 
-        self.ch1 = QLineSeries()
-        self.ch1.setName("Channel 1")
-        self.ch2 = QLineSeries()
-        self.ch2.setName("Channel 2")
+        self.channels = [QLineSeries() for _ in self.labels]
+        for channel, label in zip(self.channels, self.labels, strict=False):
+            channel.setName(label)
         self.unit = 1  # second
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         chart = self.chart_view.chart()
-        chart.setTheme(QChart.ChartTheme.ChartThemeDark)
+        # chart.setTheme(QChart.ChartTheme.ChartThemeLight)  # default, grid lines faint
+        # chart.setTheme(QChart.ChartTheme.ChartThemeDark)  # odd gradient
+        # chart.setTheme(QChart.ChartTheme.ChartThemeBlueNcs)  # grid lines faint
+        chart.setTheme(QChart.ChartTheme.ChartThemeQt)  # light and dark green, stronger grid lines
 
         self.x_axis = QValueAxis()
         self.x_axis.setRange(0.0, 4.0)
@@ -57,7 +64,7 @@ class VoltmeterWidget(QWidget):
         self.y_axis.setTitleText("voltage [volts]")
         chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
-        for channel in (self.ch1, self.ch2):
+        for channel in self.channels:
             chart.addSeries(channel)
             channel.attachAxis(self.x_axis)
             channel.attachAxis(self.y_axis)
@@ -75,48 +82,62 @@ class VoltmeterWidget(QWidget):
         layout.addWidget(label)
 
         self.sample_rate = QComboBox()
+        self.voltmeter.started_changed.connect(self.sample_rate.setDisabled)
         layout.addWidget(self.sample_rate)
 
+        self.sample_rate.addItem("20ms")
+        self.sample_rate.addItem("50ms")
+        self.sample_rate.addItem("100ms")
         self.sample_rate.addItem("200ms")
         self.sample_rate.addItem("500ms")
         self.sample_rate.addItem("1s")
         self.sample_rate.addItem("2s")
 
-        self.sample_rate.setCurrentIndex(2)
+        self.sample_rate.setCurrentIndex(5)
 
         # start / stop
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
         button = QPushButton("Start")
+        self.voltmeter.started_changed.connect(button.setDisabled)
         button.clicked.connect(self.voltmeter.start)
         layout.addWidget(button)
 
         button = QPushButton("Stop")
+        button.setEnabled(False)
+        self.voltmeter.started_changed.connect(button.setEnabled)
         button.clicked.connect(self.voltmeter.stop)
         layout.addWidget(button)
 
-        # channels
-        checkbox = QCheckBox("Channel 1 (PA 24)")
-        checkbox.setChecked(True)
-        checkbox.checkStateChanged.connect(
-            lambda state: self.ch1.setVisible(state == Qt.CheckState.Checked)
-        )
-        sidebar_layout.addWidget(checkbox)
+        # time
+        label = QLabel("Time")
+        sidebar_layout.addWidget(label)
 
-        checkbox = QCheckBox("Channel 2 (PA 17)")
-        checkbox.setChecked(True)
-        checkbox.checkStateChanged.connect(
-            lambda state: self.ch2.setVisible(state == Qt.CheckState.Checked)
-        )
-        sidebar_layout.addWidget(checkbox)
+        self.time_field = QLineEdit()
+        self.time_field.setReadOnly(True)
+        sidebar_layout.addWidget(self.time_field)
+
+        # channels
+        self.fields = [QLineEdit() for _ in self.labels]
+
+        for channel, field, label in zip(self.channels, self.fields, self.labels, strict=False):
+            checkbox = BoolCheckBox(label)
+            checkbox.setChecked(True)
+            checkbox.check_changed.connect(channel.setVisible)
+            sidebar_layout.addWidget(checkbox)
+
+            field.setReadOnly(True)
+            sidebar_layout.addWidget(field)
 
         # save
         button = QPushButton("Save")
-        button.clicked.connect(self.save)
+        button.clicked.connect(self.on_save)
         sidebar_layout.addWidget(button)
 
-        self.auto_save = QCheckBox("Automatic save")
+        self.auto_save = BoolCheckBox("Automatic save")
+        self.auto_save.setEnabled(False)
+        self.auto_save.check_changed.connect(self.voltmeter.set_auto_save)
         sidebar_layout.addWidget(self.auto_save)
 
         self.file_name = QLineEdit()
@@ -124,37 +145,38 @@ class VoltmeterWidget(QWidget):
         sidebar_layout.addWidget(self.file_name)
 
         button = QPushButton("Reset")
-        button.clicked.connect(self.voltmeter.reset)
+        self.voltmeter.started_changed.connect(button.setDisabled)
+        button.clicked.connect(self.on_reset)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
 
-    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0, 200.0]
+    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
 
     def get_upper_limit(self, value: float) -> float:
         for x in self.limits:
-            if x > value:
+            if value <= x:
                 return x
 
     @staticmethod
     def get_time_unit(time: float) -> float:
-        if time < 2.0 * 60.0:  # 2 minutes
+        if time <= 2.0 * 60.0:  # 2 minutes
             return 1  # seconds
-        elif time < 2 * 60.0 * 60.0:  # 2 hours
+        elif time <= 2 * 60.0 * 60.0:  # 2 hours
             return 60.0  # minutes
         else:
             return 60.0 * 60.0  # hours
 
-    @Slot(float, float, float)
-    def on_new_point(self, time, value1, value2):
-        unit = self.get_time_unit(time)
+    @Slot(list)
+    def on_new_records(self, new_records: list[tuple[float, float, float]]):
+        unit = self.get_time_unit(new_records[-1][0])
         if unit != self.unit:
-            self.ch1.clear()
-            self.ch2.clear()
+            for channel in self.channels:
+                channel.clear()
             self.unit = unit
-            for time, value1, value2 in self.voltmeter.points:
-                self.ch1.append((time / unit), value1)
-                self.ch2.append((time / unit), value2)
+            for time, *values in self.voltmeter.records:
+                for channel, value in zip(self.channels, values, strict=False):
+                    channel.append((time / unit), value)
 
             if unit >= 60.0 * 60.0:
                 self.x_axis.setTitleText("time [hours]")
@@ -164,43 +186,73 @@ class VoltmeterWidget(QWidget):
                 self.x_axis.setTitleText("time [seconds]")
 
         else:
-            self.ch1.append(time / unit, value1)
-            self.ch2.append(time / unit, value2)
+            for time, *values in new_records:
+                for channel, value in zip(self.channels, values, strict=False):
+                    channel.append((time / unit), value)
 
+        time, *values = new_records[-1]
         self.x_axis.setMax(self.get_upper_limit(time / unit))
+
+        self.time_field.setText(f"{time:.3g} s")
+        for field, value in zip(self.fields, values, strict=False):
+            field.setText(f"{value:.3g} V")
 
     @Slot()
     def on_reset(self):
+        if self.voltmeter.unsaved:
+            dialog = QMessageBox()
+            dialog.setWindowTitle("Lenlab")
+            dialog.setText("The voltmeter has unsaved data.")
+            dialog.setInformativeText("Do you want to save the data?")
+            dialog.setStandardButtons(
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel
+            )
+            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
+            result = dialog.exec()
+            if result == QMessageBox.StandardButton.Save:
+                if not self.save():
+                    return
+            elif result == QMessageBox.StandardButton.Cancel:
+                return
+
         self.voltmeter.reset()
-        self.ch1.clear()
-        self.ch2.clear()
+
+        for channel in self.channels:
+            channel.clear()
         self.unit = 1
         self.x_axis.setMax(4.0)
         self.x_axis.setTitleText("time [seconds]")
 
-    @Slot()
-    def save(self):
+        self.time_field.setText("")
+        for field in self.fields:
+            field.setText("")
+
+        self.file_name.setText("")
+        self.auto_save.setChecked(False)
+        self.auto_save.setEnabled(False)
+
+    def save(self) -> bool:
         file_name, selected_filter = QFileDialog.getSaveFileName(
             self, "Save", "voltmeter.csv", "CSV (*.csv)"
         )
         if not file_name:  # cancelled
-            return
+            return False
 
-        file = QSaveFile(file_name)
+        self.voltmeter.set_file_name(file_name)
+        if self.voltmeter.save():
+            self.file_name.setText(file_name)
+            self.auto_save.setChecked(False)
+            self.auto_save.setEnabled(True)
+        else:
+            self.file_name.setText("")
+            self.auto_save.setChecked(False)
+            self.auto_save.setEnabled(False)
+            return False
 
-        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
-            QMessageBox.critical(
-                self, "Save", f"Fehler beim Speichern der Daten\n{file.errorString()}"
-            )
-            return
+        return True
 
-        file.write(b"Hello!\n")
-
-        if not file.commit():
-            QMessageBox.critical(
-                self, "Save", f"Fehler beim Speichern der Daten\n{file.errorString()}"
-            )
-            return
-
-        self.auto_save.setChecked(False)
-        self.file_name.setText(file_name)
+    @Slot()
+    def on_save(self):
+        self.save()

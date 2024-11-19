@@ -22,6 +22,7 @@ def save_and_restore(painter):
 
 def find_chart_colors(n=4):
     chart = QChart()
+    chart.setTheme(QChart.ChartTheme.ChartThemeQt)  # light and dark green, stronger grid lines
     for _ in range(n):
         channel = QLineSeries()
         chart.addSeries(channel)
