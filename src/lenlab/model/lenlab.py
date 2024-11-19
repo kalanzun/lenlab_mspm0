@@ -7,7 +7,7 @@ from lenlab.message import Message
 
 class Lenlab(QObject):
     error = Signal(Message)
-    ready = Signal()
+    ready = Signal(Terminal)
 
     discovery: Discovery
     terminal: Terminal
@@ -22,4 +22,4 @@ class Lenlab(QObject):
     def on_result(self, terminal: Terminal):
         self.terminal = terminal
         del self.discovery
-        self.ready.emit()
+        self.ready.emit(terminal)

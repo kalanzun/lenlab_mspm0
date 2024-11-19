@@ -6,7 +6,7 @@ from .bode import BodePlotter
 from .figure import PinAssignmentWidget
 from .oscilloscope import Oscilloscope
 from .programmer import ProgrammerWidget
-from .voltmeter import Voltmeter
+from .voltmeter import VoltmeterWidget
 
 
 class MainWindow(QMainWindow):
@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
 
         programmer = ProgrammerWidget()
         pins = PinAssignmentWidget()
-        voltmeter = Voltmeter(self.lenlab)
+        voltmeter = VoltmeterWidget(self.lenlab)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 

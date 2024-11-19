@@ -1,4 +1,4 @@
-from PySide6.QtCharts import QChartView, QLineSeries, QValueAxis
+from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QIODevice, QSaveFile, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
@@ -15,43 +15,52 @@ from PySide6.QtWidgets import (
 )
 
 from ..model.lenlab import Lenlab
+from ..model.voltmeter import Voltmeter
 
 
-class Voltmeter(QWidget):
+class VoltmeterWidget(QWidget):
     title = "Voltmeter"
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
 
         self.lenlab = lenlab
+        self.voltmeter = Voltmeter()
+        self.lenlab.ready.connect(self.voltmeter.set_terminal)
+        self.voltmeter.new_point.connect(self.on_new_point)
+
+        main_layout = QHBoxLayout()
+        self.setLayout(main_layout)
 
         self.ch1 = QLineSeries()
         self.ch1.setName("Channel 1")
         self.ch2 = QLineSeries()
         self.ch2.setName("Channel 2")
-        for i in range(100):
-            self.ch1.append(i, 3.0)
-            self.ch2.append(i, i / 100)
-
-        main_layout = QHBoxLayout()
-        self.setLayout(main_layout)
+        self.unit = 1  # second
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         chart = self.chart_view.chart()
+        chart.setTheme(QChart.ChartTheme.ChartThemeDark)
 
-        x_axis = QValueAxis()
-        x_axis.setRange(0, 100)
-        chart.addAxis(x_axis, Qt.AlignmentFlag.AlignBottom)
+        self.x_axis = QValueAxis()
+        self.x_axis.setRange(0.0, 4.0)
+        self.x_axis.setTickCount(5)
+        self.x_axis.setLabelFormat("%g")
+        self.x_axis.setTitleText("time [seconds]")
+        chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
-        y_axis = QValueAxis()
-        y_axis.setRange(0, 3.3)
-        chart.addAxis(y_axis, Qt.AlignmentFlag.AlignLeft)
+        self.y_axis = QValueAxis()
+        self.y_axis.setRange(0.0, 3.3)
+        self.y_axis.setTickCount(5)
+        self.y_axis.setLabelFormat("%g")
+        self.y_axis.setTitleText("voltage [volts]")
+        chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
-        for ch in (self.ch1, self.ch2):
-            chart.addSeries(ch)
-            ch.attachAxis(x_axis)
-            ch.attachAxis(y_axis)
+        for channel in (self.ch1, self.ch2):
+            chart.addSeries(channel)
+            channel.attachAxis(self.x_axis)
+            channel.attachAxis(self.y_axis)
 
         main_layout.addWidget(self.chart_view, stretch=1)
 
@@ -80,9 +89,11 @@ class Voltmeter(QWidget):
         sidebar_layout.addLayout(layout)
 
         button = QPushButton("Start")
+        button.clicked.connect(self.voltmeter.start)
         layout.addWidget(button)
 
         button = QPushButton("Stop")
+        button.clicked.connect(self.voltmeter.stop)
         layout.addWidget(button)
 
         # channels
@@ -113,9 +124,59 @@ class Voltmeter(QWidget):
         sidebar_layout.addWidget(self.file_name)
 
         button = QPushButton("Reset")
+        button.clicked.connect(self.voltmeter.reset)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
+
+    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0, 200.0]
+
+    def get_upper_limit(self, value: float) -> float:
+        for x in self.limits:
+            if x > value:
+                return x
+
+    @staticmethod
+    def get_time_unit(time: float) -> float:
+        if time < 2.0 * 60.0:  # 2 minutes
+            return 1  # seconds
+        elif time < 2 * 60.0 * 60.0:  # 2 hours
+            return 60.0  # minutes
+        else:
+            return 60.0 * 60.0  # hours
+
+    @Slot(float, float, float)
+    def on_new_point(self, time, value1, value2):
+        unit = self.get_time_unit(time)
+        if unit != self.unit:
+            self.ch1.clear()
+            self.ch2.clear()
+            self.unit = unit
+            for time, value1, value2 in self.voltmeter.points:
+                self.ch1.append((time / unit), value1)
+                self.ch2.append((time / unit), value2)
+
+            if unit >= 60.0 * 60.0:
+                self.x_axis.setTitleText("time [hours]")
+            elif unit >= 60.0:
+                self.x_axis.setTitleText("time [minutes]")
+            else:
+                self.x_axis.setTitleText("time [seconds]")
+
+        else:
+            self.ch1.append(time / unit, value1)
+            self.ch2.append(time / unit, value2)
+
+        self.x_axis.setMax(self.get_upper_limit(time / unit))
+
+    @Slot()
+    def on_reset(self):
+        self.voltmeter.reset()
+        self.ch1.clear()
+        self.ch2.clear()
+        self.unit = 1
+        self.x_axis.setMax(4.0)
+        self.x_axis.setTitleText("time [seconds]")
 
     @Slot()
     def save(self):
