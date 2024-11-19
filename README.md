@@ -1,18 +1,17 @@
 # Lenlab 8 for MSPM0G3507
 
-This project is under development and not ready for use.
-
-Dieses Projekt ist in Entwicklung und nicht bereit zur Nutzung.
-
 ## Liebe Studierende im LEN Workshop A am KIT!
 
-Lenlab 8 ist noch nicht ganz fertig; bis Mittwoch, mit der Aufgabenstellung, gibt es hier eine
-funktionierende Version. Der Zusatz "@latest" bei den Kommandos verursacht ein Update
-auf die neueste Version.
+Lenlab in der Version 8.0 funktioniert für den LEN Workshop A. Ich werde in den nächsten Tagen
+noch einige Details verbessern (Fehlermeldungen, Übersetzung, Screenshot, ...). Starten Sie Lenlab mit 
 
-Installieren Sie bereits `uv` zur Vorbereitung und probieren Sie gerne die Tests unter
-"Lenlab Testen". Wenn es nicht funktioniert, schreiben Sie mir eine E-Mail (christoph.simon@kit.edu)
-oder fragen Sie mich oder Herrn Dycke in der LEN-Übung am Mittwoch.
+```shell
+uvx lenlab@latest
+```
+
+wenn Sie Internet haben. Dann lädt `uvx` automatisch Updates herunter.
+
+Wenn Sie nicht weiterkommen, fragen Sie bitte in der Übung am Mittwoch, im Ilias und in den Tutorien.
 
 ## Installation (uv)
 
@@ -43,7 +42,15 @@ Schließen Sie das Terminal und starten Sie es neu, dann findet es die eben inst
 uvx lenlab@latest
 ```
 
-`uvx` lädt Lenlab herunter und führt es aus.
+`uvx` lädt Lenlab in der neuesten Version herunter und führt es aus.
+
+Wenn Sie keine Internetverbindung haben starten Sie Lenlab ohne `@latest`
+
+```shell
+uvx lenlab
+```
+
+`uvx` hat den Download beim ersten Mal gespeichert und führt die lokale Kopie aus ohne Zugriff auf das Internet. 
 
 ## Lenlab Testen
 
