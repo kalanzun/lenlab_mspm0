@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
@@ -56,7 +57,7 @@ class VoltmeterWidget(QWidget):
         self.x_axis.setRange(0.0, 4.0)
         self.x_axis.setTickCount(5)
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText("time [seconds]")
+        self.x_axis.setTitleText(self.get_unit_label(1.0))
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
@@ -146,6 +147,10 @@ class VoltmeterWidget(QWidget):
         self.file_name.setReadOnly(True)
         sidebar_layout.addWidget(self.file_name)
 
+        button = QPushButton("Save Image")
+        button.clicked.connect(self.on_save_image_clicked)
+        sidebar_layout.addWidget(button)
+
         button = QPushButton("Reset")
         self.voltmeter.started_changed.connect(button.setDisabled)
         button.clicked.connect(self.on_reset_clicked)
@@ -173,6 +178,15 @@ class VoltmeterWidget(QWidget):
         else:
             return 60.0 * 60.0  # hours
 
+    @staticmethod
+    def get_unit_label(unit: float):
+        if unit >= 60.0 * 60.0:
+            return "time [hours]"
+        elif unit >= 60.0:
+            return "time [minutes]"
+        else:
+            return "time [seconds]"
+
     @Slot(list)
     def on_new_records(self, new_records: list[tuple[float, float, float]]):
         unit = self.get_time_unit(new_records[-1][0])
@@ -185,12 +199,7 @@ class VoltmeterWidget(QWidget):
                 )
 
             self.unit = unit
-            if self.unit >= 60.0 * 60.0:
-                self.x_axis.setTitleText("time [hours]")
-            elif self.unit >= 60.0:
-                self.x_axis.setTitleText("time [minutes]")
-            else:
-                self.x_axis.setTitleText("time [seconds]")
+            self.x_axis.setTitleText(self.get_unit_label(unit))
 
         else:
             for time, *values in new_records:
@@ -263,3 +272,32 @@ class VoltmeterWidget(QWidget):
         self.file_name.setText("")
         self.auto_save.setChecked(False)
         self.auto_save.setEnabled(False)
+
+    @Slot()
+    def on_save_image_clicked(self):
+        file_name, file_format = QFileDialog.getSaveFileName(
+            self, "Save Image", "voltmeter.svg", "SVG (*.svg);;PNG (*.png)"
+        )
+        if not file_name:  # cancelled
+            return
+
+        fig, ax = plt.subplots()
+
+        unit = self.get_time_unit(self.voltmeter.records[-1][0])
+        ax.set_xlim(0, self.get_upper_limit(self.voltmeter.records[-1][0] / unit))
+        ax.set_ylim(0, 3.3)
+
+        ax.set_xlabel(self.get_unit_label(unit))
+        ax.set_ylabel("voltage [volts]")
+
+        ax.grid()
+
+        time = [time / unit for time, *values in self.voltmeter.records]
+        for i, label in enumerate(self.labels):
+            if self.channels[i].isVisible():
+                channel1 = [values[i] for time, *values in self.voltmeter.records]
+                ax.plot(time, channel1, label=label)
+
+        # ax.legend()
+
+        fig.savefig(file_name, format=file_format[:3].lower())
