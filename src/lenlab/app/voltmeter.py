@@ -1,5 +1,6 @@
 import logging
 import time
+from itertools import batched
 
 import matplotlib.pyplot as plt
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
@@ -19,7 +20,6 @@ from PySide6.QtWidgets import (
 
 from ..message import Message
 from ..model.lenlab import Lenlab
-from ..model.voltmeter import VoltmeterPoint
 from .checkbox import BoolCheckBox
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class VoltmeterWidget(QWidget):
         self.lenlab = lenlab
         self.voltmeter = lenlab.voltmeter
         self.lenlab.ready.connect(self.voltmeter.set_terminal)
-        self.voltmeter.new_points.connect(self.on_new_points, Qt.ConnectionType.QueuedConnection)
+        self.voltmeter.updated.connect(self.on_updated, Qt.ConnectionType.QueuedConnection)
 
         self.unit = 1  # second
         self.channels = list()
@@ -192,31 +192,41 @@ class VoltmeterWidget(QWidget):
         else:
             return "time [seconds]"
 
-    @Slot(list)
-    def on_new_points(self, new_points: list[VoltmeterPoint]):
-        start = time.time()
-        current_time = new_points[-1].time
-        unit = self.get_time_unit(current_time)
-        if unit != self.unit:
-            for i, channel in enumerate(self.channels):
-                channel.replace(
-                    [QPointF(point.time / unit, point[i]) for point in self.voltmeter.points]
-                )
-
-            self.unit = unit
-            self.x_axis.setTitleText(self.get_unit_label(unit))
-
+    def get_batch_size(self, time: float) -> int:
+        if time <= 2.0 * 60.0:  # 2 minutes
+            return 1  # all points
+        elif time <= 2 * 60.0 * 60.0:  # 2 hours
+            return int(1000 / self.voltmeter.interval)  # seconds
         else:
-            for i, channel in enumerate(self.channels):
-                for point in new_points:
-                    channel.append(point.time / unit, point[i])
+            return int(1000 / self.voltmeter.interval) * 60  # minutes
 
-        self.x_axis.setMax(self.get_upper_limit(current_time / unit))
-        self.time_field.setText(f"{current_time:g} s")
+    @Slot()
+    def on_updated(self):
+        start = time.time()
+        point = self.voltmeter.points[-1]
+        unit = self.get_time_unit(point.time)
+        n = self.get_batch_size(point.time)
+
+        # this can do 100_000 points in 400 ms not batched
+        # and 130_000 points in 30 ms in batches of 50
+        # a lot faster than channel.append
+        for i, channel in enumerate(self.channels):
+            channel.replace(
+                [
+                    QPointF(batch[0].time / unit, sum(point[i] for point in batch) / len(batch))
+                    for batch in batched(self.voltmeter.points, n)
+                ]
+            )
+
+        self.x_axis.setMax(self.get_upper_limit(point.time / unit))
+        self.x_axis.setTitleText(self.get_unit_label(unit))
+        self.time_field.setText(f"{point.time:g} s")
         for i, field in enumerate(self.fields):
-            field.setText(f"{new_points[-1][i]:.3f} V")
+            field.setText(f"{point[i]:.3f} V")
 
-        logger.info(f"on_new_points {int((time.time() - start) * 1000)} ms")
+        logger.info(
+            f"on_new_points {len(self.voltmeter.points)} {int((time.time() - start) * 1000)} ms"
+        )
 
     def save(self) -> bool:
         file_name, selected_filter = QFileDialog.getSaveFileName(

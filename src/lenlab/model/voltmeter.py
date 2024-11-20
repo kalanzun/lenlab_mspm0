@@ -1,10 +1,11 @@
 import logging
+import time
 from dataclasses import dataclass
 from importlib import metadata
 from itertools import batched
 from typing import Self
 
-from PySide6.QtCore import QIODevice, QObject, QSaveFile, Signal, Slot
+from PySide6.QtCore import QObject, Qt, Signal, Slot
 
 from ..launchpad.protocol import pack, pack_uint32
 from ..launchpad.terminal import Terminal
@@ -46,7 +47,7 @@ class VoltmeterPoint:
             case _:
                 raise IndexError("VoltmeterPoint channel index out of range")
 
-    def line(self):
+    def line(self) -> str:
         return f"{self.time:f}; {self.value1:f}; {self.value2:f};\n"
 
 
@@ -55,7 +56,7 @@ class Voltmeter(QObject):
 
     # rename to active?
     started_changed = Signal(bool)
-    new_points = Signal(list)
+    updated = Signal()
 
     def __init__(self):
         super().__init__()
@@ -65,6 +66,7 @@ class Voltmeter(QObject):
 
         self.started = False
         self.unsaved = 0
+        self.save_ptr = 0
         self.file_name = None
         self.auto_save = False
 
@@ -77,6 +79,9 @@ class Voltmeter(QObject):
 
         # poll interval
         self.next_timer = SingleShotTimer(self.on_next_timeout, interval=200)
+
+        # auto save
+        self.updated.connect(self.on_updated, Qt.ConnectionType.QueuedConnection)
 
     @Slot(Terminal)
     def set_terminal(self, terminal: Terminal):
@@ -119,6 +124,7 @@ class Voltmeter(QObject):
 
         self.points = list()
         self.unsaved = 0
+        self.save_ptr = 0
         self.file_name = None
         self.auto_save = False
 
@@ -149,7 +155,7 @@ class Voltmeter(QObject):
         self.next_command()
 
     def do_stop(self):
-        # auto_save the last records regardless the limit
+        # auto_save the last points regardless the limit
         if self.auto_save and self.unsaved:
             self.save()
 
@@ -193,49 +199,43 @@ class Voltmeter(QObject):
         self.command(NEXT)
 
     def add_new_points(self, payload: bytes):
-        # start = time.time()
         new_points = [
             VoltmeterPoint.parse(buffer, time_offset=self.time_offset)
             for buffer in batched(payload, 8)
         ]
-        self.points.extend(new_points)
 
         self.unsaved += len(new_points) * self.interval
-        if self.auto_save and self.unsaved >= 5000:
-            self.save()
-
-        self.new_points.emit(new_points)
-        # logger.info(f"add_new_points {int((time.time() - start) * 1000000)} us")
+        self.points.extend(new_points)
+        self.updated.emit()
 
     def set_file_name(self, file_name):
         self.file_name = file_name
 
+    @Slot()
+    def on_updated(self):
+        if self.auto_save and self.unsaved >= 5_000:
+            self.save()
+
     def save(self):
-        file = QSaveFile(self.file_name)
+        start = time.time()
+        with open(self.file_name, "a" if self.save_ptr else "w") as file:
+            if self.save_ptr == 0:
+                version = metadata.version("lenlab")
+                file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n")
+                file.write("Zeit; Kanal_1; Kanal_2\n")
 
-        if not file.open(QIODevice.OpenModeFlag.WriteOnly):
-            logger.error(OpenError(file.errorString()))
-            return False
+            for point in self.points[self.save_ptr :]:
+                file.write(point.line())
 
-        def write(text):
-            file.write(text.encode("ascii"))
-
-        version = metadata.version("lenlab")
-        write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n")
-        write("Zeit; Kanal_1; Kanal_2\n")
-        for point in self.points:
-            write(point.line())
-
-        if not file.commit():
-            logger.error(SaveError(file.errorString()))
-            return False
+            self.save_ptr = len(self.points)
 
         self.unsaved = 0
+        logger.info(f"save {len(self.points)} {int((time.time() - start) * 1000)} ms")
         return True
 
     def set_auto_save(self, state: bool):
         self.auto_save = state
-        # auto_save the last records regardless the limit
+        # auto_save the last points regardless the limit
         if self.unsaved:
             self.save()
 
