@@ -39,6 +39,7 @@ void voltmeter_start(uint32_t interval)
         DL_Timer_stopCounter(VOLT_TIMER_INST);
     }
 
+    // promise to send red first
     self->ping_pong = 0;
     self->point_index = 0;
     self->interval = interval;
@@ -94,10 +95,15 @@ static void voltmeter_handleADCResult(void)
     struct VoltmeterReply* const reply = &self->reply[self->ping_pong];
     struct VoltmeterPoint* const point = &reply->points[self->point_index];
 
-    // DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
+    // next ADC measurement might already be underway
+    if (!DL_Timer_isRunning(VOLT_TIMER_INST)) {
+        return;
+    }
+
+    DL_GPIO_togglePins(GPIO_LEDS_B_PORT, GPIO_LEDS_B_LED_BLUE_PIN);
 
     self->point_index = self->point_index + 1;
-    if (self->point_index == LENGTH(reply->points)) {
+    if (self->point_index >= LENGTH(reply->points)) {
         DL_Timer_stopCounter(VOLT_TIMER_INST);
         return;
     }
