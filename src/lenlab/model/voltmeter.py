@@ -1,6 +1,8 @@
 import logging
+from dataclasses import dataclass
 from importlib import metadata
 from itertools import batched
+from typing import Self
 
 from PySide6.QtCore import QIODevice, QObject, QSaveFile, Signal, Slot
 
@@ -17,18 +19,49 @@ STOP = pack(b"vstop")
 ERROR = pack(b"verr!")
 
 
+binary_second = 1000.0
+binary_volt = 2**12 / 3.3
+
+
+@dataclass(frozen=True, slots=True)
+class VoltmeterPoint:
+    time: float
+    value1: float
+    value2: float
+
+    @classmethod
+    def parse(cls, buffer: tuple, time_offset: float) -> Self:
+        return cls(
+            int.from_bytes(buffer[0:4], byteorder="little") / binary_second + time_offset,
+            int.from_bytes(buffer[4:6], byteorder="little") / binary_volt,
+            int.from_bytes(buffer[6:8], byteorder="little") / binary_volt,
+        )
+
+    def __getitem__(self, channel: int) -> float:
+        match channel:
+            case 0:
+                return self.value1
+            case 1:
+                return self.value2
+            case _:
+                raise IndexError("VoltmeterPoint channel index out of range")
+
+    def line(self):
+        return f"{self.time:f}; {self.value1:f}; {self.value2:f};\n"
+
+
 class Voltmeter(QObject):
     terminal: Terminal
 
     # rename to active?
     started_changed = Signal(bool)
-    new_records = Signal(list)
+    new_points = Signal(list)
 
     def __init__(self):
         super().__init__()
         self.interval = 0
-        self.offset = 0.0
-        self.records = list()
+        self.time_offset = 0.0
+        self.points: list[VoltmeterPoint] = list()
 
         self.started = False
         self.unsaved = 0
@@ -50,6 +83,9 @@ class Voltmeter(QObject):
         self.terminal = terminal
         self.terminal.reply.connect(self.on_reply)
 
+    def get_next_time(self) -> float:
+        return self.points[-1].time + self.interval / binary_second if self.points else 0.0
+
     @Slot()
     def start(self, interval: int = 1000):
         if self.start_requested or self.started:
@@ -57,10 +93,8 @@ class Voltmeter(QObject):
             return
 
         self.interval = interval  # ms
-        if self.records:
-            self.offset = self.records[-1][0] + interval / 1000.0  # s
-        else:
-            self.offset = 0.0
+        self.time_offset = self.get_next_time()  # s
+        print(self.time_offset)
 
         self.retries = 0
         self.start_requested = True
@@ -83,7 +117,7 @@ class Voltmeter(QObject):
         if self.started:
             return
 
-        del self.records[:]
+        self.points = list()
         self.unsaved = 0
         self.file_name = None
         self.auto_save = False
@@ -137,7 +171,7 @@ class Voltmeter(QObject):
         elif reply[1:2] == b"v" and (reply[4:8] == b" red" or reply[4:8] == b" blu"):
             self.retries = 0
             if len(reply) > 8:
-                self.add_new_records(reply[8:])
+                self.add_new_points(reply[8:])
             if not self.stop_requested:
                 self.next_timer.start()
 
@@ -145,9 +179,12 @@ class Voltmeter(QObject):
             self.do_stop()
 
         elif reply == ERROR:
-            logger.error("error reply")
-            if self.started:
-                self.do_stop()
+            # overflow in firmware
+            logger.error("error reply; some points will be missing")
+            # restart
+            self.started = False
+            self.start_requested = False
+            self.start(self.interval)
 
         self.next_command()
 
@@ -155,19 +192,20 @@ class Voltmeter(QObject):
     def on_next_timeout(self):
         self.command(NEXT)
 
-    def add_new_records(self, records: bytes):
-        new_records = list()
-        for record in batched(records, 8):
-            time = int.from_bytes(record[:4], byteorder="little") / 1000.0 + self.offset
-            value1 = int.from_bytes(record[4:6], byteorder="little") / 2**12 * 3.3
-            value2 = int.from_bytes(record[6:8], byteorder="little") / 2**12 * 3.3
-            new_records.append((time, value1, value2))
+    def add_new_points(self, payload: bytes):
+        # start = time.time()
+        new_points = [
+            VoltmeterPoint.parse(buffer, time_offset=self.time_offset)
+            for buffer in batched(payload, 8)
+        ]
+        self.points.extend(new_points)
 
-        self.records.extend(new_records)
-        self.unsaved += len(new_records) * self.interval
+        self.unsaved += len(new_points) * self.interval
         if self.auto_save and self.unsaved >= 5000:
             self.save()
-        self.new_records.emit(new_records)
+
+        self.new_points.emit(new_points)
+        # logger.info(f"add_new_points {int((time.time() - start) * 1000000)} us")
 
     def set_file_name(self, file_name):
         self.file_name = file_name
@@ -179,11 +217,14 @@ class Voltmeter(QObject):
             logger.error(OpenError(file.errorString()))
             return False
 
+        def write(text):
+            file.write(text.encode("ascii"))
+
         version = metadata.version("lenlab")
-        file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n".encode("ascii"))
-        file.write("Zeit; Kanal_1; Kanal_2\n".encode("ascii"))
-        for record in self.records:
-            file.write(f"{record[0]:f}; {record[1]:f}; {record[2]:f}\n".encode("ascii"))
+        write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n")
+        write("Zeit; Kanal_1; Kanal_2\n")
+        for point in self.points:
+            write(point.line())
 
         if not file.commit():
             logger.error(SaveError(file.errorString()))

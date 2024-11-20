@@ -1,3 +1,6 @@
+import logging
+import time
+
 import matplotlib.pyplot as plt
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
@@ -16,7 +19,10 @@ from PySide6.QtWidgets import (
 
 from ..message import Message
 from ..model.lenlab import Lenlab
+from ..model.voltmeter import VoltmeterPoint
 from .checkbox import BoolCheckBox
+
+logger = logging.getLogger(__name__)
 
 
 class VoltmeterWidget(QWidget):
@@ -34,7 +40,7 @@ class VoltmeterWidget(QWidget):
         self.lenlab = lenlab
         self.voltmeter = lenlab.voltmeter
         self.lenlab.ready.connect(self.voltmeter.set_terminal)
-        self.voltmeter.new_records.connect(self.on_new_records)
+        self.voltmeter.new_points.connect(self.on_new_points, Qt.ConnectionType.QueuedConnection)
 
         self.unit = 1  # second
         self.channels = list()
@@ -187,30 +193,30 @@ class VoltmeterWidget(QWidget):
             return "time [seconds]"
 
     @Slot(list)
-    def on_new_records(self, new_records: list[tuple[float, float, float]]):
-        unit = self.get_time_unit(new_records[-1][0])
+    def on_new_points(self, new_points: list[VoltmeterPoint]):
+        start = time.time()
+        current_time = new_points[-1].time
+        unit = self.get_time_unit(current_time)
         if unit != self.unit:
             for i, channel in enumerate(self.channels):
                 channel.replace(
-                    list(
-                        QPointF(time / unit, values[i]) for time, *values in self.voltmeter.records
-                    )
+                    [QPointF(point.time / unit, point[i]) for point in self.voltmeter.points]
                 )
 
             self.unit = unit
             self.x_axis.setTitleText(self.get_unit_label(unit))
 
         else:
-            for time, *values in new_records:
-                for channel, value in zip(self.channels, values, strict=True):
-                    channel.append((time / unit), value)
+            for i, channel in enumerate(self.channels):
+                for point in new_points:
+                    channel.append(point.time / unit, point[i])
 
-        time, *values = new_records[-1]
-        self.x_axis.setMax(self.get_upper_limit(time / unit))
+        self.x_axis.setMax(self.get_upper_limit(current_time / unit))
+        self.time_field.setText(f"{current_time:g} s")
+        for i, field in enumerate(self.fields):
+            field.setText(f"{new_points[-1][i]:.3f} V")
 
-        self.time_field.setText(f"{time:g} s")
-        for field, value in zip(self.fields, values, strict=True):
-            field.setText(f"{value:.3f} V")
+        logger.info(f"on_new_points {int((time.time() - start) * 1000)} ms")
 
     def save(self) -> bool:
         file_name, selected_filter = QFileDialog.getSaveFileName(
@@ -282,8 +288,9 @@ class VoltmeterWidget(QWidget):
 
         fig, ax = plt.subplots()
 
-        unit = self.get_time_unit(self.voltmeter.records[-1][0])
-        ax.set_xlim(0, self.get_upper_limit(self.voltmeter.records[-1][0] / unit))
+        current_time = self.voltmeter.get_current_time()
+        unit = self.get_time_unit(current_time)
+        ax.set_xlim(0, self.get_upper_limit(current_time / unit))
         ax.set_ylim(0, 3.3)
 
         ax.set_xlabel(self.get_unit_label(unit))
@@ -291,12 +298,9 @@ class VoltmeterWidget(QWidget):
 
         ax.grid()
 
-        time = [time / unit for time, *values in self.voltmeter.records]
-        for i, label in enumerate(self.labels):
-            if self.channels[i].isVisible():
-                channel1 = [values[i] for time, *values in self.voltmeter.records]
-                ax.plot(time, channel1, label=label)
-
-        # ax.legend()
+        times = [point.time / unit for point in self.voltmeter.points]
+        for i, channel in enumerate(self.channels):
+            if channel.isVisible():
+                ax.plot(times, [point[i] for point in self.voltmeter.points])
 
         fig.savefig(file_name, format=file_format[:3].lower())
