@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
 
 from ..message import Message
 from ..model.lenlab import Lenlab
-from ..model.voltmeter import Voltmeter
 from .checkbox import BoolCheckBox
 
 
@@ -33,7 +32,7 @@ class VoltmeterWidget(QWidget):
         super().__init__()
 
         self.lenlab = lenlab
-        self.voltmeter = Voltmeter()
+        self.voltmeter = lenlab.voltmeter
         self.lenlab.ready.connect(self.voltmeter.set_terminal)
         self.voltmeter.new_records.connect(self.on_new_records)
 

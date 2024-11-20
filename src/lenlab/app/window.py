@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 from ..model.lenlab import Lenlab
 from .banner import MessageBanner
@@ -22,15 +22,15 @@ class MainWindow(QMainWindow):
 
         programmer = ProgrammerWidget()
         pins = PinAssignmentWidget()
-        voltmeter = VoltmeterWidget(self.lenlab)
-        voltmeter.error.connect(message_banner.set_error)
+        self.voltmeter_widget = VoltmeterWidget(self.lenlab)
+        self.voltmeter_widget.error.connect(message_banner.set_error)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 
         tab_widget = QTabWidget()
         tab_widget.addTab(programmer, programmer.title)
         tab_widget.addTab(pins, pins.title)
-        tab_widget.addTab(voltmeter, voltmeter.title)
+        tab_widget.addTab(self.voltmeter_widget, self.voltmeter_widget.title)
         tab_widget.addTab(oscilloscope, oscilloscope.title)
         tab_widget.addTab(bode, bode.title)
 
@@ -46,3 +46,22 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Lenlab")
         self.lenlab.retry()
+
+    def closeEvent(self, event):
+        if self.lenlab.voltmeter.started or self.lenlab.voltmeter.unsaved:
+            dialog = QMessageBox()
+            dialog.setWindowTitle("Lenlab")
+            dialog.setText("The voltmeter is active or has unsaved data.")
+            dialog.setInformativeText("Do you want to save the data?")
+            dialog.setStandardButtons(
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel
+            )
+            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
+            result = dialog.exec()
+            if result == QMessageBox.StandardButton.Save:
+                if not self.voltmeter_widget.save():
+                    event.ignore()
+            elif result == QMessageBox.StandardButton.Cancel:
+                event.ignore()
