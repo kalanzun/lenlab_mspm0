@@ -164,8 +164,9 @@ class Voltmeter(QObject):
             new_records.append((time, value1, value2))
 
         self.records.extend(new_records)
-        self.unsaved += len(new_records)
-        self.do_auto_save()
+        self.unsaved += len(new_records) * self.interval
+        if self.auto_save and self.unsaved >= 5000:
+            self.save()
         self.new_records.emit(new_records)
 
     def set_file_name(self, file_name):
@@ -193,10 +194,8 @@ class Voltmeter(QObject):
 
     def set_auto_save(self, state: bool):
         self.auto_save = state
-        self.do_auto_save()
-
-    def do_auto_save(self):
-        if self.auto_save and self.unsaved >= 5:
+        # auto_save the last records regardless the limit
+        if self.unsaved:
             self.save()
 
 
