@@ -4,9 +4,8 @@ from itertools import batched
 
 from PySide6.QtCore import QIODevice, QObject, QSaveFile, Signal, Slot
 
-from lenlab.launchpad.terminal import Terminal
-
 from ..launchpad.protocol import pack, pack_uint32
+from ..launchpad.terminal import Terminal
 from ..message import Message
 from ..singleshot import SingleShotTimer
 

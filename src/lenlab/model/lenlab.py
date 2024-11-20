@@ -1,9 +1,9 @@
 from PySide6.QtCore import QObject, Signal, Slot
 
-from lenlab.launchpad.discovery import Discovery
-from lenlab.launchpad.terminal import Terminal
-from lenlab.message import Message
-from lenlab.model.voltmeter import Voltmeter
+from ..launchpad.discovery import Discovery
+from ..launchpad.terminal import Terminal
+from ..message import Message
+from .voltmeter import Voltmeter
 
 
 class Lenlab(QObject):
