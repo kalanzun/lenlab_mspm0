@@ -3,8 +3,6 @@
 
 #include "ti_msp_dl_config.h"
 
-volatile uint8_t blink = 0;
-
 int main(void)
 {
     SYSCFG_DL_init();
@@ -13,16 +11,17 @@ int main(void)
     voltmeter_init();
 
     while (1) {
-        if (blink == 0)
-            DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
-
         __WFI();
     }
 }
 
 void SysTick_Handler(void)
 {
-    blink = (blink + 1) & 31;
+    static uint8_t slow_tick = 0;
 
-    terminal_tick();
+    // 8 * 20 ms = 160 ms
+    slow_tick = (slow_tick + 1) & 7;
+    if (slow_tick == 0) {
+        terminal_tick();
+    }
 }

@@ -4,11 +4,13 @@
 
 #include "ti_msp_dl_config.h"
 
+#include "arm_acle.h"
+
 struct Terminal terminal = { .rpl = { .label = 'L' }, .rx_flag = false, .tx_flag = false, .rx_stalled = false };
 
 static void terminal_receive(uint32_t address, uint32_t size)
 {
-    while (terminal.rx_flag) { }
+    if (terminal.rx_flag) while (true) { __nop(); }
     terminal.rx_flag = true;
     terminal.rx_stalled = false;
 
@@ -29,7 +31,7 @@ void terminal_receiveCommand(void)
 
 static void terminal_transmit(uint32_t address, uint32_t size)
 {
-    while (terminal.tx_flag) { }
+    if (terminal.tx_flag) while (true) { __nop(); }
     terminal.tx_flag = true;
 
     DL_DMA_setSrcAddr(DMA, DMA_CH_TX_CHAN_ID, address);

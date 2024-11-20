@@ -15,6 +15,7 @@ const ADC122  = ADC12.addInstance();
 const CRC     = scripting.addModule("/ti/driverlib/CRC");
 const GPIO    = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1   = GPIO.addInstance();
+const GPIO2   = GPIO.addInstance();
 const SYSCTL  = scripting.addModule("/ti/driverlib/SYSCTL");
 const SYSTICK = scripting.addModule("/ti/driverlib/SYSTICK");
 const TIMER   = scripting.addModule("/ti/driverlib/TIMER", {}, false);
@@ -92,10 +93,15 @@ const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 CRC.seed       = 0xFFFFFFFF;
 CRC.bitReverse = "REVERSED";
 
-GPIO1.$name                          = "GPIO_LEDS";
-GPIO1.associatedPins[0].$name        = "USER_LED_1";
-GPIO1.associatedPins[0].assignedPort = "PORTA";
-GPIO1.associatedPins[0].assignedPin  = "0";
+GPIO1.$name                               = "GPIO_LEDS_A";
+GPIO1.associatedPins[0].$name             = "USER_LED_1";
+GPIO1.associatedPins[0].assignedPort      = "PORTA";
+GPIO1.associatedPins[0].assignedPin       = "0";
+GPIO1.associatedPins[0].launchPadShortcut = "LED1En";
+
+GPIO2.$name                               = "GPIO_LEDS_B";
+GPIO2.associatedPins[0].launchPadShortcut = "LED2BlueEn";
+GPIO2.associatedPins[0].$name             = "LED_BLUE";
 
 SYSCTL.MCLKSource            = "HSCLK";
 SYSCTL.EXCLKSource           = "SYSPLLOUT1";
@@ -172,3 +178,4 @@ Board.peripheral.$suggestSolution            = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution   = "PA20";
 Board.peripheral.swdioPin.$suggestSolution   = "PA19";
 GPIO1.associatedPins[0].pin.$suggestSolution = "PA0";
+GPIO2.associatedPins[0].pin.$suggestSolution = "PB22";

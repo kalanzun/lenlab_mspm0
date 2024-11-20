@@ -58,6 +58,8 @@ void interpreter_handleCommand(void)
     const struct Packet* const cmd = &terminal.cmd;
 
     if (cmd->label == 'L' && cmd->length == 0) {
+        // blinks with command traffic
+        DL_GPIO_togglePins(GPIO_LEDS_A_PORT, GPIO_LEDS_A_USER_LED_1_PIN);
         switch (cmd->code) {
         case 'k': // knock
             if (cmd->arg == ARG_STR("nock")) {
