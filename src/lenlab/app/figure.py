@@ -289,11 +289,9 @@ class PinAssignmentWidget(QWidget):
     def __init__(self):
         super().__init__()
 
+        banner = MessageBanner(button=False)
         pins = PinAssignmentFigure()
         board = LaunchpadFigure()
-
-        banner = MessageBanner(button=False)
-        banner.set_error(Voltage())
 
         left = QVBoxLayout()
         left.addStretch()
@@ -313,6 +311,8 @@ class PinAssignmentWidget(QWidget):
         layout.addStretch()
 
         self.setLayout(layout)
+        # call show only after the layout is set
+        banner.set_error(Voltage())  # calls show()
 
 
 class Voltage(Message):

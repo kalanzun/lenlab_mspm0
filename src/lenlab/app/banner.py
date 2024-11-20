@@ -11,7 +11,7 @@ class MessageBanner(QWidget):
     def __init__(self, button=True):
         super().__init__()
 
-        self.setHidden(True)
+        self.hide()
         self.setAutoFillBackground(True)
 
         self.symbol_widget = QSvgWidget()
