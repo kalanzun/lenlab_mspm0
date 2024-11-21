@@ -224,7 +224,7 @@ class VoltmeterWidget(QWidget):
         for i, field in enumerate(self.fields):
             field.setText(f"{point[i]:.3f} V")
 
-        logger.info(
+        logger.debug(
             f"on_new_points {len(self.voltmeter.points)} {int((time.time() - start) * 1000)} ms"
         )
 

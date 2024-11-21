@@ -230,7 +230,7 @@ class Voltmeter(QObject):
             self.save_ptr = len(self.points)
 
         self.unsaved = 0
-        logger.info(f"save {len(self.points)} {int((time.time() - start) * 1000)} ms")
+        logger.debug(f"save {len(self.points)} {int((time.time() - start) * 1000)} ms")
         return True
 
     def set_auto_save(self, state: bool):
