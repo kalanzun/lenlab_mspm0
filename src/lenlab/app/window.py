@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..model.lenlab import Lenlab
 from .banner import MessageBanner
@@ -17,13 +17,12 @@ class MainWindow(QMainWindow):
 
         message_banner = MessageBanner()
         self.lenlab.error.connect(message_banner.set_error)
-        self.lenlab.ready.connect(message_banner.hide)
+        self.lenlab.new_terminal.connect(message_banner.hide)
         message_banner.retry_button.clicked.connect(self.lenlab.retry)
 
-        programmer = ProgrammerWidget()
+        programmer = ProgrammerWidget(self.lenlab)
         pins = PinAssignmentWidget()
         self.voltmeter_widget = VoltmeterWidget(self.lenlab)
-        self.voltmeter_widget.error.connect(message_banner.set_error)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 
@@ -48,20 +47,4 @@ class MainWindow(QMainWindow):
         self.lenlab.retry()
 
     def closeEvent(self, event):
-        if self.lenlab.voltmeter.started or self.lenlab.voltmeter.unsaved:
-            dialog = QMessageBox()
-            dialog.setWindowTitle("Lenlab")
-            dialog.setText("The voltmeter is active or has unsaved data.")
-            dialog.setInformativeText("Do you want to save the data?")
-            dialog.setStandardButtons(
-                QMessageBox.StandardButton.Save
-                | QMessageBox.StandardButton.Discard
-                | QMessageBox.StandardButton.Cancel
-            )
-            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
-            result = dialog.exec()
-            if result == QMessageBox.StandardButton.Save:
-                if not self.voltmeter_widget.save():
-                    event.ignore()
-            elif result == QMessageBox.StandardButton.Cancel:
-                event.ignore()
+        self.voltmeter_widget.closeEvent(event)

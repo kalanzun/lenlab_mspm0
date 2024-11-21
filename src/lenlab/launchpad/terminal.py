@@ -12,6 +12,7 @@ class Terminal(QObject):
     ack = Signal()
     error = Signal(Message)
     reply = Signal(bytes)
+    closed = Signal()
 
     def __init__(self, port: QSerialPort | None = None):
         super().__init__()
@@ -26,6 +27,10 @@ class Terminal(QObject):
     @property
     def bytes_available(self) -> int:
         return self.port.bytesAvailable()
+
+    @property
+    def is_open(self):
+        return self.port.isOpen()
 
     def set_baud_rate(self, baud_rate: int):
         logger.debug(f"{self.port_name}: set_baud_rate:  {baud_rate}")
@@ -54,6 +59,7 @@ class Terminal(QObject):
         if self.port.isOpen():
             logger.debug(f"{self.port_name}: close")
             self.port.close()
+            self.closed.emit()
 
     def peek(self, n: int) -> bytes:
         return self.port.peek(n).data()

@@ -4,7 +4,7 @@ from itertools import batched
 
 import matplotlib.pyplot as plt
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import QPointF, Qt, Signal, Slot
+from PySide6.QtCore import QPointF, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 
 from ..message import Message
 from ..model.lenlab import Lenlab
+from ..model.voltmeter import Voltmeter, VoltmeterPoint
+from .banner import MessageBanner
 from .checkbox import BoolCheckBox
 
 logger = logging.getLogger(__name__)
@@ -32,21 +34,25 @@ class VoltmeterWidget(QWidget):
     limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
     intervals = [20, 50, 100, 200, 500, 1000]
 
-    error = Signal(Message)
-
     def __init__(self, lenlab: Lenlab):
         super().__init__()
 
         self.lenlab = lenlab
-        self.voltmeter = lenlab.voltmeter
-        self.lenlab.ready.connect(self.voltmeter.set_terminal)
-        self.voltmeter.updated.connect(self.on_updated, Qt.ConnectionType.QueuedConnection)
+        self.voltmeter = Voltmeter(lenlab)
+        self.voltmeter.new_last_point.connect(
+            self.on_new_last_point, Qt.ConnectionType.QueuedConnection
+        )
 
         self.unit = 1  # second
-        self.channels = list()
+
+        window_layout = QVBoxLayout()
+        self.banner = MessageBanner("Dismiss")
+        self.banner.retry_button.clicked.connect(self.banner.hide)
+        self.voltmeter.error.connect(self.banner.set_error)
+        window_layout.addWidget(self.banner)
 
         main_layout = QHBoxLayout()
-        self.setLayout(main_layout)
+        window_layout.addLayout(main_layout)
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -62,7 +68,7 @@ class VoltmeterWidget(QWidget):
         self.x_axis.setRange(0.0, 4.0)
         self.x_axis.setTickCount(5)
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(self.get_unit_label(1.0))
+        self.x_axis.setTitleText(self.get_unit_label(self.unit))
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
@@ -92,7 +98,7 @@ class VoltmeterWidget(QWidget):
         layout.addWidget(label)
 
         self.interval = QComboBox()
-        self.voltmeter.started_changed.connect(self.interval.setDisabled)
+        self.voltmeter.active_changed.connect(self.interval.setDisabled)
         layout.addWidget(self.interval)
 
         for interval in self.intervals:
@@ -104,13 +110,13 @@ class VoltmeterWidget(QWidget):
         sidebar_layout.addLayout(layout)
 
         button = QPushButton("Start")
-        self.voltmeter.started_changed.connect(button.setDisabled)
+        self.voltmeter.active_changed.connect(button.setDisabled)
         button.clicked.connect(self.on_start_clicked)
         layout.addWidget(button)
 
         button = QPushButton("Stop")
         button.setEnabled(False)
-        self.voltmeter.started_changed.connect(button.setEnabled)
+        self.voltmeter.active_changed.connect(button.setEnabled)
         button.clicked.connect(self.voltmeter.stop)
         layout.addWidget(button)
 
@@ -139,35 +145,35 @@ class VoltmeterWidget(QWidget):
             sidebar_layout.addWidget(field)
 
         # save
-        button = QPushButton("Save")
-        button.clicked.connect(self.on_save_clicked)
+        button = QPushButton("Save As")
+        button.clicked.connect(self.on_save_as_clicked)
         sidebar_layout.addWidget(button)
-
-        self.auto_save = BoolCheckBox("Automatic save")
-        self.auto_save.setEnabled(False)
-        self.auto_save.check_changed.connect(self.voltmeter.set_auto_save)
-        sidebar_layout.addWidget(self.auto_save)
 
         self.file_name = QLineEdit()
         self.file_name.setReadOnly(True)
         sidebar_layout.addWidget(self.file_name)
+
+        self.auto_save = BoolCheckBox("Automatic save")
+        self.auto_save.setEnabled(False)
+        self.auto_save.check_changed.connect(self.voltmeter.set_auto_save)
+        # set_auto_save might cause a change back in case of an error
+        self.voltmeter.auto_save_changed.connect(
+            self.auto_save.setChecked, Qt.ConnectionType.QueuedConnection
+        )
+        sidebar_layout.addWidget(self.auto_save)
 
         button = QPushButton("Save Image")
         button.clicked.connect(self.on_save_image_clicked)
         sidebar_layout.addWidget(button)
 
         button = QPushButton("Reset")
-        self.voltmeter.started_changed.connect(button.setDisabled)
+        self.voltmeter.active_changed.connect(button.setDisabled)
         button.clicked.connect(self.on_reset_clicked)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
 
-    @Slot()
-    def on_start_clicked(self):
-        index = self.interval.currentIndex()
-        interval = self.intervals[index]
-        self.voltmeter.start(interval)
+        self.setLayout(window_layout)
 
     def get_upper_limit(self, value: float) -> float:
         for x in self.limits:
@@ -200,12 +206,12 @@ class VoltmeterWidget(QWidget):
         else:
             return int(1000 / self.voltmeter.interval) * 60  # minutes
 
-    @Slot()
-    def on_updated(self):
+    @Slot(VoltmeterPoint)
+    def on_new_last_point(self, last_point: VoltmeterPoint):
         start = time.time()
-        point = self.voltmeter.points[-1]
-        unit = self.get_time_unit(point.time)
-        n = self.get_batch_size(point.time)
+
+        unit = self.get_time_unit(last_point.time)
+        n = self.get_batch_size(last_point.time)
 
         # this can do 100_000 points in 400 ms not batched
         # and 130_000 points in 30 ms in batches of 50
@@ -218,39 +224,40 @@ class VoltmeterWidget(QWidget):
                 ]
             )
 
-        self.x_axis.setMax(self.get_upper_limit(point.time / unit))
+        self.x_axis.setMax(self.get_upper_limit(last_point.time / unit))
         self.x_axis.setTitleText(self.get_unit_label(unit))
-        self.time_field.setText(f"{point.time:g} s")
+        self.time_field.setText(f"{last_point.time:g} s")
         for i, field in enumerate(self.fields):
-            field.setText(f"{point[i]:.3f} V")
+            field.setText(f"{last_point[i]:.3f} V")
 
         logger.debug(
-            f"on_new_points {len(self.voltmeter.points)} {int((time.time() - start) * 1000)} ms"
+            f"on_new_last_point {len(self.voltmeter.points)} points"
+            f"{int((time.time() - start) * 1000)} ms"
         )
 
-    def save(self) -> bool:
+    @Slot()
+    def on_start_clicked(self):
+        index = self.interval.currentIndex()
+        interval = self.intervals[index]
+        self.voltmeter.start(interval)
+
+    def save_as(self) -> bool:
         file_name, selected_filter = QFileDialog.getSaveFileName(
             self, "Save", "voltmeter.csv", "CSV (*.csv)"
         )
         if not file_name:  # cancelled
             return False
 
-        self.voltmeter.set_file_name(file_name)
-        if self.voltmeter.save():
+        if self.voltmeter.save_as(file_name):
             self.file_name.setText(file_name)
-            self.auto_save.setChecked(False)
             self.auto_save.setEnabled(True)
-        else:
-            self.file_name.setText("")
-            self.auto_save.setChecked(False)
-            self.auto_save.setEnabled(False)
-            return False
+            return True
 
-        return True
+        return False
 
     @Slot()
-    def on_save_clicked(self):
-        self.save()
+    def on_save_as_clicked(self):
+        self.save_as()
 
     @Slot()
     def on_reset_clicked(self):
@@ -267,7 +274,7 @@ class VoltmeterWidget(QWidget):
             dialog.setDefaultButton(QMessageBox.StandardButton.Save)
             result = dialog.exec()
             if result == QMessageBox.StandardButton.Save:
-                if not self.save():
+                if not self.save_as():
                     return
             elif result == QMessageBox.StandardButton.Cancel:
                 return
@@ -278,14 +285,14 @@ class VoltmeterWidget(QWidget):
             channel.clear()
         self.unit = 1
         self.x_axis.setMax(4.0)
-        self.x_axis.setTitleText("time [seconds]")
+        self.x_axis.setTitleText(self.get_unit_label(self.unit))
 
         self.time_field.setText("")
         for field in self.fields:
             field.setText("")
 
         self.file_name.setText("")
-        self.auto_save.setChecked(False)
+        # self.auto_save.setChecked(False)  # changed signal
         self.auto_save.setEnabled(False)
 
     @Slot()
@@ -296,21 +303,56 @@ class VoltmeterWidget(QWidget):
         if not file_name:  # cancelled
             return
 
-        fig, ax = plt.subplots()
+        try:
+            fig, ax = plt.subplots()
 
-        current_time = self.voltmeter.get_current_time()
-        unit = self.get_time_unit(current_time)
-        ax.set_xlim(0, self.get_upper_limit(current_time / unit))
-        ax.set_ylim(0, 3.3)
+            last_point = (
+                self.voltmeter.points[-1]
+                if self.voltmeter.points
+                else VoltmeterPoint(4.0, 0.0, 0.0)
+            )
+            unit = self.get_time_unit(last_point.time)
+            ax.set_xlim(0, self.get_upper_limit(last_point.time / unit))
+            ax.set_ylim(0, 3.3)
 
-        ax.set_xlabel(self.get_unit_label(unit))
-        ax.set_ylabel("voltage [volts]")
+            ax.set_xlabel(self.get_unit_label(unit))
+            ax.set_ylabel("voltage [volts]")
 
-        ax.grid()
+            ax.grid()
 
-        times = [point.time / unit for point in self.voltmeter.points]
-        for i, channel in enumerate(self.channels):
-            if channel.isVisible():
-                ax.plot(times, [point[i] for point in self.voltmeter.points])
+            times = [point.time / unit for point in self.voltmeter.points]
+            for i, channel in enumerate(self.channels):
+                if channel.isVisible():
+                    ax.plot(times, [point[i] for point in self.voltmeter.points])
 
-        fig.savefig(file_name, format=file_format[:3].lower())
+            fig.savefig(file_name, format=file_format[:3].lower())
+        except Exception as error:
+            self.banner.set_error(VoltmeterSaveImageError(error))
+
+    def closeEvent(self, event):
+        if self.voltmeter.active or self.voltmeter.unsaved:
+            dialog = QMessageBox()
+            dialog.setWindowTitle("Lenlab")
+            dialog.setText("The voltmeter is active or has unsaved data.")
+            dialog.setInformativeText("Do you want to save the data?")
+            dialog.setStandardButtons(
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel
+            )
+            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
+            result = dialog.exec()
+            if result == QMessageBox.StandardButton.Save:
+                if not self.save_as():
+                    event.ignore()
+            elif result == QMessageBox.StandardButton.Cancel:
+                event.ignore()
+
+        if self.voltmeter.active and event.isAccepted():
+            self.voltmeter.stop()
+            self.voltmeter.save(0)
+
+
+class VoltmeterSaveImageError(Message):
+    english = """Error saving the image:\n\n{0}"""
+    german = """Fehler beim Speichern des Bildes:\n\n{0}"""

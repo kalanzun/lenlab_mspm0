@@ -3,19 +3,14 @@ from PySide6.QtCore import QObject, Signal, Slot
 from ..launchpad.discovery import Discovery
 from ..launchpad.terminal import Terminal
 from ..message import Message
-from .voltmeter import Voltmeter
 
 
 class Lenlab(QObject):
     error = Signal(Message)
-    ready = Signal(Terminal)
+    new_terminal = Signal(Terminal)
 
     discovery: Discovery
     terminal: Terminal
-
-    def __init__(self):
-        super().__init__()
-        self.voltmeter = Voltmeter()
 
     def retry(self):
         self.discovery = Discovery()
@@ -26,5 +21,18 @@ class Lenlab(QObject):
     @Slot(Terminal)
     def on_result(self, terminal: Terminal):
         self.terminal = terminal
+        self.terminal.error.connect(self.on_terminal_error)
         del self.discovery
-        self.ready.emit(terminal)
+        self.new_terminal.emit(terminal)
+
+    def remove_terminal(self):
+        if hasattr(self, "terminal"):
+            self.terminal.close()
+            self.terminal.error.disconnect(self.on_terminal_error)
+            del self.terminal
+
+    @Slot(Message)
+    def on_terminal_error(self, message: Message):
+        self.error.emit(message)
+        self.terminal.error.disconnect(self.on_terminal_error)
+        del self.terminal

@@ -11,6 +11,7 @@ from ..launchpad.protocol import pack, pack_uint32
 from ..launchpad.terminal import Terminal
 from ..message import Message
 from ..singleshot import SingleShotTimer
+from .lenlab import Lenlab
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ START = pack(b"vstrt")
 NEXT = pack(b"vnext")
 STOP = pack(b"vstop")
 ERROR = pack(b"verr!")
-
 
 binary_second = 1000.0
 binary_volt = 2**12 / 3.3
@@ -52,151 +52,196 @@ class VoltmeterPoint:
 
 
 class Voltmeter(QObject):
-    terminal: Terminal
+    terminal: Terminal | None
 
-    # rename to active?
-    started_changed = Signal(bool)
-    updated = Signal()
+    active: bool
+    active_changed = Signal(bool)
 
-    def __init__(self):
+    points: list[VoltmeterPoint]
+    new_last_point = Signal(VoltmeterPoint)
+
+    unsaved: bool
+
+    auto_save: bool
+    auto_save_changed = Signal(bool)
+
+    error = Signal(Message)
+
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
-        self.interval = 0
-        self.time_offset = 0.0
-        self.points: list[VoltmeterPoint] = list()
+        self.lenlab = lenlab
+        self.terminal = None
 
-        self.started = False
-        self.unsaved = 0
-        self.save_ptr = 0
+        self.active = False
+        self.start_requested = False
+        self.stop_requested = False
+        self.interval = 1000
+        self.time_offset = 0.0
+        self.points = list()
+        self.unsaved = False
+
+        # auto save
+        self.save_idx = 0
         self.file_name = None
         self.auto_save = False
+
+        self.new_last_point.connect(
+            lambda last_point: self.save(), Qt.ConnectionType.QueuedConnection
+        )
 
         # no reply timeout
         self.busy_timer = SingleShotTimer(self.on_busy_timeout, interval=2000)
         self.command_queue = list()
         self.retries = 0
-        self.start_requested = False
-        self.stop_requested = False
 
         # poll interval
         self.next_timer = SingleShotTimer(self.on_next_timeout, interval=200)
 
-        # auto save
-        self.updated.connect(self.on_updated, Qt.ConnectionType.QueuedConnection)
+        # terminal
+        self.lenlab.new_terminal.connect(self.on_new_terminal)
 
     @Slot(Terminal)
-    def set_terminal(self, terminal: Terminal):
+    def on_new_terminal(self, terminal: Terminal):
         self.terminal = terminal
+        self.terminal.error.connect(self.on_terminal_error)
         self.terminal.reply.connect(self.on_reply)
+        self.terminal.closed.connect(self.on_terminal_closed)
 
-    def get_next_time(self) -> float:
-        return self.points[-1].time + self.interval / binary_second if self.points else 0.0
+    @Slot(Message)
+    def on_terminal_error(self, message: Message):
+        self.terminal = None
+
+        if self.active or self.start_requested:
+            self.stopped()
 
     @Slot()
-    def start(self, interval: int = 1000):
-        if self.start_requested or self.started:
-            logger.error("already started")
+    def on_terminal_closed(self):
+        self.terminal = None
+
+        if self.active or self.start_requested:
+            self.stopped()
+
+    def stopped(self):
+        logger.info("stopped")
+        self.save(0)
+
+        self.next_timer.stop()
+        self.busy_timer.stop()
+        self.start_requested = False
+        if self.active:
+            self.active = False
+            self.active_changed.emit(False)
+
+    def start(self, interval: int):
+        if self.terminal is None:
+            logger.error("start error: no terminal")
+            return
+
+        if self.active or self.start_requested:
+            logger.error("start error: already started")
             return
 
         self.interval = interval  # ms
-        self.time_offset = self.get_next_time()  # s
-        print(self.time_offset)
+        self.restart()
 
-        self.retries = 0
+    def restart(self):
+        self.command(pack_uint32(b"v", self.interval))
+        self.time_offset = (
+            self.points[-1].time + self.interval / binary_second if self.points else 0.0
+        )
+
         self.start_requested = True
         self.stop_requested = False
-        self.command(pack_uint32(b"v", interval))
 
     @Slot()
     def stop(self):
-        if self.stop_requested or not self.started:
-            logger.error("already stopped")
+        if self.terminal is None:
+            logger.error("start error: no terminal")
+            return
+
+        if self.stop_requested or not self.active:
+            logger.error("stop error: already stopped")
             return
 
         self.next_timer.stop()
         self.start_requested = False
         self.stop_requested = True
-        self.command(STOP)
 
-    @Slot()
+        try:
+            self.command(STOP)
+        except Exception as error:
+            logger.error(error)
+
     def reset(self):
-        if self.started:
-            return
+        self.save(0)
+
+        self.save_idx = 0
+        self.file_name = None
+
+        if self.auto_save:
+            self.auto_save = False
+            self.auto_save_changed.emit(False)
 
         self.points = list()
-        self.unsaved = 0
-        self.save_ptr = 0
-        self.file_name = None
-        self.auto_save = False
+        self.unsaved = False
 
-    def next_command(self):
+    def command(self, command: bytes):
+        self.command_queue.append(command)
+        self.send_command()
+
+    def send_command(self):
         if not self.busy_timer.isActive() and self.command_queue:
+            if not self.terminal.is_open:
+                logger.error("send command error: terminal not open")
+                return
+
             command = self.command_queue.pop(0)
             self.terminal.write(command)
             self.busy_timer.start()
 
-    @Slot()
-    def on_busy_timeout(self):
-        logger.error("no reply")
-        if self.started:
-            if not self.stop_requested:  # next failed
-                # try again
-                if self.retries == 2:
-                    self.do_stop()
-                else:
-                    self.next_timer.start()
-                    self.retries += 1
-            else:  # stop failed
-                self.do_stop()
-        else:  # start failed
-            pass
-
-    def command(self, command: bytes):
-        self.command_queue.append(command)
-        self.next_command()
-
-    def do_stop(self):
-        # auto_save the last points regardless the limit
-        if self.auto_save and self.unsaved:
-            self.save()
-
-        logger.info("stopped")
-        self.start_requested = False
-        self.started = False
-        self.started_changed.emit(False)
-
     @Slot(bytes)
     def on_reply(self, reply: bytes):
         self.busy_timer.stop()
+        self.send_command()
 
         if reply == START:
             logger.info("started")
-            self.started = True
-            self.started_changed.emit(True)
+            self.active = True
+            self.active_changed.emit(True)
             self.next_timer.start()
 
         elif reply[1:2] == b"v" and (reply[4:8] == b" red" or reply[4:8] == b" blu"):
-            self.retries = 0
             if len(reply) > 8:
                 self.add_new_points(reply[8:])
             if not self.stop_requested:
                 self.next_timer.start()
 
         elif reply == STOP:
-            self.do_stop()
+            self.stopped()
 
         elif reply == ERROR:
-            # overflow in firmware
-            logger.error("error reply; some points will be missing")
-            # restart
-            self.started = False
-            self.start_requested = False
-            self.start(self.interval)
+            # reset or overflow in firmware
+            self.error.emit(VoltmeterOverflowError())
+            if not self.stop_requested:
+                self.restart()
 
-        self.next_command()
+    @Slot()
+    def on_busy_timeout(self):
+        if self.active:
+            if self.stop_requested:  # stop failed
+                logger.error("stop timeout")
+                self.stopped()
+            else:  # next failed
+                self.error.emit(VoltmeterNextTimeout())
+                self.next_timer.start()  # retry
+        else:  # start failed
+            self.error.emit(VoltmeterStartTimeout())
+            self.start_requested = False
 
     @Slot()
     def on_next_timeout(self):
-        self.command(NEXT)
+        if self.active and not self.stop_requested:
+            self.command(NEXT)
 
     def add_new_points(self, payload: bytes):
         new_points = [
@@ -204,47 +249,92 @@ class Voltmeter(QObject):
             for buffer in batched(payload, 8)
         ]
 
-        self.unsaved += len(new_points) * self.interval
         self.points.extend(new_points)
-        self.updated.emit()
+        self.unsaved = True
+        self.new_last_point.emit(new_points[-1])
 
-    def set_file_name(self, file_name):
+    def save_as(self, file_name: str) -> bool:
         self.file_name = file_name
 
-    @Slot()
-    def on_updated(self):
-        if self.auto_save and self.unsaved >= 5_000:
-            self.save()
+        try:
+            start = time.time()
 
-    def save(self):
-        start = time.time()
-        with open(self.file_name, "a" if self.save_ptr else "w") as file:
-            if self.save_ptr == 0:
+            with open(self.file_name, "w") as file:
                 version = metadata.version("lenlab")
                 file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n")
                 file.write("Zeit; Kanal_1; Kanal_2\n")
+                for point in self.points:
+                    file.write(point.line())
 
-            for point in self.points[self.save_ptr :]:
-                file.write(point.line())
+            self.save_idx = len(self.points)
+            self.unsaved = False
 
-            self.save_ptr = len(self.points)
+            logger.debug(
+                f"save_as {len(self.points)} points {int((time.time() - start) * 1000)} ms"
+            )
+            return True
 
-        self.unsaved = 0
-        logger.debug(f"save {len(self.points)} {int((time.time() - start) * 1000)} ms")
-        return True
+        except Exception as error:
+            logger.error(f"error in save_as: {error}")
+            self.error.emit(VoltmeterSaveError(error))
 
-    def set_auto_save(self, state: bool):
-        self.auto_save = state
-        # auto_save the last points regardless the limit
-        if self.unsaved:
-            self.save()
+            if self.auto_save:
+                self.auto_save = False
+                self.auto_save_changed.emit(False)
+
+            return False
+
+    @Slot()
+    def save(self, interval: int = 5000):
+        if not self.auto_save:
+            return
+
+        n = interval // self.interval
+        if self.save_idx + n > len(self.points):
+            return
+
+        try:
+            start = time.time()
+            with open(self.file_name, "a") as file:
+                for point in self.points[self.save_idx :]:
+                    file.write(point.line())
+
+            self.save_idx = len(self.points)
+            self.unsaved = False
+
+            logger.debug(f"save {len(self.points)} points {int((time.time() - start) * 1000)} ms")
+
+        except Exception as error:
+            logger.error(f"error in save: {error}")
+            self.error.emit(VoltmeterSaveError(error))
+
+            self.auto_save = False
+            self.auto_save_changed.emit(False)
+
+    @Slot(bool)
+    def set_auto_save(self, auto_save: bool):
+        logger.info(f"set_auto_save {auto_save}")
+        self.auto_save = auto_save
+        self.save(0)
 
 
-class OpenError(Message):
-    english = """Error opening file for saving: {0}"""
-    german = """Fehler beim Öffnen der Datei fürs Speichern: {0}"""
+class VoltmeterOverflowError(Message):
+    english = """The computer didn't read all values from the Launchpad in time.
+    Some points are be missing."""
+    german = """Der Computer hat nicht rechtzeitig alle Werte vom Launchpad gelesen.
+    Manche Punkte fehlen."""
 
 
-class SaveError(Message):
-    english = """Error when saving: {0}"""
-    german = """Fehler beim Speichern: {0}"""
+class VoltmeterStartTimeout(Message):
+    english = """The Launchpad did not reply."""
+    german = """Das Launchpad antwortet nicht."""
+
+
+class VoltmeterNextTimeout(Message):
+    english = """The Launchpad did not reply. Some points may be missing."""
+    german = """Das Launchpad antwortet nicht. Manche Punkte könnten fehlen."""
+
+
+class VoltmeterSaveError(Message):
+    english = """Error saving the data:\n\n{0}"""
+    german = """Fehler beim Speichern der Daten:\n\n{0}"""

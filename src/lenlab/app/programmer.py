@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from ..launchpad.bsl import Programmer
 from ..message import Message
+from ..model.lenlab import Lenlab
 from .banner import MessageBanner
 from .figure import LaunchpadFigure
 
@@ -20,8 +21,10 @@ class ProgrammerWidget(QWidget):
 
     programmer: Programmer
 
-    def __init__(self):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+
+        self.lenlab = lenlab
 
         introduction = QLabel(self)
         introduction.setText(str(Introduction()))
@@ -56,6 +59,8 @@ class ProgrammerWidget(QWidget):
         self.messages.clear()
         self.banner.hide()
 
+        self.lenlab.remove_terminal()
+
         self.programmer = Programmer()
         self.programmer.message.connect(self.on_message)
         self.programmer.success.connect(self.on_success)
@@ -74,10 +79,14 @@ class ProgrammerWidget(QWidget):
         self.program_button.setEnabled(True)
         self.banner.set_success(Successful())
 
+        self.lenlab.retry()
+
     @Slot(Message)
     def on_error(self, error: Message):
         self.program_button.setEnabled(True)
         self.banner.set_error(error)
+
+        self.lenlab.retry()
 
 
 class Introduction(Message):

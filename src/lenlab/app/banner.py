@@ -8,7 +8,7 @@ from . import symbols
 
 
 class MessageBanner(QWidget):
-    def __init__(self, button=True):
+    def __init__(self, button="Retry"):
         super().__init__()
 
         self.hide()
@@ -18,7 +18,8 @@ class MessageBanner(QWidget):
         self.symbol_widget.setFixedSize(40, 40)
 
         self.text_label = QLabel()
-        self.retry_button = QPushButton("Retry")
+        if button:
+            self.retry_button = QPushButton(button)
 
         body = QVBoxLayout()
         body.addWidget(self.text_label)
