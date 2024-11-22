@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import timedelta
 from itertools import batched
 
 import matplotlib.pyplot as plt
@@ -226,7 +227,13 @@ class VoltmeterWidget(QWidget):
 
         self.x_axis.setMax(self.get_upper_limit(last_point.time / unit))
         self.x_axis.setTitleText(self.get_unit_label(unit))
-        self.time_field.setText(f"{last_point.time:g} s")
+
+        seconds = str(timedelta(seconds=int(last_point.time)))
+        if fractional := last_point.time % 1.0 or self.voltmeter.interval < 1000:  # ms
+            milliseconds = f"{fractional:.2f}"[1:]
+        else:
+            milliseconds = ""
+        self.time_field.setText(f"{seconds}{milliseconds}")
         for i, field in enumerate(self.fields):
             field.setText(f"{last_point[i]:.3f} V")
 
