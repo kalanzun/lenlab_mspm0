@@ -2,8 +2,7 @@
 
 ## Liebe Studierende im LEN Workshop A am KIT!
 
-Lenlab in der Version 8.0 funktioniert für den LEN Workshop A. Ich werde in den nächsten Tagen
-noch einige Details verbessern (Fehlermeldungen, Übersetzung, Screenshot, ...). Starten Sie Lenlab mit 
+Lenlab in der Version 8.0.1 funktioniert für den LEN Workshop A. Starten Sie Lenlab mit 
 
 ```shell
 uvx lenlab@latest
@@ -11,7 +10,13 @@ uvx lenlab@latest
 
 wenn Sie Internet haben. Dann lädt `uvx` automatisch Updates herunter.
 
-Wenn Sie nicht weiterkommen, fragen Sie bitte in der Übung am Mittwoch, im Ilias und in den Tutorien.
+Falls das Kommando `realpath` nicht gefunden wurde ("realpath: command not found"):
+
+```shell
+uvx --from lenlab@lastest python -m lenlab
+```
+
+Wenn Sie nicht weiterkommen, fragen Sie bitte im Ilias und in den Tutorien.
 
 ## Installation (uv)
 
@@ -50,7 +55,16 @@ Wenn Sie keine Internetverbindung haben starten Sie Lenlab ohne `@latest`
 uvx lenlab
 ```
 
-`uvx` hat den Download beim ersten Mal gespeichert und führt die lokale Kopie aus ohne Zugriff auf das Internet. 
+`uvx` hat den Download beim ersten Mal gespeichert und führt die lokale Kopie aus ohne Zugriff auf das Internet.
+
+### Mac realpath Fehler
+
+Auf manchen Mac fehlt das Kommando `realpath`. Lenlab startet dann nicht mit der Fehlermeldung
+"realpath: command not found". Bitte verwenden Sie in diesem Fall den Befehl
+
+```shell
+uvx --from lenlab@lastest python -m lenlab
+```
 
 ## Lenlab Testen
 
