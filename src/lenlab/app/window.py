@@ -1,3 +1,7 @@
+import ctypes
+import platform
+
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..model.lenlab import Lenlab
@@ -7,6 +11,13 @@ from .figure import PinAssignmentWidget
 from .oscilloscope import Oscilloscope
 from .programmer import ProgrammerWidget
 from .voltmeter import VoltmeterWidget
+
+# https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate
+ES_AWAYMODE_REQUIRED = 0x00000040
+ES_CONTINUOUS = 0x80000000
+ES_DISPLAY_REQUIRED = 0x00000002
+ES_SYSTEM_REQUIRED = 0x00000001
+ES_USER_PRESENT = 0x00000004
 
 
 class MainWindow(QMainWindow):
@@ -23,6 +34,8 @@ class MainWindow(QMainWindow):
         programmer = ProgrammerWidget(self.lenlab)
         pins = PinAssignmentWidget()
         self.voltmeter_widget = VoltmeterWidget(self.lenlab)
+        if platform.system() == "Windows":
+            self.voltmeter_widget.voltmeter.active_changed.connect(self.inhibit_windows_sleep_mode)
         oscilloscope = Oscilloscope(self.lenlab)
         bode = BodePlotter(self.lenlab)
 
@@ -48,3 +61,13 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.voltmeter_widget.closeEvent(event)
+
+    @Slot(bool)
+    def inhibit_windows_sleep_mode(self, inhibit: bool):
+        # works only on Windows, do not connect on other systems
+        # with ES_AWAYMODE_REQUIRED, the USB device vanished
+        # ES_SYSTEM_REQUIRED inhibits sleep
+        # ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED inhibits "display off"
+        # "display off" seems fine, sleep closes the USB device
+        state = ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if inhibit else 0)
+        ctypes.windll.kernel32.SetThreadExecutionState(state)
