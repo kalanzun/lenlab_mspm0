@@ -374,5 +374,11 @@ class NoLaunchpad(Message):
 
 
 class ProgrammingFailed(Message):
-    english = "Programming failed"
-    german = "Programmieren fehlgeschlagen"
+    english = """Programming failed
+    Maybe the "Bootstrap Loader" did not start?
+    Please try the reset procedure (buttons S1 + RESET) once more.
+    The red LED at the bottom edge shall be off."""
+    german = """Programmieren fehlgeschlagen
+    Vielleicht startete der "Bootstrap Loader" nicht?
+    Versuchen Sie die Reset-Prozedur (Tasten S1 + RESET) noch einmal.
+    Die rote LED an der Unterkante soll aus sein."""
