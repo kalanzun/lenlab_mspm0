@@ -48,7 +48,7 @@ class VoltmeterPoint:
                 raise IndexError("VoltmeterPoint channel index out of range")
 
     def line(self) -> str:
-        return f"{self.time:f}; {self.value1:f}; {self.value2:f};\n"
+        return f"{self.time:f}; {self.value1:f}; {self.value2:f}\n"
 
 
 class Voltmeter(QObject):
