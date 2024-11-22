@@ -250,7 +250,7 @@ class Programmer(QObject):
     error = Signal(Message)
 
     bootstrap_loaders: list[BootstrapLoader]
-    n_messages: int
+    n_messages: int = 8
 
     def program(self):
         port_infos = QSerialPortInfo.availablePorts()
@@ -259,8 +259,6 @@ class Programmer(QObject):
             self.error.emit(NoLaunchpad())
             return
 
-        # two messages for each bsl and 7 more for the successful one
-        self.n_messages = 2 * len(matches) + 7
         self.start([BootstrapLoader(Terminal(QSerialPort(port_info))) for port_info in matches])
 
     def start(self, bootstrap_loaders: list[BootstrapLoader]) -> None:
@@ -320,16 +318,19 @@ class Connect(Message):
 class Connected(Message):
     english = "Connected on {0}"
     german = "Verbunden auf {0}"
+    progress = 1
 
 
 class SetBaudRate(Message):
     english = "Set baudrate: {0}"
     german = "Baudrate einstellen: {0}"
+    progress = 1
 
 
 class GetDeviceInfo(Message):
     english = "Get device info"
     german = "Controller-Eigenschaften abrufen"
+    progress = 1
 
 
 class BufferTooSmall(Message):
@@ -340,26 +341,31 @@ class BufferTooSmall(Message):
 class BufferSize(Message):
     english = "Max. buffer size: {0:.1f} KiB"
     german = "Max. Puffergröße: {0:.1f} KiB"
+    progress = 1
 
 
 class Unlock(Message):
     english = "Unlock Bootstrap Loader"
     german = "Bootstrap Loader entsperren"
+    progress = 1
 
 
 class Erase(Message):
     english = "Erase memory"
     german = "Speicher löschen"
+    progress = 1
 
 
 class WriteFirmware(Message):
     english = "Write firmware ({0:.1f} KiB)"
     german = "Firmware schreiben ({0:.1f} KiB)"
+    progress = 1
 
 
 class Restart(Message):
     english = "Restart"
     german = "Neustarten"
+    progress = 1
 
 
 class NoLaunchpad(Message):

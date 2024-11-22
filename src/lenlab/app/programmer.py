@@ -54,8 +54,6 @@ class ProgrammerWidget(QWidget):
     @Slot()
     def on_program_clicked(self):
         self.program_button.setEnabled(False)
-        self.progress_bar.setMaximum(1)
-        self.progress_bar.setValue(0)
         self.messages.clear()
         self.banner.hide()
 
@@ -66,12 +64,14 @@ class ProgrammerWidget(QWidget):
         self.programmer.success.connect(self.on_success)
         self.programmer.error.connect(self.on_error)
 
+        self.progress_bar.setValue(0)
+        self.progress_bar.setMaximum(self.programmer.n_messages)
+
         self.programmer.program()
-        self.progress_bar.setMaximum(self.programmer.n_messages - 1)
 
     @Slot(Message)
     def on_message(self, message: Message):
-        self.progress_bar.setValue(self.progress_bar.value() + 1)
+        self.progress_bar.setValue(self.progress_bar.value() + message.progress)
         self.messages.appendPlainText(str(message))
 
     @Slot()

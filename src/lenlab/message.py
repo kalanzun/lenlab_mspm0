@@ -12,6 +12,8 @@ class Message(Exception):
     english: str = ""
     german: str = ""
 
+    progress: int = 0
+
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
