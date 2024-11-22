@@ -128,8 +128,8 @@ TIMER1.event1PublisherChannel      = 1;
 TIMER1.event2PublisherChannel      = 2;
 TIMER1.$name                       = "VOLT_TIMER";
 TIMER1.timerPeriod                 = "1 s";
-TIMER1.event1ControllerInterruptEn = ["ZERO_EVENT"];
-TIMER1.event2ControllerInterruptEn = ["ZERO_EVENT"];
+TIMER1.event1ControllerInterruptEn = ["LOAD_EVENT"];
+TIMER1.event2ControllerInterruptEn = ["LOAD_EVENT"];
 TIMER1.peripheral.$assign          = "TIMA0";
 
 UART1.$name                             = "TERMINAL_UART";
