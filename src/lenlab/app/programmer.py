@@ -14,10 +14,11 @@ from ..message import Message
 from ..model.lenlab import Lenlab
 from .banner import MessageBanner
 from .figure import LaunchpadFigure
+from .vocabulary import Vocabulary as Vocab
 
 
 class ProgrammerWidget(QWidget):
-    title = "Programmer"
+    title = Vocab("Programmer", "Programmierer")
 
     programmer: Programmer
 
@@ -29,12 +30,12 @@ class ProgrammerWidget(QWidget):
         introduction = QLabel(self)
         introduction.setText(str(Introduction()))
 
-        self.program_button = QPushButton("Program")
+        self.program_button = QPushButton(str(Vocab.program))
         self.program_button.clicked.connect(self.on_program_clicked)
         self.progress_bar = QProgressBar()
         self.messages = QPlainTextEdit()
         self.messages.setReadOnly(True)
-        self.banner = MessageBanner(button=False)
+        self.banner = MessageBanner()
 
         figure = LaunchpadFigure()
 

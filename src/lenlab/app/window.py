@@ -10,6 +10,7 @@ from .bode import BodePlotter
 from .figure import PinAssignmentWidget
 from .oscilloscope import Oscilloscope
 from .programmer import ProgrammerWidget
+from .vocabulary import Vocabulary as Vocab
 from .voltmeter import VoltmeterWidget
 
 # https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate
@@ -26,10 +27,10 @@ class MainWindow(QMainWindow):
 
         self.lenlab = Lenlab()
 
-        message_banner = MessageBanner()
+        message_banner = MessageBanner(button_text=Vocab.retry)
         self.lenlab.error.connect(message_banner.set_error)
         self.lenlab.new_terminal.connect(message_banner.hide)
-        message_banner.retry_button.clicked.connect(self.lenlab.retry)
+        message_banner.button.clicked.connect(self.lenlab.retry)
 
         programmer = ProgrammerWidget(self.lenlab)
         pins = PinAssignmentWidget()
@@ -40,11 +41,11 @@ class MainWindow(QMainWindow):
         bode = BodePlotter(self.lenlab)
 
         tab_widget = QTabWidget()
-        tab_widget.addTab(programmer, programmer.title)
-        tab_widget.addTab(pins, pins.title)
-        tab_widget.addTab(self.voltmeter_widget, self.voltmeter_widget.title)
-        tab_widget.addTab(oscilloscope, oscilloscope.title)
-        tab_widget.addTab(bode, bode.title)
+        tab_widget.addTab(programmer, str(programmer.title))
+        tab_widget.addTab(pins, str(pins.title))
+        tab_widget.addTab(self.voltmeter_widget, str(self.voltmeter_widget.title))
+        tab_widget.addTab(oscilloscope, str(oscilloscope.title))
+        tab_widget.addTab(bode, str(bode.title))
 
         # self.lenlab.ready.connect(lambda: tab_widget.setCurrentIndex(1))
 

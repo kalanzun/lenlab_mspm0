@@ -5,10 +5,10 @@ from PySide6.QtWidgets import QCheckBox
 class BoolCheckBox(QCheckBox):
     check_changed = Signal(bool)
 
-    def __init__(self, text: str = ""):
+    def __init__(self, text):
         super().__init__()
 
-        self.setText(text)
+        self.setText(str(text))
         self.checkStateChanged.connect(self.on_check_state_changed)
 
     @Slot(Qt.CheckState)

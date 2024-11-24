@@ -24,16 +24,32 @@ from ..model.lenlab import Lenlab
 from ..model.voltmeter import Voltmeter, VoltmeterPoint
 from .banner import MessageBanner
 from .checkbox import BoolCheckBox
+from .dialog import Dialog
+from .vocabulary import Vocabulary as Vocab
 
 logger = logging.getLogger(__name__)
 
 
 class VoltmeterWidget(QWidget):
-    title = "Voltmeter"
+    title = Vocab("Voltmeter", "Voltmeter")
 
-    labels = ("Channel 1 (PA 24)", "Channel 2 (PA 17)")
+    labels = (
+        Vocab("Channel 1 (PA 24)", "Kanal 1 (PA 24)"),
+        Vocab("Channel 2 (PA 17)", "Kanal 2 (PA 17)"),
+    )
     limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
     intervals = [20, 50, 100, 200, 500, 1000]
+
+    x_label = Vocab("time", "Zeit")
+    y_label = Vocab("voltage", "Spannung")
+
+    time_labels = {
+        1: Vocab("seconds", "Sekunden"),
+        60: Vocab("minutes", "Minuten"),
+        60 * 60: Vocab("hours", "Stunden"),
+    }
+
+    amplitude_label = Vocab("volts", "Volt")
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -47,8 +63,8 @@ class VoltmeterWidget(QWidget):
         self.unit = 1  # second
 
         window_layout = QVBoxLayout()
-        self.banner = MessageBanner("Dismiss")
-        self.banner.retry_button.clicked.connect(self.banner.hide)
+        self.banner = MessageBanner(button_text=Vocab.hide)
+        self.banner.button.clicked.connect(self.banner.hide)
         self.voltmeter.error.connect(self.banner.set_error)
         window_layout.addWidget(self.banner)
 
@@ -69,19 +85,19 @@ class VoltmeterWidget(QWidget):
         self.x_axis.setRange(0.0, 4.0)
         self.x_axis.setTickCount(5)
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(self.get_unit_label(self.unit))
+        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[self.unit]}]")
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
         self.y_axis.setRange(0.0, 3.3)
         self.y_axis.setTickCount(5)
         self.y_axis.setLabelFormat("%g")
-        self.y_axis.setTitleText("voltage [volts]")
+        self.y_axis.setTitleText(f"{self.y_label} [{self.amplitude_label}]")
         self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
         self.channels = [QLineSeries() for _ in self.labels]
         for channel, label in zip(self.channels, self.labels, strict=True):
-            channel.setName(label)
+            channel.setName(str(label))
             self.chart.addSeries(channel)
             channel.attachAxis(self.x_axis)
             channel.attachAxis(self.y_axis)
@@ -95,7 +111,7 @@ class VoltmeterWidget(QWidget):
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
-        label = QLabel("Interval")
+        label = QLabel(str(Vocab.interval))
         layout.addWidget(label)
 
         self.interval = QComboBox()
@@ -110,19 +126,19 @@ class VoltmeterWidget(QWidget):
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
-        button = QPushButton("Start")
+        button = QPushButton(str(Vocab.start))
         self.voltmeter.active_changed.connect(button.setDisabled)
         button.clicked.connect(self.on_start_clicked)
         layout.addWidget(button)
 
-        button = QPushButton("Stop")
+        button = QPushButton(str(Vocab.stop))
         button.setEnabled(False)
         self.voltmeter.active_changed.connect(button.setEnabled)
         button.clicked.connect(self.voltmeter.stop)
         layout.addWidget(button)
 
         # time
-        label = QLabel("Time")
+        label = QLabel(str(Vocab.time))
         sidebar_layout.addWidget(label)
 
         self.time_field = QLineEdit()
@@ -146,7 +162,7 @@ class VoltmeterWidget(QWidget):
             sidebar_layout.addWidget(field)
 
         # save
-        button = QPushButton("Save As")
+        button = QPushButton(str(Vocab.save_as))
         button.clicked.connect(self.on_save_as_clicked)
         sidebar_layout.addWidget(button)
 
@@ -154,7 +170,7 @@ class VoltmeterWidget(QWidget):
         self.file_name.setReadOnly(True)
         sidebar_layout.addWidget(self.file_name)
 
-        self.auto_save = BoolCheckBox("Automatic save")
+        self.auto_save = BoolCheckBox(Vocab.automatic_save)
         self.auto_save.setEnabled(False)
         self.auto_save.check_changed.connect(self.voltmeter.set_auto_save)
         # set_auto_save might cause a change back in case of an error
@@ -163,13 +179,13 @@ class VoltmeterWidget(QWidget):
         )
         sidebar_layout.addWidget(self.auto_save)
 
-        button = QPushButton("Save Image")
+        button = QPushButton(str(Vocab.save_image))
         button.clicked.connect(self.on_save_image_clicked)
         sidebar_layout.addWidget(button)
 
-        button = QPushButton("Reset")
+        button = QPushButton(str(Vocab.discard))
         self.voltmeter.active_changed.connect(button.setDisabled)
-        button.clicked.connect(self.on_reset_clicked)
+        button.clicked.connect(self.on_discard_clicked)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
@@ -186,18 +202,9 @@ class VoltmeterWidget(QWidget):
         if time <= 2.0 * 60.0:  # 2 minutes
             return 1  # seconds
         elif time <= 2 * 60.0 * 60.0:  # 2 hours
-            return 60.0  # minutes
+            return 60  # minutes
         else:
-            return 60.0 * 60.0  # hours
-
-    @staticmethod
-    def get_unit_label(unit: float):
-        if unit >= 60.0 * 60.0:
-            return "time [hours]"
-        elif unit >= 60.0:
-            return "time [minutes]"
-        else:
-            return "time [seconds]"
+            return 60 * 60  # hours
 
     def get_batch_size(self, time: float) -> int:
         if time <= 2.0 * 60.0:  # 2 minutes
@@ -226,7 +233,7 @@ class VoltmeterWidget(QWidget):
             )
 
         self.x_axis.setMax(self.get_upper_limit(last_point.time / unit))
-        self.x_axis.setTitleText(self.get_unit_label(unit))
+        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[unit]}]")
 
         seconds = str(timedelta(seconds=int(last_point.time)))
         if fractional := last_point.time % 1.0 or self.voltmeter.interval < 1000:  # ms
@@ -250,7 +257,7 @@ class VoltmeterWidget(QWidget):
 
     def save_as(self) -> bool:
         file_name, selected_filter = QFileDialog.getSaveFileName(
-            self, "Save", "voltmeter.csv", "CSV (*.csv)"
+            self, str(Vocab.save_as), "voltmeter.csv", "CSV (*.csv)"
         )
         if not file_name:  # cancelled
             return False
@@ -267,18 +274,14 @@ class VoltmeterWidget(QWidget):
         self.save_as()
 
     @Slot()
-    def on_reset_clicked(self):
+    def on_discard_clicked(self):
         if self.voltmeter.unsaved:
-            dialog = QMessageBox()
-            dialog.setWindowTitle("Lenlab")
-            dialog.setText("The voltmeter has unsaved data.")
-            dialog.setInformativeText("Do you want to save the data?")
+            dialog = SaveQuestion()
             dialog.setStandardButtons(
                 QMessageBox.StandardButton.Save
                 | QMessageBox.StandardButton.Discard
                 | QMessageBox.StandardButton.Cancel
             )
-            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
             result = dialog.exec()
             if result == QMessageBox.StandardButton.Save:
                 if not self.save_as():
@@ -286,13 +289,13 @@ class VoltmeterWidget(QWidget):
             elif result == QMessageBox.StandardButton.Cancel:
                 return
 
-        self.voltmeter.reset()
+        self.voltmeter.discard()
 
         for channel in self.channels:
             channel.clear()
         self.unit = 1
         self.x_axis.setMax(4.0)
-        self.x_axis.setTitleText(self.get_unit_label(self.unit))
+        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[self.unit]}]")
 
         self.time_field.setText("")
         for field in self.fields:
@@ -305,7 +308,7 @@ class VoltmeterWidget(QWidget):
     @Slot()
     def on_save_image_clicked(self):
         file_name, file_format = QFileDialog.getSaveFileName(
-            self, "Save Image", "voltmeter.svg", "SVG (*.svg);;PNG (*.png)"
+            self, str(Vocab.save_image), "voltmeter.svg", "SVG (*.svg);;PNG (*.png)"
         )
         if not file_name:  # cancelled
             return
@@ -322,8 +325,8 @@ class VoltmeterWidget(QWidget):
             ax.set_xlim(0, self.get_upper_limit(last_point.time / unit))
             ax.set_ylim(0, 3.3)
 
-            ax.set_xlabel(self.get_unit_label(unit))
-            ax.set_ylabel("voltage [volts]")
+            ax.set_xlabel(f"{self.x_label} [{self.time_labels[unit]}]")
+            ax.set_ylabel(f"{self.y_label} [{self.amplitude_label}]")
 
             ax.grid()
 
@@ -334,20 +337,16 @@ class VoltmeterWidget(QWidget):
 
             fig.savefig(file_name, format=file_format[:3].lower())
         except Exception as error:
-            self.banner.set_error(VoltmeterSaveImageError(error))
+            self.banner.set_error(SaveImageError(error))
 
     def closeEvent(self, event):
         if self.voltmeter.active or self.voltmeter.unsaved:
-            dialog = QMessageBox()
-            dialog.setWindowTitle("Lenlab")
-            dialog.setText("The voltmeter is active or has unsaved data.")
-            dialog.setInformativeText("Do you want to save the data?")
+            dialog = SaveQuestion()
             dialog.setStandardButtons(
                 QMessageBox.StandardButton.Save
                 | QMessageBox.StandardButton.Discard
                 | QMessageBox.StandardButton.Cancel
             )
-            dialog.setDefaultButton(QMessageBox.StandardButton.Save)
             result = dialog.exec()
             if result == QMessageBox.StandardButton.Save:
                 if not self.save_as():
@@ -360,6 +359,11 @@ class VoltmeterWidget(QWidget):
             self.voltmeter.save(0)
 
 
-class VoltmeterSaveImageError(Message):
+class SaveImageError(Message):
     english = """Error saving the image:\n\n{0}"""
     german = """Fehler beim Speichern des Bildes:\n\n{0}"""
+
+
+class SaveQuestion(Dialog):
+    text = Vocab("The voltmeter has unsaved data.", "Das Voltmeter hat ungespeicherte Daten.")
+    info = Vocab("Do you want to save the data?", "Möchten Sie die Daten speichern?")

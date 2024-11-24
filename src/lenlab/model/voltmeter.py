@@ -172,7 +172,7 @@ class Voltmeter(QObject):
         except Exception as error:
             logger.error(error)
 
-    def reset(self):
+    def discard(self):
         self.save(0)
 
         self.save_idx = 0

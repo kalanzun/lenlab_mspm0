@@ -3,10 +3,11 @@ from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from ..model.lenlab import Lenlab
+from .vocabulary import Vocabulary as Vocab
 
 
 class Oscilloscope(QWidget):
-    title = "Oscilloscope"
+    title = Vocab("Oscilloscope", "Oszilloskop")
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -27,10 +28,10 @@ class Oscilloscope(QWidget):
         layout = QHBoxLayout()
         sidebar_layout.addLayout(layout)
 
-        button = QPushButton("Start")
+        button = QPushButton(str(Vocab.start))
         layout.addWidget(button)
 
-        button = QPushButton("Stop")
+        button = QPushButton(str(Vocab.stop))
         layout.addWidget(button)
 
         sidebar_layout.addStretch(1)

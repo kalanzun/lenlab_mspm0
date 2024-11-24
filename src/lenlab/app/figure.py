@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QPainter, QPen, Qt
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from lenlab.app.banner import MessageBanner
+from lenlab.app.vocabulary import Vocabulary as Vocab
 from lenlab.message import Message
 
 white = QColor(0xF0, 0xF0, 0xF0)
@@ -284,12 +285,12 @@ class PinAssignmentFigure(QWidget):
 
 
 class PinAssignmentWidget(QWidget):
-    title = "Pin Assignment"
+    title = Vocab("Pin Assignment", "Pin-Belegung")
 
     def __init__(self):
         super().__init__()
 
-        banner = MessageBanner(button=False)
+        banner = MessageBanner()
         pins = PinAssignmentFigure()
         board = LaunchpadFigure()
 

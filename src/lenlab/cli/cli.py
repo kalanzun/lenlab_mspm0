@@ -7,8 +7,6 @@ from importlib import metadata
 from PySide6.QtCore import QCoreApplication, QLocale
 from PySide6.QtWidgets import QApplication
 
-from lenlab.message import Message
-
 logger = logging.getLogger(__name__)
 
 commands = {}
@@ -22,6 +20,7 @@ def command(func):
 @command
 def app():
     from lenlab.app.window import MainWindow
+    from lenlab.message import Message
 
     gui_app = QApplication(sys.argv)
 
