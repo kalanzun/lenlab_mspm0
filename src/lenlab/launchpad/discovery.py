@@ -143,12 +143,15 @@ class Discovery(QObject):
 
 
 class InvalidFirmwareVersion(Message):
-    english = """Invalid firmware version: {0}
-        This Lenlab requires version {1}.
-        Please write the current version to the Launchpad with the Programmer."""
-    german = """Ungültige Firmware-Version: {0}
-        Dieses Lenlab benötigt Version {1}.
-        Bitte die aktuelle Version mit dem Programmierer auf das Launchpad schreiben."""
+    english = """### Invalid firmware version: {0}
+    
+    This Lenlab requires version {1}.
+    Please write the current version to the Launchpad with the Programmer."""
+
+    german = """### Ungültige Firmware-Version: {0}
+    
+    Dieses Lenlab benötigt Version {1}.
+    Bitte die aktuelle Version mit dem Programmierer auf das Launchpad schreiben."""
 
 
 class UnexpectedReply(Message):
@@ -157,19 +160,33 @@ class UnexpectedReply(Message):
 
 
 class NoLaunchpad(Message):
-    english = """No Launchpad found
-        Please connect the Launchpad via USB to the computer."""
-    german = """Kein Launchpad gefunden
-        Bitte das Launchpad über USB mit dem Computer verbinden."""
+    english = """### No Launchpad found
+    
+    Please connect the Launchpad via USB to the computer."""
+
+    german = """### Kein Launchpad gefunden
+    
+    Bitte das Launchpad über USB mit dem Computer verbinden."""
 
 
 class NoFirmware(Message):
-    english = """No reply from the Launchpad
-        Lenlab requires the Lenlab firmware on the Launchpad.
-        Please write the firmware on the Launchpad with the Programmer."""
-    german = """Keine Antwort vom Launchpad
-        Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
-        Bitte die Firmware mit dem Programmierer auf das Launchpad schreiben."""
+    english = """### No reply from the Launchpad
+    
+    Lenlab requires the Lenlab firmware on the Launchpad.
+    Please write the firmware on the Launchpad with the Programmer.
+    
+    If the communication still does not work, you can try to reset the launchpad
+    (push the RESET button), to switch off power to the launchpad (unplug USB connection
+    and plug it back in), and to restart the computer."""
+
+    german = """### Keine Antwort vom Launchpad
+    
+    Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
+    Bitte die Firmware mit dem Programmierer auf das Launchpad schreiben.
+    
+    Wenn die Kommunikation trotzdem nicht funktioniert können Sie das Launchpad neustarten
+    (Taste RESET drücken), das Launchpad stromlos schalten (USB-Verbindung ausstecken
+    und wieder anstecken) und den Computer neustarten."""
 
 
 class TerminalErrors(Message):

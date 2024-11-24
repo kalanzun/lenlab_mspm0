@@ -18,6 +18,13 @@ class MessageBanner(QWidget):
         self.symbol_widget.setFixedSize(40, 40)
 
         self.text_label = QLabel()
+        self.text_label.setTextFormat(Qt.TextFormat.MarkdownText)
+        self.text_label.setWordWrap(True)
+        self.text_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        self.text_label.setOpenExternalLinks(True)
 
         body = QVBoxLayout()
         body.addWidget(self.text_label)

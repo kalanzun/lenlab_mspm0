@@ -1,4 +1,4 @@
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -28,6 +28,8 @@ class ProgrammerWidget(QWidget):
         self.lenlab = lenlab
 
         introduction = QLabel(self)
+        introduction.setTextFormat(Qt.TextFormat.MarkdownText)
+        introduction.setWordWrap(True)
         introduction.setText(str(Introduction()))
 
         self.program_button = QPushButton(str(Vocab.program))
@@ -91,27 +93,30 @@ class ProgrammerWidget(QWidget):
 
 
 class Introduction(Message):
-    english = """
-    Please start the "Bootstrap Loader" on the Launchpad first:
+    english = """### Please start the "Bootstrap Loader" on the Launchpad first:
+    
     Press and hold the button S1 next to the green LED and press the button Reset
     next to the USB plug. Let the button S1 go shortly after (min. 100 ms).
+    
     The buttons click audibly. The red LED at the lower edge is off.
-    You have now 10 seconds to click on Program here in the app.
-    """
+    You have now 10 seconds to click on Program here in the app."""
 
-    german = """
-    Bitte starten Sie zuerst den "Bootstrap Loader" auf dem Launchpad:
+    german = """### Bitte starten Sie zuerst den "Bootstrap Loader" auf dem Launchpad:
+    
     Halten Sie die Taste S1 neben der grünen LED gedrückt und drücken Sie auf die Taste Reset
     neben dem USB-Stecker. Lassen Sie die Taste S1 kurz danach wieder los (min. 100 ms).
+    
     Die Tasten klicken hörbar. Die rote LED an der Unterkante ist aus.
-    Sie haben jetzt 10 Sekunden, um hier in der App auf Programmieren zu klicken.
-    """
+    Sie haben jetzt 10 Sekunden, um hier in der App auf Programmieren zu klicken."""
 
 
 class Successful(Message):
-    english = """Programming successful
+    english = """### Programming successful
+    
     The programmer wrote the Lenlab firmware to the Launchpad.
     Lenlab should be connected and ready for measurements."""
-    german = """Programmieren erfolgreich
+
+    german = """### Programmieren erfolgreich
+    
     Der Programmierer schrieb die Lenlab Firmware auf das Launchpad.
     Lenlab sollte verbunden sein und bereit für Messungen."""

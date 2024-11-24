@@ -317,12 +317,12 @@ class PinAssignmentWidget(QWidget):
 
 
 class Voltage(Message):
-    english = """Maximum pin voltage: 3.3 V
+    english = """### Maximum pin voltage: 3.3 V
     
     Never directly connect a pin to the 5 V pin or the solar cell.
     Use a voltage divider circuit."""
 
-    german = """Maximalspannung an den Pins: 3.3 V
+    german = """### Maximalspannung an den Pins: 3.3 V
     
     Verbinden Sie einen Pin niemals direkt mit dem 5-V-Pin oder der Solarzelle.
     Verwenden Sie eine Spannungsteiler-Schaltung."""

@@ -66,6 +66,18 @@ Auf manchen Mac fehlt das Kommando `realpath`. Lenlab startet dann nicht mit der
 uvx --from lenlab@lastest python -m lenlab
 ```
 
+### TI UniFlash, Programmieren funktioniert nicht
+
+TI UniFlash programmiert das Launchpad auf eine andere Weise und kann funktionieren,
+wenn der Programmierer in Lenlab nicht funktioniert.
+
+- Installieren Sie https://www.ti.com/tool/UNIFLASH
+- Laden Sie das Firmware Binary herunter https://github.com/kalanzun/lenlab_mspm0/blob/main/src/lenlab/lenlab_fw.bin
+  - Rechts gibt es einen kleinen Knopf mit einem Download-Symbol "Download raw file"
+- Starten Sie UniFlash. Wählen Sie als "Flash Image" die heruntergeladene `lenlab_fw.bin`
+- Führen Sie "Load Image" aus
+  - Bei Erfolg schreibt es in die "Console": "\[SUCCESS\] Program Load completed successfully."
+
 ## Lenlab Testen
 
 Halten Sie die Taste S1 des Launchpads neben der grünen LED gedrückt und drücken Sie kurz auf die Taste RESET (NRST) neben

@@ -113,19 +113,25 @@ class TerminalError(Message):
 
 
 class TerminalPermissionError(Message):
-    english = """Permission error
-        Lenlab requires unique access to the serial communication with the Launchpad.
-        Maybe another instance of Lenlab is running and blocks the access?"""
-    german = """Keine Zugriffsberechtigung
-        Lenlab braucht alleinigen Zugriff auf die serielle Kommunikation mit dem Launchpad.
-        Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Zugriff?"""
+    english = """### Permission error
+    
+    Lenlab requires unique access to the serial communication with the Launchpad.
+    Maybe another instance of Lenlab is running and blocks the access?"""
+
+    german = """### Keine Zugriffsberechtigung
+    
+    Lenlab braucht alleinigen Zugriff auf die serielle Kommunikation mit dem Launchpad.
+    Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Zugriff?"""
 
 
 class TerminalResourceError(Message):
-    english = """Connection lost
-        The Launchpad vanished. Please reconnect it to the computer."""
-    german = """Verbindung verloren
-        Das Launchpad ist verschwunden. Bitte wieder mit dem Computer verbinden."""
+    english = """### Connection lost
+    
+    The Launchpad vanished. Please reconnect it to the computer."""
+
+    german = """### Verbindung verloren
+    
+    Das Launchpad ist verschwunden. Bitte wieder mit dem Computer verbinden."""
 
 
 class OverlongPacket(Message):
