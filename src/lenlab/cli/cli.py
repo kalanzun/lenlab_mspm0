@@ -4,7 +4,7 @@ import sys
 from argparse import ArgumentParser
 from importlib import metadata
 
-from PySide6.QtCore import QCoreApplication, QLocale
+from PySide6.QtCore import QCoreApplication, QLibraryInfo, QLocale, QTranslator
 from PySide6.QtWidgets import QApplication
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,12 @@ def app():
 
     if QLocale().language() == QLocale.Language.German:
         Message.language = "german"
+
+    # Qt Translations
+    path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    translator = QTranslator(gui_app)
+    if translator.load(QLocale(), "qtbase", "_", path):
+        gui_app.installTranslator(translator)
 
     window = MainWindow()
     window.show()
