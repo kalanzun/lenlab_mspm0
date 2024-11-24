@@ -181,6 +181,12 @@ class VoltmeterWidget(QWidget):
     title = Vocab("Voltmeter", "Voltmeter")
     intervals = [20, 50, 100, 200, 500, 1000]
 
+    interval: QComboBox
+    time_field: QLineEdit
+    fields: list[QLineEdit]
+    file_name: QLineEdit
+    auto_save: BoolCheckBox
+
     def __init__(self, lenlab: Lenlab):
         super().__init__()
 
@@ -192,39 +198,42 @@ class VoltmeterWidget(QWidget):
 
         self.unit = 1  # second
 
-        window_layout = QVBoxLayout()
         self.banner = MessageBanner(button_text=Vocab.hide)
         self.banner.button.clicked.connect(self.banner.hide)
         self.voltmeter.error.connect(self.banner.set_error)
-        window_layout.addWidget(self.banner)
-
-        main_layout = QHBoxLayout()
-        window_layout.addLayout(main_layout)
 
         self.chart = VoltmeterChart(self.voltmeter)
+
+        main_layout = QHBoxLayout()
         main_layout.addWidget(self.chart, stretch=1)
+        main_layout.addLayout(self.create_sidebar())
 
+        window_layout = QVBoxLayout()
+        window_layout.addWidget(self.banner)
+        window_layout.addLayout(main_layout)
+
+        self.setLayout(window_layout)
+
+    def create_sidebar(self):
         sidebar_layout = QVBoxLayout()
-        main_layout.addLayout(sidebar_layout)
 
-        # sample rate
-        layout = QHBoxLayout()
-        sidebar_layout.addLayout(layout)
-
-        label = QLabel(str(Vocab.interval))
-        layout.addWidget(label)
-
+        # interval
         self.interval = QComboBox()
-        self.voltmeter.active_changed.connect(self.interval.setDisabled)
-        layout.addWidget(self.interval)
-
         for interval in self.intervals:
             self.interval.addItem(f"{interval} ms")
         self.interval.setCurrentIndex(len(self.intervals) - 1)
+        self.voltmeter.active_changed.connect(self.interval.setDisabled)
+
+        layout = QHBoxLayout()
+
+        label = QLabel(str(Vocab.interval))
+        layout.addWidget(label)
+        layout.addWidget(self.interval)
+
+        sidebar_layout.addLayout(layout)
 
         # start / stop
         layout = QHBoxLayout()
-        sidebar_layout.addLayout(layout)
 
         button = QPushButton(str(Vocab.start))
         self.voltmeter.active_changed.connect(button.setDisabled)
@@ -236,6 +245,8 @@ class VoltmeterWidget(QWidget):
         self.voltmeter.active_changed.connect(button.setEnabled)
         button.clicked.connect(self.voltmeter.stop)
         layout.addWidget(button)
+
+        sidebar_layout.addLayout(layout)
 
         # time
         label = QLabel(str(Vocab.time))
@@ -255,8 +266,8 @@ class VoltmeterWidget(QWidget):
             channel,
         ) in zip(checkboxes, self.fields, self.chart.channels, strict=True):
             checkbox.setChecked(True)
-            sidebar_layout.addWidget(checkbox)
             checkbox.check_changed.connect(channel.setVisible)
+            sidebar_layout.addWidget(checkbox)
 
             field.setReadOnly(True)
             sidebar_layout.addWidget(field)
@@ -290,7 +301,7 @@ class VoltmeterWidget(QWidget):
 
         sidebar_layout.addStretch(1)
 
-        self.setLayout(window_layout)
+        return sidebar_layout
 
     @Slot(VoltmeterPoint)
     def on_new_last_point(self, last_point: VoltmeterPoint):
