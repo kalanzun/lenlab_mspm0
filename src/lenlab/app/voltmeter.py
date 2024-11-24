@@ -30,26 +30,156 @@ from .vocabulary import Vocabulary as Vocab
 logger = logging.getLogger(__name__)
 
 
-class VoltmeterWidget(QWidget):
-    title = Vocab("Voltmeter", "Voltmeter")
-
+class VoltmeterChart(QWidget):
     labels = (
         Vocab("Channel 1 (PA 24)", "Kanal 1 (PA 24)"),
         Vocab("Channel 2 (PA 17)", "Kanal 2 (PA 17)"),
     )
     limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
-    intervals = [20, 50, 100, 200, 500, 1000]
 
-    x_label = Vocab("time", "Zeit")
-    y_label = Vocab("voltage", "Spannung")
+    x_label = Vocab.time
+    y_label = Vocab.voltage
 
+    amplitude_label = Vocab.volt
     time_labels = {
-        1: Vocab("seconds", "Sekunden"),
-        60: Vocab("minutes", "Minuten"),
-        60 * 60: Vocab("hours", "Stunden"),
+        1: Vocab.seconds,
+        60: Vocab.minutes,
+        60 * 60: Vocab.hours,
     }
 
-    amplitude_label = Vocab("volts", "Volt")
+    def get_limit(self, value: float) -> float:
+        for x in self.limits:
+            if x >= value:
+                return x
+
+    def get_x_label(self, unit: int) -> str:
+        return f"{self.x_label} [{self.time_labels[unit]}]"
+
+    def get_y_label(self) -> str:
+        return f"{self.y_label} [{self.amplitude_label}]"
+
+    def __init__(self, voltmeter: Voltmeter):
+        super().__init__()
+
+        self.voltmeter = voltmeter
+        self.voltmeter.new_last_point.connect(
+            self.on_new_last_point, Qt.ConnectionType.QueuedConnection
+        )
+
+        self.unit = 1  # second
+
+        self.chart_view = QChartView()
+        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.chart = self.chart_view.chart()
+        # chart.setTheme(QChart.ChartTheme.ChartThemeLight)  # default, grid lines faint
+        # chart.setTheme(QChart.ChartTheme.ChartThemeDark)  # odd gradient
+        # chart.setTheme(QChart.ChartTheme.ChartThemeBlueNcs)  # grid lines faint
+        self.chart.setTheme(
+            QChart.ChartTheme.ChartThemeQt
+        )  # light and dark green, stronger grid lines
+
+        self.x_axis = QValueAxis()
+        self.x_axis.setRange(0.0, 4.0)
+        self.x_axis.setTickCount(5)
+        self.x_axis.setLabelFormat("%g")
+        self.x_axis.setTitleText(self.get_x_label(self.unit))
+        self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
+
+        self.y_axis = QValueAxis()
+        self.y_axis.setRange(0.0, 3.3)
+        self.y_axis.setTickCount(5)
+        self.y_axis.setLabelFormat("%g")
+        self.y_axis.setTitleText(self.get_y_label())
+        self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
+
+        self.channels = [QLineSeries() for _ in self.labels]
+        for channel, label in zip(self.channels, self.labels, strict=True):
+            channel.setName(str(label))
+            self.chart.addSeries(channel)
+            channel.attachAxis(self.x_axis)
+            channel.attachAxis(self.y_axis)
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.chart_view)
+        self.setLayout(layout)
+
+    @staticmethod
+    def get_time_unit(value: float) -> int:
+        if value <= 2.0 * 60.0:  # 2 minutes
+            return 1  # seconds
+        elif value <= 2 * 60.0 * 60.0:  # 2 hours
+            return 60  # minutes
+        else:
+            return 60 * 60  # hours
+
+    @staticmethod
+    def get_batch_size(last_time: float, interval: int) -> int:
+        if last_time <= 2.0 * 60.0:  # 2 minutes
+            return 1  # all points
+        elif last_time <= 2 * 60.0 * 60.0:  # 2 hours
+            return 1000 // interval  # seconds
+        else:
+            return 1000 // interval * 60  # minutes
+
+    @Slot(VoltmeterPoint)
+    def on_new_last_point(self, last_point: VoltmeterPoint):
+        start = time.time()
+
+        unit = self.get_time_unit(last_point.time)
+        n = self.get_batch_size(last_point.time, self.voltmeter.interval)
+
+        # this can do 100_000 points in 400 ms not batched
+        # and 130_000 points in 30 ms in batches of 50
+        # a lot faster than channel.append
+        for i, channel in enumerate(self.channels):
+            channel.replace(
+                [
+                    QPointF(batch[0].time / unit, sum(point[i] for point in batch) / len(batch))
+                    for batch in batched(self.voltmeter.points, n)
+                ]
+            )
+
+        self.x_axis.setMax(self.get_limit(last_point.time / unit))
+        self.x_axis.setTitleText(self.get_x_label(unit))
+
+        logger.debug(
+            f"on_new_last_point {len(self.voltmeter.points)} points"
+            f"{int((time.time() - start) * 1000)} ms"
+        )
+
+    def discard(self):
+        for channel in self.channels:
+            channel.clear()
+        self.unit = 1
+        self.x_axis.setMax(4.0)
+        self.x_axis.setTitleText(self.get_x_label(self.unit))
+
+    def save_image(self, file_name, file_format):
+        fig, ax = plt.subplots()
+
+        last_point = (
+            self.voltmeter.points[-1] if self.voltmeter.points else VoltmeterPoint(4.0, 0.0, 0.0)
+        )
+        unit = self.get_time_unit(last_point.time)
+        ax.set_xlim(0, self.get_limit(last_point.time / unit))
+        ax.set_ylim(0, 3.3)
+
+        ax.set_xlabel(self.get_x_label(unit))
+        ax.set_ylabel(self.get_y_label())
+
+        ax.grid()
+
+        times = [point.time / unit for point in self.voltmeter.points]
+        for i, channel in enumerate(self.channels):
+            if channel.isVisible():
+                ax.plot(times, [point[i] for point in self.voltmeter.points])
+
+        fig.savefig(file_name, format=file_format[:3].lower())
+
+
+class VoltmeterWidget(QWidget):
+    title = Vocab("Voltmeter", "Voltmeter")
+    intervals = [20, 50, 100, 200, 500, 1000]
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -71,38 +201,8 @@ class VoltmeterWidget(QWidget):
         main_layout = QHBoxLayout()
         window_layout.addLayout(main_layout)
 
-        self.chart_view = QChartView()
-        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.chart = self.chart_view.chart()
-        # chart.setTheme(QChart.ChartTheme.ChartThemeLight)  # default, grid lines faint
-        # chart.setTheme(QChart.ChartTheme.ChartThemeDark)  # odd gradient
-        # chart.setTheme(QChart.ChartTheme.ChartThemeBlueNcs)  # grid lines faint
-        self.chart.setTheme(
-            QChart.ChartTheme.ChartThemeQt
-        )  # light and dark green, stronger grid lines
-
-        self.x_axis = QValueAxis()
-        self.x_axis.setRange(0.0, 4.0)
-        self.x_axis.setTickCount(5)
-        self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[self.unit]}]")
-        self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
-
-        self.y_axis = QValueAxis()
-        self.y_axis.setRange(0.0, 3.3)
-        self.y_axis.setTickCount(5)
-        self.y_axis.setLabelFormat("%g")
-        self.y_axis.setTitleText(f"{self.y_label} [{self.amplitude_label}]")
-        self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
-
-        self.channels = [QLineSeries() for _ in self.labels]
-        for channel, label in zip(self.channels, self.labels, strict=True):
-            channel.setName(str(label))
-            self.chart.addSeries(channel)
-            channel.attachAxis(self.x_axis)
-            channel.attachAxis(self.y_axis)
-
-        main_layout.addWidget(self.chart_view, stretch=1)
+        self.chart = VoltmeterChart(self.voltmeter)
+        main_layout.addWidget(self.chart, stretch=1)
 
         sidebar_layout = QVBoxLayout()
         main_layout.addLayout(sidebar_layout)
@@ -146,14 +246,14 @@ class VoltmeterWidget(QWidget):
         sidebar_layout.addWidget(self.time_field)
 
         # channels
-        checkboxes = [BoolCheckBox(label) for label in self.labels]
-        self.fields = [QLineEdit() for _ in self.labels]
+        checkboxes = [BoolCheckBox(label) for label in self.chart.labels]
+        self.fields = [QLineEdit() for _ in self.chart.labels]
 
         for (
             checkbox,
             field,
             channel,
-        ) in zip(checkboxes, self.fields, self.channels, strict=True):
+        ) in zip(checkboxes, self.fields, self.chart.channels, strict=True):
             checkbox.setChecked(True)
             sidebar_layout.addWidget(checkbox)
             checkbox.check_changed.connect(channel.setVisible)
@@ -192,62 +292,17 @@ class VoltmeterWidget(QWidget):
 
         self.setLayout(window_layout)
 
-    def get_upper_limit(self, value: float) -> float:
-        for x in self.limits:
-            if value <= x:
-                return x
-
-    @staticmethod
-    def get_time_unit(time: float) -> float:
-        if time <= 2.0 * 60.0:  # 2 minutes
-            return 1  # seconds
-        elif time <= 2 * 60.0 * 60.0:  # 2 hours
-            return 60  # minutes
-        else:
-            return 60 * 60  # hours
-
-    def get_batch_size(self, time: float) -> int:
-        if time <= 2.0 * 60.0:  # 2 minutes
-            return 1  # all points
-        elif time <= 2 * 60.0 * 60.0:  # 2 hours
-            return int(1000 / self.voltmeter.interval)  # seconds
-        else:
-            return int(1000 / self.voltmeter.interval) * 60  # minutes
-
     @Slot(VoltmeterPoint)
     def on_new_last_point(self, last_point: VoltmeterPoint):
-        start = time.time()
-
-        unit = self.get_time_unit(last_point.time)
-        n = self.get_batch_size(last_point.time)
-
-        # this can do 100_000 points in 400 ms not batched
-        # and 130_000 points in 30 ms in batches of 50
-        # a lot faster than channel.append
-        for i, channel in enumerate(self.channels):
-            channel.replace(
-                [
-                    QPointF(batch[0].time / unit, sum(point[i] for point in batch) / len(batch))
-                    for batch in batched(self.voltmeter.points, n)
-                ]
-            )
-
-        self.x_axis.setMax(self.get_upper_limit(last_point.time / unit))
-        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[unit]}]")
-
-        seconds = str(timedelta(seconds=int(last_point.time)))
+        seconds = timedelta(seconds=int(last_point.time))
         if fractional := last_point.time % 1.0 or self.voltmeter.interval < 1000:  # ms
             milliseconds = f"{fractional:.2f}"[1:]
+            self.time_field.setText(f"{seconds}{milliseconds}")
         else:
-            milliseconds = ""
-        self.time_field.setText(f"{seconds}{milliseconds}")
+            self.time_field.setText(str(seconds))
+
         for i, field in enumerate(self.fields):
             field.setText(f"{last_point[i]:.3f} V")
-
-        logger.debug(
-            f"on_new_last_point {len(self.voltmeter.points)} points"
-            f"{int((time.time() - start) * 1000)} ms"
-        )
 
     @Slot()
     def on_start_clicked(self):
@@ -290,12 +345,7 @@ class VoltmeterWidget(QWidget):
                 return
 
         self.voltmeter.discard()
-
-        for channel in self.channels:
-            channel.clear()
-        self.unit = 1
-        self.x_axis.setMax(4.0)
-        self.x_axis.setTitleText(f"{self.x_label} [{self.time_labels[self.unit]}]")
+        self.chart.discard()
 
         self.time_field.setText("")
         for field in self.fields:
@@ -314,28 +364,7 @@ class VoltmeterWidget(QWidget):
             return
 
         try:
-            fig, ax = plt.subplots()
-
-            last_point = (
-                self.voltmeter.points[-1]
-                if self.voltmeter.points
-                else VoltmeterPoint(4.0, 0.0, 0.0)
-            )
-            unit = self.get_time_unit(last_point.time)
-            ax.set_xlim(0, self.get_upper_limit(last_point.time / unit))
-            ax.set_ylim(0, 3.3)
-
-            ax.set_xlabel(f"{self.x_label} [{self.time_labels[unit]}]")
-            ax.set_ylabel(f"{self.y_label} [{self.amplitude_label}]")
-
-            ax.grid()
-
-            times = [point.time / unit for point in self.voltmeter.points]
-            for i, channel in enumerate(self.channels):
-                if channel.isVisible():
-                    ax.plot(times, [point[i] for point in self.voltmeter.points])
-
-            fig.savefig(file_name, format=file_format[:3].lower())
+            self.chart.save_image(file_name, file_format)
         except Exception as error:
             self.banner.set_error(SaveImageError(error))
 
