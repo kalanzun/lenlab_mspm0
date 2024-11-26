@@ -2,13 +2,14 @@
 
 ## Liebe Studierende im LEN Workshop A am KIT!
 
-Lenlab in der Version 8.0.1 funktioniert für den LEN Workshop A. Starten Sie Lenlab mit 
+Lenlab in der Version 8.0 funktioniert für den LEN Workshop A. Starten Sie Lenlab,
+nachdem `uv` installiert ist und wenn Sie Internet haben, mit 
 
 ```shell
 uvx lenlab@latest
 ```
 
-wenn Sie Internet haben. Dann lädt `uvx` automatisch Updates herunter.
+Dann lädt `uvx` automatisch Updates herunter.
 
 Falls das Kommando `realpath` nicht gefunden wurde ("realpath: command not found"):
 
