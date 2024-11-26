@@ -261,11 +261,14 @@ class Voltmeter(QObject):
 
             with open(self.file_name, "w") as file:
                 version = metadata.version("lenlab")
+                # TODO: csv file format remove -Daten -> de and en
                 file.write(f"Lenlab MSPM0 {version} Voltmeter-Daten\n")
+                # TODO: csv file format translate?
                 file.write("Zeit; Kanal_1; Kanal_2\n")
                 for point in self.points:
                     file.write(point.line())
 
+            # TODO: move here: self.file_name = file_name
             self.save_idx = len(self.points)
             self.unsaved = False
 
