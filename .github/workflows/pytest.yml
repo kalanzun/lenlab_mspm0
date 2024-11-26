@@ -1,9 +1,8 @@
 name: pytest
-
+on: [push]
 jobs:
   pytest:
     runs-on: ubuntu-latest
-
     steps:
       - name: "Check out repository"
         uses: actions/checkout@v4
