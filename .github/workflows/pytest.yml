@@ -17,6 +17,10 @@ jobs:
         with:
           python-version-file: ".python-version"
 
+      - name: "Install Qt dependencies"
+        if: runner.os == 'Linux'
+        run: sudo apt update && sudo apt install -y libegl1
+
       - name: "Install the project"
         run: uv sync --all-extras --dev
 
