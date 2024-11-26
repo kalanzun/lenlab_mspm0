@@ -1,5 +1,4 @@
 import logging
-from importlib import metadata
 
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -7,7 +6,7 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from ..message import Message
 from ..singleshot import SingleShotTimer
 from .launchpad import find_vid_pid
-from .protocol import pack
+from .protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
@@ -43,15 +42,15 @@ class Probe(QObject):
 
     @Slot(bytes)
     def on_reply(self, reply: bytes) -> None:
-        if reply[0:4] == b"L8\x00\x00":
-            version = "8." + reply[4:8].strip(b"\x00").decode("ascii", errors="strict")
-            if version == metadata.version("lenlab"):
+        if fw_version := unpack_fw_version(reply):
+            app_version = get_app_version()
+            if fw_version == app_version:
                 self.timer.stop()
                 self.terminal.reply.disconnect(self.on_reply)
                 self.terminal.error.disconnect(self.on_error)
                 self.result.emit(self.terminal)
             else:
-                self.fail(InvalidFirmwareVersion(version, metadata.version("lenlab")))
+                self.fail(InvalidFirmwareVersion(fw_version, app_version))
 
         else:
             self.fail(UnexpectedReply(self.terminal.port_name, reply))

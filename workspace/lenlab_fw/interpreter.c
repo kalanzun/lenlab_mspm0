@@ -34,21 +34,14 @@ static void interpreter_getVersion(void)
     uint32_t arg = 0;
 
     // handle any version string length
-    if (version[i])
+    if (version[i]) // 8
         i++;
-    if (version[i])
+    if (version[i]) // .
         i++;
 
-    arg += version[i];
-    if (version[i])
-        i++;
-    arg += version[i] << 8;
-    if (version[i])
-        i++;
-    arg += version[i] << 16;
-    if (version[i])
-        i++;
-    arg += version[i] << 24;
+    for (; version[i] != 0 && version[i] != '.' && i < 6; i++) {
+        arg += version[i] << ((i - 2) * 8);
+    }
 
     terminal_sendReply(VERSION[0], arg);
 }
