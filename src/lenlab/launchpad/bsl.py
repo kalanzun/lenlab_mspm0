@@ -22,7 +22,7 @@ import lenlab
 
 from ..message import Message
 from ..singleshot import SingleShotTimer
-from .launchpad import KB, crc, find_vid_pid, last
+from .launchpad import KB, crc, find_call_up, find_vid_pid, last
 from .terminal import Terminal
 
 logger = logging.getLogger(__name__)
@@ -254,7 +254,7 @@ class Programmer(QObject):
 
     def program(self):
         port_infos = QSerialPortInfo.availablePorts()
-        matches = find_vid_pid(port_infos)
+        matches = find_call_up(find_vid_pid(port_infos))
         if not matches:
             self.error.emit(NoLaunchpad())
             return

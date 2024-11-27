@@ -5,7 +5,7 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from ..message import Message
 from ..singleshot import SingleShotTimer
-from .launchpad import find_vid_pid
+from .launchpad import find_call_up, find_vid_pid
 from .protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
 
@@ -92,7 +92,7 @@ class Discovery(QObject):
 
     def discover(self):
         port_infos = QSerialPortInfo.availablePorts()
-        matches = find_vid_pid(port_infos)
+        matches = find_call_up(find_vid_pid(port_infos))
         if not matches:
             self.error.emit(NoLaunchpad())
             return
