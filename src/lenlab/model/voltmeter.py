@@ -145,13 +145,13 @@ class Voltmeter(QObject):
         self.restart()
 
     def restart(self):
-        self.command(pack_uint32(b"v", self.interval))
         self.time_offset = (
             self.points[-1].time + self.interval / binary_second if self.points else 0.0
         )
 
         self.start_requested = True
         self.stop_requested = False
+        self.command(pack_uint32(b"v", self.interval))
 
     @Slot()
     def stop(self):
@@ -195,9 +195,9 @@ class Voltmeter(QObject):
                 logger.error("send command error: terminal not open")
                 return
 
+            self.busy_timer.start()
             command = self.command_queue.pop(0)
             self.terminal.write(command)
-            self.busy_timer.start()
 
     @Slot(bytes)
     def on_reply(self, reply: bytes):
