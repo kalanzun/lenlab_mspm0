@@ -105,11 +105,9 @@ def test_save_as_empty(tmp_path):
     voltmeter = Voltmeter(lenlab)
     assert voltmeter.save_as(str(tmp_path / "voltmeter.csv"))
 
-    data = np.loadtxt(voltmeter.file_name, delimiter=";", skiprows=2)
-    assert data.size == 0
-
     head = Path(voltmeter.file_name).read_text()
     assert head.startswith("Lenlab")
+    assert len(head.splitlines()) == 2
 
 
 def test_save_as_permission_error(tmp_path):
