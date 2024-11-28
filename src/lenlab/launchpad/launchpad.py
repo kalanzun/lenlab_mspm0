@@ -1,5 +1,3 @@
-import platform
-
 from PySide6.QtSerialPort import QSerialPortInfo
 
 KB = 1024
@@ -35,9 +33,6 @@ def find_call_up(port_infos: list[QSerialPortInfo]) -> list[QSerialPortInfo]:
 
     if it has port names that start with "cu.", those are the correct ones
     """
-    if platform.system() != "Darwin":
-        return port_infos
-
     matches = [port_info for port_info in port_infos if port_info.portName().startswith("cu.")]
     return matches if matches else port_infos
 
