@@ -1,13 +1,16 @@
 import pytest
+from PySide6.QtSerialPort import QSerialPortInfo
 
 from lenlab.launchpad.launchpad import (
     find_call_up,
-    find_vid_pid, find_launchpad,
+    find_launchpad,
+    find_vid_pid,
 )
 
 
-class MockSerialPortInfo:
+class MockSerialPortInfo(QSerialPortInfo):
     def __init__(self, info: dict):
+        super().__init__()  # empty QSerialPortInfo
         self.info = info
 
     def vendorIdentifier(self):
@@ -24,20 +27,24 @@ class MockSerialPortInfo:
 
 
 def windows_port_infos():
-    yield {'description': 'XDS110 Class Auxiliary Data Port',
-     'manufacturer': 'Texas Instruments Incorporated',
-     'portName': 'COM3',
-     'productIdentifier': 48_883,
-     'vendorIdentifier': 1_105,
-     'serialNumber': 'MG350001',
-     'systemLocation': '\\\\.\\COM3'}
-    yield {'description': 'XDS110 Class Application/User UART',
-     'manufacturer': 'Texas Instruments Incorporated',
-     'portName': 'COM4',
-     'productIdentifier': 48_883,
-     'vendorIdentifier': 1_105,
-     'serialNumber': 'MG350001',
-     'systemLocation': '\\\\.\\COM4'}
+    yield {
+        "description": "XDS110 Class Auxiliary Data Port",
+        "manufacturer": "Texas Instruments Incorporated",
+        "portName": "COM3",
+        "productIdentifier": 48_883,
+        "vendorIdentifier": 1_105,
+        "serialNumber": "MG350001",
+        "systemLocation": "\\\\.\\COM3",
+    }
+    yield {
+        "description": "XDS110 Class Application/User UART",
+        "manufacturer": "Texas Instruments Incorporated",
+        "portName": "COM4",
+        "productIdentifier": 48_883,
+        "vendorIdentifier": 1_105,
+        "serialNumber": "MG350001",
+        "systemLocation": "\\\\.\\COM4",
+    }
 
 
 def windows_port_infos_extra():

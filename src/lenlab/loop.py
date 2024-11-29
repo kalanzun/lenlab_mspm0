@@ -2,7 +2,6 @@ from PySide6.QtCore import QEventLoop, QTimer, SignalInstance
 
 
 class Loop(QEventLoop):
-
     def run_until(self, *signals: SignalInstance, interval: int = 400) -> bool:
         connections = [signal.connect(lambda: self.exit(0)) for signal in signals]
 
