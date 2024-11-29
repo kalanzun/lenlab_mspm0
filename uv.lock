@@ -136,7 +136,7 @@ wheels = [
 
 [[package]]
 name = "lenlab"
-version = "8.1"
+version = "8.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
