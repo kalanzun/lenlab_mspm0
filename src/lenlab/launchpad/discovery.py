@@ -1,10 +1,9 @@
 import logging
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 from ..message import Message
-from ..singleshot import SingleShotTimer
 from .launchpad import find_call_up, find_vid_pid
 from .protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
@@ -17,12 +16,18 @@ class Probe(QObject):
     error = Signal(Message)
     timeout = Signal()
 
+    interval = 600
+
     def __init__(self, terminal: Terminal):
         super().__init__()
 
         self.terminal = terminal
         self.unsuccessful = False
-        self.timer = SingleShotTimer(self.on_timeout)
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(self.interval)
+        self.timer.timeout.connect(self.on_timeout)
 
     def start(self) -> None:
         self.terminal.reply.connect(self.on_reply)
@@ -111,6 +116,7 @@ class Discovery(QObject):
     @Slot(Terminal)
     def on_result(self, result: Terminal) -> None:
         self.result.emit(result)
+        logger.info(f"launchpad discovered on {result.port_name}")
         for probe in self.probes:
             if probe is not self.sender():
                 probe.cancel()

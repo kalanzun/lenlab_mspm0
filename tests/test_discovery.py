@@ -3,7 +3,7 @@ from logging import getLogger
 import pytest
 from PySide6.QtSerialPort import QSerialPortInfo
 
-from lenlab.launchpad.discovery import Discovery
+from lenlab.launchpad.discovery import Discovery, Probe
 from lenlab.launchpad.terminal import Terminal
 from lenlab.loop import Loop
 from lenlab.spy import Spy
@@ -20,7 +20,7 @@ def test_discovery(request, port_infos: list[QSerialPortInfo]):
         pytest.skip(str(error.get_single_arg()))
 
     loop = Loop()
-    event = loop.run_until(discovery.result, discovery.error, timeout=600)
+    event = loop.run_until(discovery.result, discovery.error, interval=Probe.interval + 200)
     assert event, ">= 1 probe did not emit"
 
     result = spy.get_single_arg()

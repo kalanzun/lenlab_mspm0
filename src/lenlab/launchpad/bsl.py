@@ -15,13 +15,12 @@ from io import BytesIO
 from itertools import batched
 from typing import Self
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 import lenlab
 
 from ..message import Message
-from ..singleshot import SingleShotTimer
 from .launchpad import KB, crc, find_call_up, find_vid_pid, last
 from .terminal import Terminal
 
@@ -89,6 +88,7 @@ class BootstrapLoader(QObject):
     error = Signal(Message)
 
     batch_size = 12 * KB
+    interval = 600
 
     # connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
     CONNECT = b"\x12"
@@ -105,7 +105,11 @@ class BootstrapLoader(QObject):
 
         self.terminal = terminal
         self.unsuccessful = False
-        self.timer = SingleShotTimer(self.on_timeout)
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(self.interval)
+        self.timer.timeout.connect(self.on_timeout)
 
     def start(self, firmware: bytes):
         self.enumerate_batched = enumerate(batched(firmware, self.batch_size))
@@ -125,16 +129,12 @@ class BootstrapLoader(QObject):
         command: bytes,
         callback: Callable[..., None],
         ack_mode: bool = False,
-        timeout: int = 0,
     ):
         self.terminal.ack_mode = ack_mode
         self.terminal.write(pack(command))
 
         self.callback = callback
-        if timeout:
-            self.timer.start(timeout)
-        else:
-            self.timer.start()
+        self.timer.start()
 
     @Slot()
     def on_ack(self):

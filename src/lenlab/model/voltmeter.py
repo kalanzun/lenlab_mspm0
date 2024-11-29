@@ -5,12 +5,11 @@ from importlib import metadata
 from itertools import batched
 from typing import Self
 
-from PySide6.QtCore import QObject, Qt, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 
 from ..launchpad.protocol import pack, pack_uint32
 from ..launchpad.terminal import Terminal
 from ..message import Message
-from ..singleshot import SingleShotTimer
 from .lenlab import Lenlab
 
 logger = logging.getLogger(__name__)
@@ -54,6 +53,9 @@ class VoltmeterPoint:
 class Voltmeter(QObject):
     terminal: Terminal | None
 
+    busy_interval = 2000
+    next_interval = 200
+
     active: bool
     active_changed = Signal(bool)
 
@@ -90,12 +92,19 @@ class Voltmeter(QObject):
         )
 
         # no reply timeout
-        self.busy_timer = SingleShotTimer(self.on_busy_timeout, interval=2000)
+        self.busy_timer = QTimer()
+        self.busy_timer.setSingleShot(True)
+        self.busy_timer.setInterval(self.busy_interval)
+        self.busy_timer.timeout.connect(self.on_busy_timeout)
+
         self.command_queue = list()
         self.retries = 0
 
         # poll interval
-        self.next_timer = SingleShotTimer(self.on_next_timeout, interval=200)
+        self.next_timer = QTimer()
+        self.next_timer.setSingleShot(True)
+        self.next_timer.setInterval(self.next_interval)
+        self.next_timer.timeout.connect(self.on_next_timeout)
 
         # terminal
         self.lenlab.new_terminal.connect(self.on_new_terminal)
