@@ -1,5 +1,9 @@
+from importlib import resources
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
@@ -8,6 +12,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+import lenlab
 
 from ..launchpad.bsl import Programmer
 from ..message import Message
@@ -47,6 +53,10 @@ class ProgrammerWidget(QWidget):
         program_layout.addWidget(self.progress_bar)
         program_layout.addWidget(self.messages)
         program_layout.addWidget(self.banner)
+
+        button = QPushButton(str(Vocab("Export Firmware", "Firmware Exportieren")))
+        button.clicked.connect(self.on_export_clicked)
+        program_layout.addWidget(button)
 
         layout = QHBoxLayout()
         layout.addLayout(program_layout)
@@ -91,6 +101,23 @@ class ProgrammerWidget(QWidget):
 
         self.lenlab.retry()
 
+    @Slot()
+    def on_export_clicked(self):
+        file_name, file_format = QFileDialog.getSaveFileName(
+            self,
+            str(Vocab("Export Firmware", "Firmware Exportieren")),
+            "lenlab_fw.bin",
+            "Binary (*.bin)",
+        )
+        if not file_name:  # cancelled
+            return
+
+        try:
+            firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
+            Path(file_name).write_bytes(firmware)
+        except Exception as error:
+            self.banner.set_error(ExportError(error))
+
 
 class Introduction(Message):
     english = """### Please start the "Bootstrap Loader" on the Launchpad first:
@@ -120,3 +147,8 @@ class Successful(Message):
     
     Der Programmierer schrieb die Lenlab Firmware auf das Launchpad.
     Lenlab sollte verbunden sein und bereit für Messungen."""
+
+
+class ExportError(Message):
+    english = """Error exporting the firmware:\n\n{0}"""
+    german = """Fehler beim Exportieren der Firmware:\n\n{0}"""

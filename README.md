@@ -2,7 +2,7 @@
 
 ## Liebe Studierende im LEN Workshop A am KIT!
 
-Lenlab in der Version 8.0 funktioniert für den LEN Workshop A. Starten Sie Lenlab,
+Lenlab ab der Version 8.0 funktioniert für den LEN Workshop A. Starten Sie Lenlab,
 nachdem `uv` installiert ist und wenn Sie Internet haben, mit 
 
 ```shell
@@ -56,7 +56,7 @@ Wenn Sie keine Internetverbindung haben starten Sie Lenlab ohne `@latest`
 uvx lenlab
 ```
 
-`uvx` hat den Download beim ersten Mal gespeichert und führt die lokale Kopie aus ohne Zugriff auf das Internet.
+`uvx` hat den Download beim ersten Mal gespeichert und führt nun die lokale Kopie aus ohne Zugriff auf das Internet.
 
 ### Mac realpath Fehler
 
@@ -73,9 +73,9 @@ TI UniFlash programmiert das Launchpad auf eine andere Weise und kann funktionie
 wenn der Programmierer in Lenlab nicht funktioniert.
 
 - Installieren Sie https://www.ti.com/tool/UNIFLASH
-- Laden Sie das Firmware Binary herunter https://github.com/kalanzun/lenlab_mspm0/blob/main/src/lenlab/lenlab_fw.bin
-  - Rechts gibt es einen kleinen Knopf mit einem Download-Symbol "Download raw file"
-- Starten Sie UniFlash. Wählen Sie als "Flash Image" die heruntergeladene `lenlab_fw.bin`
+- Starten Sie Lenlab und exportieren Sie das Firmware-Binary
+  - Klicken Sie im Programmierer auf "Firmware Exportieren" und Speichern Sie das Firmware-Binary
+- Starten Sie UniFlash. Wählen Sie als "Flash Image" das exportierte Firmware-Binary
 - Führen Sie "Load Image" aus
   - Bei Erfolg schreibt es in die "Console": "\[SUCCESS\] Program Load completed successfully."
 
