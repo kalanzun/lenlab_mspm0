@@ -19,6 +19,10 @@ def pytest_addoption(parser):
         default=False,
         help="run BSL tests",
     )
+    parser.addoption(
+        "--port",
+        help="launchpad port name",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -44,14 +48,19 @@ def port_infos():
 
 
 @pytest.fixture(scope="module")
-def port(port_infos):
-    matches = find_launchpad(port_infos)
-    if len(matches) == 0:
-        pytest.skip("no launchpad")
-    elif len(matches) > 1:
-        pytest.skip("too many launchpads")
+def port(request, port_infos):
+    if port_name := request.config.getoption("port"):
+        port_info = QSerialPortInfo(port_name)
 
-    port = QSerialPort(matches[0])
+    else:
+        matches = find_launchpad(port_infos)
+        if len(matches) == 0:
+            pytest.skip("no launchpad")
+        elif len(matches) > 1:
+            pytest.skip("too many launchpads")
+        port_info = matches[0]
+
+    port = QSerialPort(port_info)
     if not port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
         pytest.skip(port.errorString())
 
