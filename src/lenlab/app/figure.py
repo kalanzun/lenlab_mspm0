@@ -14,11 +14,18 @@ white = QColor(0xF0, 0xF0, 0xF0)
 black = QColor(0x10, 0x10, 0x10)
 
 
-@contextmanager
-def save_and_restore(painter):
-    painter.save()
-    yield
-    painter.restore()
+class Figure(QPainter):
+    def __init__(self, palette):
+        super().__init__()
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        self.palette = palette
+
+    @contextmanager
+    def save_and_restore(self):
+        self.save()
+        yield
+        self.restore()
 
 
 def find_chart_colors(n=4):
@@ -30,36 +37,28 @@ def find_chart_colors(n=4):
         yield channel.color()
 
 
-class LaunchpadFigure(QWidget):
-    def sizeHint(self):
-        width = 96
-        horizontal_scale = 4
-        vertical_scale = 6
-        return QSize(width * horizontal_scale, width * vertical_scale)
+class LaunchpadFigure(Figure):
+    unit = 4
+    size_hint = QSize(96 * unit, 144 * unit)
 
-    def minimumSizeHint(self):
-        size = self.sizeHint()
-        return QSize(size.width() // 2, size.height() // 2)
-
-    @staticmethod
-    def draw_switch(painter: QPainter):
+    def draw_switch(self):
         # cut-out
         # on dark background, the black button has better contrast on the red board
-        # painter.setBrush(self.background)
-        # painter.drawRect(-4, 0, 8, 2)
+        # self.setBrush(self.background)
+        # self.drawRect(-4, 0, 8, 2)
 
         # button
-        painter.setBrush(black)
-        painter.drawRect(-2, 0, 4, 2)
+        self.setBrush(black)
+        self.drawRect(-2, 0, 4, 2)
 
         # body
-        painter.setBrush(white)
-        painter.drawRect(-4, 2, 8, 3)
+        self.setBrush(white)
+        self.drawRect(-4, 2, 8, 3)
 
-    def draw_arrow(self, painter: QPainter):
-        painter.translate(0, -2)
-        painter.setBrush(self.palette().toolTipText())
-        painter.drawPolygon(
+    def draw_arrow(self):
+        self.translate(0, -2)
+        self.setBrush(self.palette.toolTipText())
+        self.drawPolygon(
             [
                 QPoint(0, 0),
                 QPoint(-5, -10),
@@ -71,130 +70,120 @@ class LaunchpadFigure(QWidget):
             ]
         )
 
-    @staticmethod
-    def draw_header(painter: QPainter):
+    def draw_header(self):
         def pin_iter():
             for y in range(10):
                 yield QPointF(0, 2.5 * y)
                 yield QPointF(2.5, 2.5 * y)
 
-        painter.setPen(QColor(0xA0, 0xA0, 0xA0))
-        painter.drawPoints(list(pin_iter()))
+        self.setPen(QColor(0xA0, 0xA0, 0xA0))
+        self.drawPoints(list(pin_iter()))
 
-    @staticmethod
-    def draw_led(painter: QPainter, color: QColor):
-        painter.setBrush(color)
-        painter.drawRect(-1, -1, 2, 2)
+    def draw_led(self, color: QColor):
+        self.setBrush(color)
+        self.drawRect(-1, -1, 2, 2)
 
-        painter.setPen(color)
+        self.setPen(color)
         for _ in range(6):
-            painter.drawLine(3, 0, 5, 0)
-            painter.rotate(60)
+            self.drawLine(3, 0, 5, 0)
+            self.rotate(60)
 
-    def draw_board(self, painter: QPainter):
-        painter.setPen(Qt.PenStyle.NoPen)
+    def draw_board(self):
+        self.setPen(Qt.PenStyle.NoPen)
 
         # board
-        painter.setBrush(QColor(0xCC, 0, 0))
-        painter.drawRect(0, 0, 60, 108)
+        self.setBrush(QColor(0xCC, 0, 0))
+        self.drawRect(0, 0, 60, 108)
 
         # xds110
-        painter.setBrush(black)
-        painter.drawRect(11, 16, 15, 15)
+        self.setBrush(black)
+        self.drawRect(11, 16, 15, 15)
 
         # controller
-        painter.drawRect(28, 62, 10, 10)
+        self.drawRect(28, 62, 10, 10)
 
         # usb plug
-        painter.drawRect(7, -20, 10, 18)
-        painter.drawRect(10, -32, 4, 12)
+        self.drawRect(7, -20, 10, 18)
+        self.drawRect(10, -32, 4, 12)
 
         # usb connector
-        painter.setBrush(QColor(0x60, 0x60, 0x60))
-        painter.drawRect(8, 0, 8, 5)
-        painter.setBrush(QColor(0xA0, 0xA0, 0xA0))
-        painter.drawRect(8, -2, 8, 2)
+        self.setBrush(QColor(0x60, 0x60, 0x60))
+        self.drawRect(8, 0, 8, 5)
+        self.setBrush(QColor(0xA0, 0xA0, 0xA0))
+        self.drawRect(8, -2, 8, 2)
 
         # border
-        with save_and_restore(painter):
-            painter.translate(0, 41)
-            painter.setPen(white)
+        with self.save_and_restore():
+            self.translate(0, 41)
+            self.setPen(white)
             for i in range(20):
-                painter.drawLine(1 + 3 * i, 0, 2 + 3 * i, 0)
+                self.drawLine(1 + 3 * i, 0, 2 + 3 * i, 0)
 
         # holes
-        with save_and_restore(painter):
-            painter.setPen(QPen(self.palette().window(), 3, c=Qt.PenCapStyle.RoundCap))
-            painter.drawPoint(2, 2)
-            painter.drawPoint(60 - 2, 2)
-            painter.drawPoint(2, 108 - 2)
-            painter.drawPoint(60 - 2, 108 - 2)
+        with self.save_and_restore():
+            self.setPen(QPen(self.palette.window(), 3, c=Qt.PenCapStyle.RoundCap))
+            self.drawPoint(2, 2)
+            self.drawPoint(60 - 2, 2)
+            self.drawPoint(2, 108 - 2)
+            self.drawPoint(60 - 2, 108 - 2)
 
         # switches
-        with save_and_restore(painter):
-            painter.translate(48, 0)
-            self.draw_switch(painter)
-            self.draw_arrow(painter)
+        with self.save_and_restore():
+            self.translate(48, 0)
+            self.draw_switch()
+            self.draw_arrow()
 
-        with save_and_restore(painter):
-            painter.translate(0, 46)
-            painter.rotate(-90)
-            self.draw_switch(painter)
-            self.draw_arrow(painter)
+        with self.save_and_restore():
+            self.translate(0, 46)
+            self.rotate(-90)
+            self.draw_switch()
+            self.draw_arrow()
 
-        with save_and_restore(painter):
-            painter.translate(60, 46)
-            painter.rotate(90)
-            self.draw_switch(painter)
+        with self.save_and_restore():
+            self.translate(60, 46)
+            self.rotate(90)
+            self.draw_switch()
 
         # pin headers
-        with save_and_restore(painter):
-            painter.translate(7, 53)
-            self.draw_header(painter)
+        with self.save_and_restore():
+            self.translate(7, 53)
+            self.draw_header()
 
-        with save_and_restore(painter):
-            painter.translate(60 - 7 - 2.5, 53)
-            self.draw_header(painter)
+        with self.save_and_restore():
+            self.translate(60 - 7 - 2.5, 53)
+            self.draw_header()
 
         # pin arrow
-        with save_and_restore(painter):
-            painter.translate(7, 68)
-            painter.rotate(-90)
-            self.draw_arrow(painter)
+        with self.save_and_restore():
+            self.translate(7, 68)
+            self.rotate(-90)
+            self.draw_arrow()
 
         # green LED
-        with save_and_restore(painter):
-            painter.translate(3, 38)
-            self.draw_led(painter, QColor(0, 0xFF, 0))
+        with self.save_and_restore():
+            self.translate(3, 38)
+            self.draw_led(QColor(0, 0xFF, 0))
 
-    @staticmethod
-    def draw_label(painter: QPainter, x: int, y: int, text: str):
-        width = painter.fontMetrics().horizontalAdvance(text)
-        # height = painter.fontMetrics().height()
-        painter.drawText(QPointF(x - width / 2, y), text)
+    def draw_label(self, x: int, y: int, text: str):
+        width = self.fontMetrics().horizontalAdvance(text)
+        # height = self.fontMetrics().height()
+        self.drawText(QPointF(x - width / 2, y), text)
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-
-        sx = self.width() / 96
-        sy = self.height() / 144
-        s = max(min(sx, sy, 4), 2)
-        painter.scale(s, s)
-
-        # painter area (96, 144)
+    def paint(self):
+        # self area (96, 144)
         # board size (60, 108)
         # margin 1
-        painter.translate(34, 34)
+        self.scale(self.unit, self.unit)
+        self.translate(34, 34)
 
-        self.draw_board(painter)
+        self.draw_board()
 
         # text
-        painter.scale(0.5, 0.5)
-        painter.setPen(self.palette().toolTipText().color())
-        self.draw_label(painter, 48 * 2, (-22 - 4) * 2, "Reset")
-        self.draw_label(painter, -22 * 2, (46 - 6) * 2, "S1")
-        self.draw_label(painter, (7 - 22) * 2, (68 - 6) * 2, "Pins")
+        self.scale(0.5, 0.5)
+        self.setPen(self.palette.toolTipText().color())
+        self.draw_label(48 * 2, (-22 - 4) * 2, "Reset")
+        self.draw_label(-22 * 2, (46 - 6) * 2, "S1")
+        self.draw_label((7 - 22) * 2, (68 - 6) * 2, "Pins")
 
 
 @dataclass
@@ -205,14 +194,12 @@ class Pin:
     name: str = ""
 
 
-class PinAssignmentFigure(QWidget):
+class PinAssignmentFigure(Figure):
     unit = 32
+    size_hint = QSize(12 * unit, 12 * unit)
 
-    def __init__(self):
-        super().__init__()
-
+    def paint(self):
         channel_colors = list(find_chart_colors(4))
-
         self.pins = {
             1: Pin("3V3", white, QColor(0xC0, 0, 0)),
             21: Pin("5V", white, QColor(0xC0, 0, 0)),
@@ -222,66 +209,74 @@ class PinAssignmentFigure(QWidget):
             30: Pin("DAC", black, channel_colors[2], name="PA 15"),
         }
 
-    def sizeHint(self):
-        return QSize(12 * self.unit, 12 * self.unit)
-
-    def minimumSizeHint(self):
-        return self.sizeHint()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-
-        font = painter.font()
+        font = self.font()
         font.setPointSize(16)
-        painter.setFont(font)
+        self.setFont(font)
 
-        painter.translate(4.5 * self.unit, 1.5 * self.unit)
-        self.draw_pin_header(painter)
+        self.translate(4.5 * self.unit, 1.5 * self.unit)
+        self.draw_pin_header()
 
-        painter.setPen(white)
-        with save_and_restore(painter):
-            self.draw_labels(painter)
+        self.setPen(white)
+        with self.save_and_restore():
+            self.draw_labels()
 
-        with save_and_restore(painter):
-            painter.translate(self.unit, 0)
-            self.draw_labels(painter, right=True)
+        with self.save_and_restore():
+            self.translate(self.unit, 0)
+            self.draw_labels(right=True)
 
-    def draw_pin_header(self, painter: QPainter):
-        painter.setPen(self.palette().toolTipText().color())
+    def draw_pin_header(self):
+        self.setPen(self.palette.toolTipText().color())
         margin = self.unit // 2
-        painter.drawRect(-margin, -margin, self.unit + 2 * margin, 9 * self.unit + 2 * margin)
+        self.drawRect(-margin, -margin, self.unit + 2 * margin, 9 * self.unit + 2 * margin)
 
-        painter.setPen(QPen(QColor(0xA0, 0xA0, 0xA0), 16))
+        self.setPen(QPen(QColor(0xA0, 0xA0, 0xA0), 16))
         points = [QPoint(x * self.unit, y * self.unit) for x in range(2) for y in range(10)]
-        painter.drawPoints(points)
+        self.drawPoints(points)
 
-    def draw_labels(self, painter: QPainter, right=False):
+    def draw_labels(self, right=False):
         for i in range(10):
             pin = self.pins.get(i + (21 if right else 1), None)
             if pin:
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.setBrush(pin.bg)
+                self.setPen(Qt.PenStyle.NoPen)
+                self.setBrush(pin.bg)
 
                 rect = QRect(QPoint(0, 0), QSize(64, 24))
                 rect.moveCenter(QPoint(56 if right else -56, 0))
-                painter.drawRect(rect)
+                self.drawRect(rect)
 
-                painter.setPen(pin.fg)
-                self.draw_text_center(painter, 56 if right else -56, 0, pin.label)
+                self.setPen(pin.fg)
+                self.draw_text_center(56 if right else -56, 0, pin.label)
 
                 if pin.name:
-                    painter.setPen(self.palette().toolTipText().color())
-                    self.draw_text_center(painter, 128 if right else -128, 0, str(pin.name))
+                    self.setPen(self.palette.toolTipText().color())
+                    self.draw_text_center(128 if right else -128, 0, str(pin.name))
 
-            painter.translate(0, self.unit)
+            self.translate(0, self.unit)
 
-    @staticmethod
-    def draw_text_center(painter: QPainter, x: int, y: int, text: str):
-        rect = painter.fontMetrics().tightBoundingRect(text)
+    def draw_text_center(self, x: int, y: int, text: str):
+        rect = self.fontMetrics().tightBoundingRect(text)
         rect.moveCenter(QPoint(x, y))
         # painter.drawRect(rect)
-        painter.drawText(rect.bottomLeft(), text)
+        self.drawText(rect.bottomLeft(), text)
+
+
+class PainterWidget(QWidget):
+    def __init__(self, Painter):
+        super().__init__()
+
+        self.Painter = Painter
+
+    def sizeHint(self):
+        return self.Painter.size_hint
+
+    def minimumSizeHint(self):
+        return self.Painter.size_hint
+
+    def paintEvent(self, event):
+        painter = self.Painter(self.palette())
+        painter.begin(self)
+        painter.paint()
+        painter.end()
 
 
 class PinAssignmentWidget(QWidget):
@@ -291,8 +286,8 @@ class PinAssignmentWidget(QWidget):
         super().__init__()
 
         banner = MessageBanner()
-        pins = PinAssignmentFigure()
-        board = LaunchpadFigure()
+        pins = PainterWidget(PinAssignmentFigure)
+        board = PainterWidget(LaunchpadFigure)
 
         left = QVBoxLayout()
         left.addStretch()

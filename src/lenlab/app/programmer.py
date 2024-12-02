@@ -19,7 +19,7 @@ from ..launchpad.bsl import Programmer
 from ..message import Message
 from ..model.lenlab import Lenlab
 from .banner import MessageBanner
-from .figure import LaunchpadFigure
+from .figure import LaunchpadFigure, PainterWidget
 from .vocabulary import Vocabulary as Vocab
 
 
@@ -45,7 +45,7 @@ class ProgrammerWidget(QWidget):
         self.messages.setReadOnly(True)
         self.banner = MessageBanner()
 
-        figure = LaunchpadFigure()
+        figure = PainterWidget(LaunchpadFigure)
 
         program_layout = QVBoxLayout()
         program_layout.addWidget(introduction)
