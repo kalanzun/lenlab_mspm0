@@ -1,13 +1,12 @@
 import struct
 
 import pytest
-from PySide6.QtCore import QObject, Signal
 
 from lenlab.launchpad.protocol import pack
 from lenlab.launchpad.terminal import Terminal, TerminalResourceError
-from lenlab.message import Message
 from lenlab.model.lenlab import Lenlab
-from lenlab.model.voltmeter import Voltmeter
+from lenlab.model.voltmeter import Voltmeter, VoltmeterNextTimeout, VoltmeterStartTimeout
+from lenlab.spy import Spy
 
 struct_point = struct.Struct("<IHH")
 
@@ -17,11 +16,11 @@ def pack_point(i: int, t: int = 0, v1: int = 0, v2: int = 0):
 
 
 class MockVoltmeterTerminal(Terminal):
-
     def __init__(self):
         super().__init__()
         self.index = 0
         self.interval = 0
+        self.do_not_reply = False
 
     @property
     def is_open(self):
@@ -31,6 +30,9 @@ class MockVoltmeterTerminal(Terminal):
         self.closed.emit()
 
     def write(self, packet: bytes):
+        if self.do_not_reply:
+            return
+
         if packet == pack(b"vnext"):
             if self.index < 2:
                 self.reply.emit(pack_point(self.index, self.index * self.interval))
@@ -77,6 +79,17 @@ def test_start_already_started(voltmeter, started):
         voltmeter.start(1000)
 
 
+def test_start_no_reply(voltmeter, opened):
+    voltmeter.terminal.do_not_reply = True
+    spy = Spy(voltmeter.error)
+    voltmeter.start(1000)
+    voltmeter.busy_timer.timeout.emit()
+
+    assert isinstance(spy.get_single_arg(), VoltmeterStartTimeout)
+    assert voltmeter.active is False
+    assert not voltmeter.next_timer.isActive()
+
+
 @pytest.fixture()
 def red(voltmeter, started):
     voltmeter.next_timer.timeout.emit()  # trigger next timer
@@ -109,6 +122,17 @@ def test_blu(voltmeter, blu):
     assert point[1] == 0.0
 
 
+def test_next_no_reply(voltmeter, blu):
+    voltmeter.terminal.do_not_reply = True
+    spy = Spy(voltmeter.error)
+    voltmeter.next_timer.timeout.emit()  # trigger next timer
+    voltmeter.busy_timer.timeout.emit()
+
+    assert isinstance(spy.get_single_arg(), VoltmeterNextTimeout)
+    assert voltmeter.active is True
+    assert voltmeter.next_timer.isActive()
+
+
 @pytest.fixture()
 def stopped(voltmeter, started):
     voltmeter.stop()
@@ -127,6 +151,16 @@ def test_stop_no_terminal(voltmeter):
 def test_stop_already_stopped(voltmeter, stopped):
     with pytest.raises(RuntimeError):
         voltmeter.stop()
+
+
+def test_stop_no_reply(voltmeter, started):
+    voltmeter.terminal.do_not_reply = True
+    voltmeter.stop()
+    voltmeter.busy_timer.timeout.emit()
+
+    # it stops anyway
+    assert voltmeter.active is False
+    assert not voltmeter.next_timer.isActive()
 
 
 def test_close(voltmeter, started):
