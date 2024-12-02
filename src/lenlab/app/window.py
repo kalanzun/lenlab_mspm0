@@ -1,7 +1,7 @@
 import ctypes
 import platform
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..model.lenlab import Lenlab
@@ -22,6 +22,8 @@ ES_USER_PRESENT = 0x00000004
 
 
 class MainWindow(QMainWindow):
+    ready = Signal()
+
     def __init__(self):
         super().__init__()
 
@@ -31,6 +33,7 @@ class MainWindow(QMainWindow):
         self.lenlab.error.connect(message_banner.set_error)
         self.lenlab.new_terminal.connect(message_banner.hide)
         message_banner.button.clicked.connect(self.lenlab.retry)
+        self.ready.connect(self.lenlab.retry, Qt.ConnectionType.QueuedConnection)
 
         programmer = ProgrammerWidget(self.lenlab)
         pins = PinAssignmentWidget()
@@ -58,7 +61,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
         self.setWindowTitle("Lenlab")
-        self.lenlab.retry()
+        self.ready.emit()
 
     def closeEvent(self, event):
         self.voltmeter_widget.closeEvent(event)

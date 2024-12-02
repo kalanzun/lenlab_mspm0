@@ -1,6 +1,7 @@
 import pytest
-from PySide6.QtCore import QCoreApplication, QIODeviceBase
+from PySide6.QtCore import QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
+from PySide6.QtWidgets import QApplication
 
 from lenlab.launchpad.launchpad import find_launchpad
 from lenlab.launchpad.terminal import Terminal
@@ -39,7 +40,8 @@ def bsl(request):
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    return QCoreApplication()
+    # support view tests with QtWidgets
+    return QApplication()
 
 
 @pytest.fixture(scope="session")

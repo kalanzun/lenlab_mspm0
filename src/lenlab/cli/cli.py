@@ -22,7 +22,7 @@ def app():
     from lenlab.app.window import MainWindow
     from lenlab.message import Message
 
-    gui_app = QApplication(sys.argv)
+    gui_app = QApplication()
 
     if QLocale().language() == QLocale.Language.German:
         Message.language = "german"

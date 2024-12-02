@@ -1,7 +1,6 @@
 from logging import getLogger
 
 import pytest
-from PySide6.QtSerialPort import QSerialPortInfo
 
 from lenlab.launchpad.discovery import Discovery, Probe
 from lenlab.launchpad.terminal import Terminal
@@ -11,7 +10,7 @@ from lenlab.spy import Spy
 logger = getLogger(__name__)
 
 
-def test_discovery(request, port_infos: list[QSerialPortInfo]):
+def test_discovery(request):
     discovery = Discovery()
     spy = Spy(discovery.result)
     error = Spy(discovery.error)
