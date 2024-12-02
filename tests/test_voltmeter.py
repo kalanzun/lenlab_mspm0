@@ -1,7 +1,7 @@
-from pathlib import Path
 from time import sleep
 
 import numpy as np
+import pytest
 
 from lenlab.launchpad.protocol import pack, pack_uint32
 from lenlab.launchpad.terminal import Terminal
@@ -86,39 +86,167 @@ def test_overflow(firmware, terminal: Terminal):
     assert reply == pack(b"vstop")
 
 
-def test_save_as(tmp_path):
+@pytest.fixture()
+def voltmeter():
     lenlab = Lenlab()
     voltmeter = Voltmeter(lenlab)
+    return voltmeter
+
+
+@pytest.fixture()
+def points(voltmeter):
     voltmeter.points = [VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3)]
     voltmeter.unsaved = True
-    assert voltmeter.save_as(str(tmp_path / "voltmeter.csv"))
+
+
+def test_save_as(tmp_path, voltmeter, points):
+    file_path = tmp_path / "voltmeter.csv"
+    assert voltmeter.save_as(str(file_path))
 
     assert voltmeter.unsaved is False
-    data = np.loadtxt(voltmeter.file_name, delimiter=";", skiprows=2)
+    data = np.loadtxt(file_path, delimiter=";", skiprows=2)
     # a list of rows
     example = np.array([(float(i), i / 10, i / 100) for i in range(3)])
     assert np.all(data == example)
 
 
-def test_save_as_empty(tmp_path):
-    lenlab = Lenlab()
-    voltmeter = Voltmeter(lenlab)
-    assert voltmeter.save_as(str(tmp_path / "voltmeter.csv"))
+def test_save_as_empty(tmp_path, voltmeter):
+    file_path = tmp_path / "voltmeter.csv"
+    assert voltmeter.save_as(str(file_path))
 
-    head = Path(voltmeter.file_name).read_text()
+    head = file_path.read_text()
     assert head.startswith("Lenlab")
     assert len(head.splitlines()) == 2
 
 
-def test_save_as_permission_error(tmp_path):
-    lenlab = Lenlab()
-    voltmeter = Voltmeter(lenlab)
+def test_save_as_permission_error(tmp_path, voltmeter, points):
+    voltmeter.auto_save = True
+
     spy = Spy(voltmeter.error)
-    voltmeter.points = [VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3)]
-    voltmeter.unsaved = True
     assert not voltmeter.save_as(str(tmp_path))  # cannot save in a directory
 
-    assert voltmeter.unsaved is True
-    assert spy.count() == 1
     error = spy.get_single_arg()
     assert isinstance(error, VoltmeterSaveError)
+
+    assert voltmeter.unsaved is True
+    assert voltmeter.auto_save is False
+
+
+def test_voltmeter_point_index_access():
+    point = VoltmeterPoint(1.0, 2.0, 3.0)
+    assert point[0] == 2.0
+    assert point[1] == 3.0
+    with pytest.raises(IndexError):
+        assert point[3] == 4.0
+
+
+def test_discard(voltmeter, points):
+    voltmeter.discard()
+
+    assert not voltmeter.points
+    assert voltmeter.unsaved is False
+
+
+@pytest.fixture()
+def saved(tmp_path, voltmeter):
+    file_path = tmp_path / "voltmeter.csv"
+    assert voltmeter.save_as(str(file_path))
+    return file_path
+
+
+def test_auto_save(voltmeter, points, saved):
+    saved.unlink()
+    voltmeter.set_auto_save(True)
+    assert voltmeter.auto_save is True
+    assert not saved.exists(), "set auto save with no new points shall not write to the file"
+
+
+def test_set_auto_save_with_new_points(voltmeter, points, saved):
+    voltmeter.points.extend([VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3, 6)])
+    voltmeter.unsaved = True
+
+    voltmeter.set_auto_save(True)
+    assert voltmeter.auto_save is True
+    assert voltmeter.unsaved is False
+
+    data = np.loadtxt(saved, delimiter=";", skiprows=2)
+    # a list of rows
+    example = np.array([(float(i), i / 10, i / 100) for i in range(6)])
+    assert np.all(data == example)
+
+
+def test_auto_save_on_new_points(voltmeter, points, saved):
+    voltmeter.set_auto_save(True)
+    voltmeter.points.extend([VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3, 8)])
+    voltmeter.unsaved = True
+    # new_last_point calls save is a queued connection
+    voltmeter.save()
+
+    assert voltmeter.auto_save is True
+    # assert voltmeter.unsaved is False
+
+    data = np.loadtxt(saved, delimiter=";", skiprows=2)
+    # a list of rows
+    example = np.array([(float(i), i / 10, i / 100) for i in range(8)])
+    assert np.all(data == example)
+
+
+def test_no_auto_save_on_few_new_points(voltmeter, points, saved):
+    voltmeter.set_auto_save(True)
+    voltmeter.points.extend([VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3, 6)])
+    voltmeter.unsaved = True
+
+    saved.unlink()
+    # new_last_point calls save is a queued connection
+    voltmeter.save()
+
+    assert voltmeter.auto_save is True
+    assert voltmeter.unsaved is True
+
+    assert not saved.exists()
+
+
+def test_no_auto_save_on_no_new_points(voltmeter, points, saved):
+    voltmeter.set_auto_save(True)
+    saved.unlink()
+    # new_last_point calls save is a queued connection
+    voltmeter.save()
+
+    assert voltmeter.auto_save is True
+    assert voltmeter.unsaved is False
+
+    assert not saved.exists()
+
+
+def test_auto_save_on_discard(voltmeter, points, saved):
+    voltmeter.set_auto_save(True)
+    voltmeter.points.extend([VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3, 6)])
+    voltmeter.unsaved = True
+
+    voltmeter.discard()
+
+    assert not voltmeter.points
+    assert voltmeter.unsaved is False
+    assert voltmeter.auto_save is False
+
+    data = np.loadtxt(saved, delimiter=";", skiprows=2)
+    # a list of rows
+    example = np.array([(float(i), i / 10, i / 100) for i in range(6)])
+    assert np.all(data == example)
+
+
+def test_auto_save_permission_error(tmp_path, voltmeter, points, saved):
+    voltmeter.set_auto_save(True)
+    voltmeter.points.extend([VoltmeterPoint(float(i), i / 10, i / 100) for i in range(3, 8)])
+    voltmeter.unsaved = True
+
+    voltmeter.file_name = str(tmp_path)  # cannot save in a directory
+    spy = Spy(voltmeter.error)
+    # new_last_point calls save is a queued connection
+    voltmeter.save()
+
+    error = spy.get_single_arg()
+    assert isinstance(error, VoltmeterSaveError)
+
+    assert voltmeter.unsaved is True
+    assert voltmeter.auto_save is False

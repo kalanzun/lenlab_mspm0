@@ -192,9 +192,6 @@ class Voltmeter(QObject):
 
     def send_command(self):
         if not self.busy_timer.isActive() and self.command_queue:
-            if not self.terminal.is_open:
-                raise RuntimeError("terminal is not open")
-
             self.busy_timer.start()
             command = self.command_queue.pop(0)
             self.terminal.write(command)
@@ -288,12 +285,12 @@ class Voltmeter(QObject):
             return False
 
     @Slot()
-    def save(self, interval: int = 5000):
+    def save(self, interval: int = 4000):
         if not self.auto_save:
             return
 
         n = interval // self.interval
-        if self.save_idx + n > len(self.points):
+        if self.save_idx + n >= len(self.points):
             return
 
         try:
