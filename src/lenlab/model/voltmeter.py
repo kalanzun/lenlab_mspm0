@@ -143,12 +143,10 @@ class Voltmeter(QObject):
 
     def start(self, interval: int):
         if self.terminal is None:
-            logger.error("start error: no terminal")
-            return
+            raise RuntimeError("no terminal")
 
         if self.active or self.start_requested:
-            logger.error("start error: already started")
-            return
+            raise RuntimeError("already started")
 
         self.interval = interval  # ms
         self.restart()
@@ -165,21 +163,15 @@ class Voltmeter(QObject):
     @Slot()
     def stop(self):
         if self.terminal is None:
-            logger.error("start error: no terminal")
-            return
+            raise RuntimeError("no terminal")
 
         if self.stop_requested or not self.active:
-            logger.error("stop error: already stopped")
-            return
+            raise RuntimeError("already stopped")
 
         self.next_timer.stop()
         self.start_requested = False
         self.stop_requested = True
-
-        try:
-            self.command(STOP)
-        except Exception as error:
-            logger.error(error)
+        self.command(STOP)
 
     def discard(self):
         self.save(0)
@@ -201,8 +193,7 @@ class Voltmeter(QObject):
     def send_command(self):
         if not self.busy_timer.isActive() and self.command_queue:
             if not self.terminal.is_open:
-                logger.error("send command error: terminal not open")
-                return
+                raise RuntimeError("terminal is not open")
 
             self.busy_timer.start()
             command = self.command_queue.pop(0)
