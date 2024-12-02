@@ -23,6 +23,7 @@ lenlab = "lenlab.cli.cli:main"
 dev = [
     "pytest-repeat>=0.9.3",
     "pytest>=8.3.3",
+    "coverage>=7.6.8",
 ]
 
 [build-system]
