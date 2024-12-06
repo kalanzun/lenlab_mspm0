@@ -9,7 +9,7 @@ from lenlab.app.figure import LaunchpadFigure, PinAssignmentFigure
 
 
 @pytest.mark.parametrize("Painter", [LaunchpadFigure, PinAssignmentFigure])
-def test_figure(Painter):
+def test_figure(gui, Painter):
     generator = QSvgGenerator()
 
     painter = Painter(QPalette())

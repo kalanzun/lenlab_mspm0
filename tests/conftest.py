@@ -1,5 +1,5 @@
 import pytest
-from PySide6.QtCore import QIODeviceBase
+from PySide6.QtCore import QIODeviceBase, QCoreApplication
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QApplication
 
@@ -24,6 +24,12 @@ def pytest_addoption(parser):
         "--port",
         help="launchpad port name",
     )
+    parser.addoption(
+        "--gui",
+        action="store_true",
+        default=False,
+        help="enable gui tests",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -39,9 +45,18 @@ def bsl(request):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def app():
-    # support view tests with QtWidgets
-    return QApplication()
+def app(request):
+    if request.config.getoption("gui"):
+        # support view tests with QtWidgets
+        return QApplication()
+    else:
+        return QCoreApplication()
+
+
+@pytest.fixture(scope="session")
+def gui(request):
+    if not request.config.getoption("gui"):
+        pytest.skip("no gui")
 
 
 @pytest.fixture(scope="session")
