@@ -39,10 +39,10 @@ def test_install_rules_local(monkeypatch):
     linux.install_rules()
 
 
-def test_rules():  # pragma: no cover
-    pytest.skip("No Linux")
-    # 'verify' does not work in CI
-    run(["udevadm", "verify", "/etc/udev/rules.d/50-launchpad.rules"], check=True)
+def test_rules(ci):  # pragma: no cover
+    linux.install_rules()
+    verify = run(["udevadm", "verify", "/etc/udev/rules.d/50-launchpad.rules"])
+    assert verify.returncode == 0
 
 
 def test_check_permission():
