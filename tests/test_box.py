@@ -29,7 +29,7 @@ def test_box_paint():
     assert len(root.findall("{*}g/*"))
 
 
-def test_error():
+def test_error(gui):
     box = Box()
     box.set_error(Message(callback=lambda: None))
     box.on_clicked()
