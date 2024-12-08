@@ -1,11 +1,12 @@
 import time
 
+from PySide6.QtCore import QCoreApplication, QIODevice, QTimer
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
-from PySide6.QtCore import QIODevice, QCoreApplication, QTimer
 
 
 def main():
-    """ModemManager blocks the device for 30 seconds. Either open fails or replies do not return sometimes (in time)."""
+    """ModemManager blocks the device for 30 seconds.
+    Either open fails or replies do not return sometimes."""
     app = QCoreApplication()
 
     start_time = time.time()
@@ -78,7 +79,6 @@ if __name__ == "__main__":
 
 
 """
-/home/christoph/devel/lenlab_mspm0/.venv/bin/python /home/christoph/devel/lenlab_mspm0/modem_manager.py 
 open
 knock
 on ready read
@@ -654,6 +654,4 @@ knock
 on ready read
 b'Lk\x00\x00nock'
 runtime=38.3 seconds
-
-Process finished with exit code 0
 """
