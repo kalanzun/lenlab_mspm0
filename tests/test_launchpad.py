@@ -1,11 +1,7 @@
 import pytest
 from PySide6.QtSerialPort import QSerialPortInfo
 
-from lenlab.launchpad.launchpad import (
-    find_call_up,
-    find_launchpad,
-    find_vid_pid,
-)
+from lenlab.controller.launchpad import find_launchpad
 
 
 class MockSerialPortInfo(QSerialPortInfo):
@@ -22,33 +18,8 @@ class MockSerialPortInfo(QSerialPortInfo):
     def portName(self):
         return self.info["portName"]
 
-    def description(self):
-        return self.info.get("description", "")
-
 
 def windows_port_infos():
-    yield {
-        "description": "XDS110 Class Auxiliary Data Port",
-        "manufacturer": "Texas Instruments Incorporated",
-        "portName": "COM3",
-        "productIdentifier": 48_883,
-        "vendorIdentifier": 1_105,
-        "serialNumber": "MG350001",
-        "systemLocation": "\\\\.\\COM3",
-    }
-    yield {
-        "description": "XDS110 Class Application/User UART",
-        "manufacturer": "Texas Instruments Incorporated",
-        "portName": "COM4",
-        "productIdentifier": 48_883,
-        "vendorIdentifier": 1_105,
-        "serialNumber": "MG350001",
-        "systemLocation": "\\\\.\\COM4",
-    }
-
-
-def windows_port_infos_extra():
-    # additional port
     yield {
         "description": "Intel(R) Active Management Technology - SOL",
         "manufacturer": "Intel",
@@ -75,28 +46,6 @@ def windows_port_infos_extra():
         "vendorIdentifier": 1_105,
         "serialNumber": "MG350001",
         "systemLocation": "\\\\.\\COM11",
-    }
-
-
-def windows_port_infos_blank_description():
-    # without TI driver
-    yield {
-        "description": "",
-        "manufacturer": "Texas Instruments Incorporated",
-        "portName": "COM3",
-        "productIdentifier": 48_883,
-        "vendorIdentifier": 1_105,
-        "serialNumber": "MG350001",
-        "systemLocation": "\\\\.\\COM1",
-    }
-    yield {
-        "description": "",
-        "manufacturer": "Texas Instruments Incorporated",
-        "portName": "COM5",
-        "productIdentifier": 48_883,
-        "vendorIdentifier": 1_105,
-        "serialNumber": "MG350001",
-        "systemLocation": "\\\\.\\COM2",
     }
 
 
@@ -171,8 +120,6 @@ def mac_arm64_port_infos():
 @pytest.fixture(
     params=[
         windows_port_infos,
-        windows_port_infos_extra,
-        windows_port_infos_blank_description,
         linux_port_infos,
         mac_arm64_port_infos,
     ]
@@ -181,11 +128,9 @@ def mock_port_infos(request):
     return [MockSerialPortInfo(info) for info in request.param()]
 
 
-def test_find_call_up(mock_port_infos):
-    matches = find_call_up(find_vid_pid(mock_port_infos))
-    assert len(matches) == 2
-
-
 def test_find_launchpad(mock_port_infos):
     matches = find_launchpad(mock_port_infos)
-    assert len(matches) == 1 or len(matches) == 2
+    # two matches
+    assert len(matches) == 2
+    # sorted
+    assert matches[0].portName() in {"COM11", "ttyACM0", "cu.usbmodemMG3500011"}

@@ -1,36 +1,84 @@
-from logging import getLogger
+from PySide6.QtSerialPort import QSerialPortInfo
+from PySide6.QtTest import QSignalSpy
 
-import pytest
+from lenlab.controller import launchpad, linux
+from lenlab.controller.discovery import (
+    Discovery,
+    NoGroup,
+    NoLaunchpad,
+    NoPermission,
+    NoRules,
+)
 
-from lenlab.launchpad.discovery import Discovery, Probe
-from lenlab.launchpad.terminal import Terminal
-from lenlab.loop import Loop
-from lenlab.spy import Spy
 
-logger = getLogger(__name__)
+class Spy(QSignalSpy):
+    def get_single_arg(self):
+        if self.count() == 1:
+            return self.at(0)[0]
 
 
-def test_discovery(request):
+def test_no_rules(monkeypatch):
+    monkeypatch.setattr(linux, "check_rules", lambda: False)
     discovery = Discovery()
-    spy = Spy(discovery.result)
-    error = Spy(discovery.error)
+
+    spy = Spy(discovery.error)
     discovery.discover()
-    if error.count():
-        pytest.skip(str(error.get_single_arg()))
+    error = spy.get_single_arg()
+    assert isinstance(error, NoRules)
 
-    loop = Loop()
-    event = loop.run_until(discovery.result, discovery.error, interval=Probe.interval + 200)
-    assert event, ">= 1 probe did not emit"
+    monkeypatch.setattr(linux, "install_rules", lambda: None)
+    error.callback()
 
-    result = spy.get_single_arg()
-    if request.config.getoption("fw"):
-        assert isinstance(result, Terminal)
-        logger.info(f"firmware found on {result.port_name}")
-    elif request.config.getoption("bsl"):
-        assert result is None
-        logger.info("nothing found")
-    else:
-        if isinstance(result, Terminal):
-            logger.info(f"firmware found on {result.port_name}")
-        else:
-            logger.info("nothing found")
+
+def test_no_launchpad(monkeypatch):
+    monkeypatch.setattr(linux, "check_rules", lambda: True)
+    monkeypatch.setattr(QSerialPortInfo, "availablePorts", lambda: [])
+    discovery = Discovery()
+
+    spy = Spy(discovery.error)
+    discovery.discover()
+    error = spy.get_single_arg()
+    assert isinstance(error, NoLaunchpad)
+
+
+class MockSerialPortInfo(QSerialPortInfo):
+    def vendorIdentifier(self):
+        return launchpad.ti_vid
+
+    def productIdentifier(self):
+        return launchpad.ti_pid
+
+    def portName(self):
+        return "ttyS0"
+
+    def systemLocation(self):
+        return "/dev/ttyS0"
+
+
+def test_no_group(monkeypatch):
+    monkeypatch.setattr(linux, "check_rules", lambda: True)
+    monkeypatch.setattr(QSerialPortInfo, "availablePorts", lambda: [MockSerialPortInfo()])
+    monkeypatch.setattr(linux, "check_permission", lambda path: False)
+    monkeypatch.setattr(linux, "check_group", lambda path: False)
+    discovery = Discovery()
+
+    spy = Spy(discovery.error)
+    discovery.discover()
+    error = spy.get_single_arg()
+    assert isinstance(error, NoGroup)
+
+    monkeypatch.setattr(linux, "add_to_group", lambda path: None)
+    error.callback()
+
+
+def test_no_permission(monkeypatch):
+    monkeypatch.setattr(linux, "check_rules", lambda: True)
+    monkeypatch.setattr(QSerialPortInfo, "availablePorts", lambda: [MockSerialPortInfo()])
+    monkeypatch.setattr(linux, "check_permission", lambda path: False)
+    monkeypatch.setattr(linux, "check_group", lambda path: True)
+    discovery = Discovery()
+
+    spy = Spy(discovery.error)
+    discovery.discover()
+    error = spy.get_single_arg()
+    assert isinstance(error, NoPermission)
