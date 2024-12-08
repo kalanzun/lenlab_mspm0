@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import run
 
-import pytest
-
 from lenlab.controller import linux
 
 
@@ -54,7 +52,7 @@ def test_check_no_permission():
 
 
 def test_get_group():
-    assert linux.get_group(Path("/root")) == "root"
+    assert linux.get_group(Path("/dev/ttyS0")) == "dialout"
 
 
 def test_get_user_groups():
@@ -78,14 +76,13 @@ def test_add_to_group_local(monkeypatch):
     linux.add_to_group(Path("/dev/null"))
 
 
-def test_add_to_group_ci(monkeypatch, ci):  # pragma: no cover
-    monkeypatch.setattr(linux, "pkexec", "sudo")
+def test_add_to_group_ci(ci):  # pragma: no cover
     linux.add_to_group(Path("/dev/ttyS0"))
     # root privileges for sudo -u
     groups = run(
         ["sudo", "sudo", "-u", linux.get_user().pw_name, "groups"], capture_output=True, text=True
-    ).stdout
-    assert "tty" in groups
+    ).stdout.strip()
+    assert "dialout" in groups
 
 
 def test_check_in_group_ci(ci):  # pragma: no cover

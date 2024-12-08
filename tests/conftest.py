@@ -20,6 +20,12 @@ def gui():
         pytest.skip("No GUI")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def pkexec():
+    if "CI" in os.environ:
+        os.link("/usr/bin/sudo", "/usr/bin/pkexec")
+
+
 @pytest.fixture()
 def ci():
     if "CI" not in os.environ:

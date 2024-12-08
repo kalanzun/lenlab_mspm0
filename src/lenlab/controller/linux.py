@@ -2,9 +2,6 @@ import os
 from pathlib import Path
 from subprocess import run
 
-# pkexec of PolicyKit
-pkexec = "pkexec"
-
 rules_path = Path("/etc/udev/rules.d/50-launchpad.rules")
 
 launchpad_rules = b"""
@@ -16,13 +13,14 @@ def check_rules() -> bool:
     return rules_path.exists() and rules_path.read_bytes() == launchpad_rules
 
 
-def su_write(path: Path, data: bytes) -> None:
+def pk_write(path: Path, data: bytes) -> None:
+    # pkexec of PolicyKit
     # tee of GNU coreutils
-    run([pkexec, "tee", path], input=data)
+    run(["pkexec", "tee", path], input=data)
 
 
 def install_rules() -> None:
-    su_write(rules_path, launchpad_rules)
+    pk_write(rules_path, launchpad_rules)
 
 
 def check_permission(port_path: Path) -> bool:
@@ -54,4 +52,4 @@ def check_group(port_path: Path) -> bool:
 def add_to_group(port_path: Path) -> None:
     user = get_user().pw_name
     group = get_group(port_path)
-    run([pkexec, "usermod", "-aG", group, user])
+    run(["pkexec", "usermod", "-aG", group, user])
