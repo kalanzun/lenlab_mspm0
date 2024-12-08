@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from subprocess import run
 
-
 # pkexec of PolicyKit
 pkexec = "pkexec"
 

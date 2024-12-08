@@ -81,7 +81,10 @@ def test_add_to_group_local(monkeypatch):
 def test_add_to_group_ci(monkeypatch, ci):  # pragma: no cover
     monkeypatch.setattr(linux, "pkexec", "sudo")
     linux.add_to_group(Path("/dev/ttyS0"))
-    groups = run(["groups"], capture_output=True, text=True).stdout
+    # root privileges for sudo -u
+    groups = run(
+        ["sudo", "sudo", "-u", linux.get_user().pw_name, "groups"], capture_output=True, text=True
+    ).stdout
     assert "tty" in groups
 
 
