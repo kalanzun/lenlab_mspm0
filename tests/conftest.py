@@ -1,4 +1,5 @@
 import os
+from subprocess import run
 
 import pytest
 from PySide6.QtCore import QCoreApplication
@@ -23,7 +24,7 @@ def gui():
 @pytest.fixture(scope="session", autouse=True)
 def pkexec():
     if "CI" in os.environ:
-        os.link("/usr/bin/sudo", "/usr/bin/pkexec")
+        run(["sudo", "ln", "/usr/bin/sudo", "/usr/bin/pkexec"])
 
 
 @pytest.fixture()
