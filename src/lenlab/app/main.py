@@ -1,3 +1,5 @@
+import logging
+
 from PySide6.QtCore import QLocale
 
 from lenlab.app.app import App
@@ -7,6 +9,8 @@ from lenlab.message import Message
 
 def main() -> int:
     app = App.get_instance()
+
+    logging.basicConfig(level=logging.INFO)
 
     if QLocale().language() == QLocale.Language.German:
         Message.language = "german"

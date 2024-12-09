@@ -70,6 +70,6 @@ class Box(QWidget):
     def set_error(self, error: Message):
         self.error = error
         self.symbol_widget.load(symbols.error)
-        self.text_widget.setText(str(error))
+        self.text_widget.setText(f"### {error}")
         self.button.setText(str(error.button))
         self.show()

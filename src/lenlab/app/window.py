@@ -13,7 +13,6 @@ class MainWindow(QMainWindow):
 
         self.discovery = Discovery()
         self.discovery.error.connect(self.box.set_error)
-        self.discovery.close.connect(self.close)
         self.discovery.discover_later.emit()
 
         self.setWindowTitle("Lenlab")

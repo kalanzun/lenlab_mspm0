@@ -11,7 +11,13 @@ class Message(Exception):
         super().__init__(*args)
         self.callback = callback
 
-    def __str__(self):
+    def __str__(self) -> str:
         template = getattr(self, self.language)
         template = "\n".join(line.strip() for line in template.splitlines())
+        return template.format(*self.args)
+
+    def short(self) -> str:
+        template = getattr(self, self.language)
+        template, *rest = template.split("\n", 1)
+        template = template.strip()
         return template.format(*self.args)
