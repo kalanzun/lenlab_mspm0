@@ -5,7 +5,7 @@ from subprocess import run
 
 rules_path = Path("/etc/udev/rules.d/50-launchpad.rules")
 
-launchpad_rules = b"""
+launchpad_rules = """
 ATTRS{idVendor}=="0451", ATTRS{idProduct}=="bef3", ENV{ID_MM_DEVICE_IGNORE}="1"
 """
 
@@ -15,7 +15,7 @@ def is_linux() -> bool:
 
 
 def check_rules() -> bool:
-    return rules_path.exists() and rules_path.read_bytes() == launchpad_rules
+    return rules_path.exists() and rules_path.read_text() == launchpad_rules
 
 
 def pk_exec(args: list[str], **kwargs):
@@ -23,9 +23,9 @@ def pk_exec(args: list[str], **kwargs):
     run(["pkexec"] + args, **kwargs)
 
 
-def pk_write(path: Path, data: bytes) -> None:
+def pk_write(path: Path, data: str) -> None:
     # tee of GNU coreutils
-    pk_exec(["tee", str(path)], input=data)
+    pk_exec(["tee", str(path)], input=data, capture_output=True, text=True)
 
 
 def install_rules() -> None:

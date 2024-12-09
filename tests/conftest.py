@@ -1,6 +1,5 @@
 import os
 import sys
-from subprocess import run
 
 import pytest
 from PySide6.QtCore import QCoreApplication
@@ -14,7 +13,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "linux")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config, items):  # pragma: no cover
     for item in items:
         if "ci" in item.keywords and "CI" not in os.environ:
             item.add_marker(pytest.mark.skip(reason="No CI"))
@@ -28,11 +27,5 @@ def pytest_collection_modifyitems(config, items):
 def app():
     if "CI" not in os.environ:
         return App.get_instance()
-    else:
+    else:  # pragma: no cover
         return QCoreApplication()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def pkexec():
-    if "CI" in os.environ:
-        run(["sudo", "ln", "/usr/bin/sudo", "/usr/bin/pkexec"])

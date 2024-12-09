@@ -12,13 +12,17 @@ pytestmark = pytest.mark.linux
 @dataclass()
 class MockPath:
     _exists: bool
-    _content: bytes = b""
+    _content: str = ""
 
     def exists(self):
         return self._exists
 
-    def read_bytes(self):
+    def read_text(self):
         return self._content
+
+
+def test_is_linux():
+    assert linux.is_linux()
 
 
 def test_check_rules(monkeypatch):
@@ -36,9 +40,25 @@ def test_check_rules_ok(monkeypatch):
     assert linux.check_rules()
 
 
+def test_pk_exec(monkeypatch):
+    monkeypatch.setattr(linux, "run", lambda *args, **kwargs: ...)
+    linux.pk_exec(["echo", "Hi!"])
+
+
 def test_install_rules(monkeypatch):
     monkeypatch.setattr(linux, "pk_exec", lambda *args, **kwargs: ...)
     linux.install_rules()
+
+
+def test_rules(monkeypatch, tmp_path):
+    rules_path = tmp_path / "50-launchpad.rules"
+    monkeypatch.setattr(linux, "rules_path", rules_path)
+    monkeypatch.setattr(linux, "pk_exec", run)
+    linux.install_rules()
+    verify = run(["udevadm", "verify", str(rules_path)], capture_output=True, text=True)
+    assert verify.returncode == 0
+
+    assert linux.check_rules()
 
 
 def test_check_permission():
@@ -71,19 +91,29 @@ def test_add_to_group(monkeypatch):
 
 
 @pytest.mark.ci
-class CI:
+class CI:  # pragma: no cover
     @staticmethod
-    def test_rules():  # pragma: no cover
+    def test_rules(monkeypatch):
+        monkeypatch.setattr(
+            linux, "pk_exec", lambda args, **kwargs: run(["sudo"] + args, **kwargs)
+        )
         linux.install_rules()
-        verify = run(["udevadm", "verify", "/etc/udev/rules.d/50-launchpad.rules"])
+        verify = run(
+            ["udevadm", "verify", "/etc/udev/rules.d/50-launchpad.rules"],
+            capture_output=True,
+            text=True,
+        )
         assert verify.returncode == 0
 
     @staticmethod
-    def test_check_not_in_group():  # pragma: no cover
+    def test_check_not_in_group():
         assert not linux.check_group(Path("/dev/ttyS0"))
 
     @staticmethod
-    def test_add_to_group():  # pragma: no cover
+    def test_add_to_group(monkeypatch):
+        monkeypatch.setattr(
+            linux, "pk_exec", lambda args, **kwargs: run(["sudo"] + args, **kwargs)
+        )
         linux.add_to_group(Path("/dev/ttyS0"))
         # root privileges for sudo -u
         groups = run(
@@ -92,5 +122,5 @@ class CI:
         assert "dialout" in groups
 
     @staticmethod
-    def test_check_in_group():  # pragma: no cover
+    def test_check_in_group():
         assert linux.check_group(Path("/dev/ttyS0"))
