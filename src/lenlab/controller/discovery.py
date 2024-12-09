@@ -29,7 +29,7 @@ class Discovery(QObject):
     @Slot()
     def discover(self):
         try:
-            if not linux.check_rules():
+            if linux.is_linux() and not linux.check_rules():
                 raise NoRules(callback=self.install_rules)
 
             matches = find_launchpad(QSerialPortInfo.availablePorts())
@@ -38,18 +38,19 @@ class Discovery(QObject):
 
             self.port_info = matches[0]
             self.port_path = Path(self.port_info.systemLocation())
-            if not linux.check_permission(self.port_path):
+
+            if linux.is_linux() and not linux.check_permission(self.port_path):
                 if not linux.check_group(self.port_path):
                     raise NoGroup(
                         self.port_path,
-                        linux.get_user().pw_name,
+                        linux.get_user_name(),
                         linux.get_group(self.port_path),
                         callback=self.add_to_group,
                     )
                 else:
                     raise NoPermission(
                         self.port_path,
-                        linux.get_user().pw_name,
+                        linux.get_user_name(),
                         callback=self.close.emit,
                     )
 

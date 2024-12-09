@@ -1,5 +1,6 @@
 from xml.etree import ElementTree
 
+import pytest
 from PySide6.QtCore import QBuffer, QRect, QSize
 from PySide6.QtGui import QPainter
 from PySide6.QtSvg import QSvgGenerator
@@ -29,7 +30,10 @@ def test_box_paint():
     assert len(root.findall("{*}g/*"))
 
 
-def test_error(gui):
+@pytest.mark.gui
+def test_error(monkeypatch):
+    monkeypatch.setattr(Box, "show", lambda self: None)
+
     box = Box()
     box.set_error(Message(callback=lambda: None))
     box.on_clicked()
