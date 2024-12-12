@@ -8,6 +8,7 @@ authors = [{name = "Christoph Simon", email = "christoph.simon@kit.edu"}]
 # 3.12 adds the type keyword and itertools.batched
 requires-python = ">=3.12"
 dependencies = [
+    "attrs>=24.2.0",
     "matplotlib>=3.9.2",
     "numpy>=2.1.3",
     "pyside6>=6.8.0.2",
@@ -35,7 +36,10 @@ path = "workspace/lenlab_fw/version.h"
 pattern = '#define VERSION "(?P<version>[^"]+)"'
 
 [tool.uv]
-cache-keys = [{ file = "workspace/lenlab_fw/version.h" }]
+cache-keys = [
+    { file = "workspace/lenlab_fw/version.h" },
+    { file = "pyproject.toml" },
+]
 
 [tool.pytest.ini_options]
 addopts = [
