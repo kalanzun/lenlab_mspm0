@@ -7,4 +7,5 @@ def test_cli():
 
 def test_main():
     from lenlab import __main__
+
     assert __main__

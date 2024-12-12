@@ -1,6 +1,16 @@
+import logging
+
 import pytest
-from lenlab.controller.discovery import find_launchpad
+from PySide6.QtCore import QEventLoop
+from PySide6.QtTest import QSignalSpy
+
+from lenlab.controller.discovery import Probe, find_launchpad
+from lenlab.controller.terminal import Terminal
+from lenlab.model.port import Port
 from lenlab.model.port_info import PortInfo
+
+logger = logging.getLogger(__name__)
+
 
 examples = [
     {
@@ -296,3 +306,39 @@ def test_find_launchpad(example, available_ports):
     port_infos = find_launchpad(available_ports)
     assert len(port_infos) == 2
     assert port_infos[0].name == example["launchpad_uart_port"]
+
+
+@pytest.fixture()
+def port():
+    port_infos = PortInfo.available_ports()
+    matches = find_launchpad(port_infos)
+    return Port.from_port_info(matches[0])
+
+
+@pytest.fixture()
+def terminal(port):
+    terminal = Terminal(port)
+    terminal.open()
+    yield terminal
+    terminal.close()
+
+
+@pytest.mark.firmware
+def test_probe(terminal):
+    terminal.set_baud_rate(1_000_000)
+
+    probe = Probe(terminal)
+    probe.error.connect(logger.error)
+
+    loop = QEventLoop()
+    probe.error.connect(lambda: loop.quit())
+    probe.success.connect(lambda: loop.quit())
+
+    error = QSignalSpy(probe.error)
+    success = QSignalSpy(probe.success)
+
+    probe.probe()
+    loop.exec()
+
+    assert error.count() == 0
+    assert success.count() == 1
