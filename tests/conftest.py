@@ -1,7 +1,7 @@
 import pytest
 from PySide6.QtCore import QCoreApplication
 
-from lenlab.model.lenlab import Lenlab
+from lenlab.controller.lenlab import Lenlab
 
 
 @pytest.fixture(scope="session", autouse=True)

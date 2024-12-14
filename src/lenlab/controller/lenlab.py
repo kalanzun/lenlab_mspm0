@@ -1,0 +1,71 @@
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
+
+from ..message import Message
+from ..model.launchpad import find_launchpad
+from ..model.port_info import PortInfo
+from ..model.protocol import get_app_version, unpack_fw_version
+from .terminal import Terminal
+
+
+class Lenlab(QObject):
+    terminal: Terminal
+
+    ready = Signal()
+    error = Signal(Message)
+
+    def __init__(self):
+        super().__init__()
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.on_timeout)
+
+    def discover(self):
+        available_ports = PortInfo.available_ports()
+        matches = find_launchpad(available_ports)
+        if not matches:
+            self.error.emit(NoLaunchpad())
+            return
+
+        terminal = Terminal.from_port_info(matches[0])
+        terminal.reply.connect(self.on_reply)
+        terminal.error.connect(self.on_error)
+        if terminal.open():
+            terminal.set_baud_rate(1_000_000)
+            self.terminal = terminal
+
+            self.timer.start()
+            self.terminal.write(b"8ver?")  # calls on_reply eventually
+
+    @Slot(bytes)
+    def on_reply(self, reply: bytes):
+        self.timer.stop()
+        if reply.startswith(b"L8"):
+            fw_version = unpack_fw_version(reply)
+            app_version = get_app_version()
+            if fw_version == app_version:
+                self.ready.emit()
+            else:
+                self.error.emit(InvalidFirmwareVersion(fw_version, app_version))
+
+    @Slot(Message)
+    def on_error(self, error: Message):
+        self.timer.stop()
+        self.error.emit(error)
+
+    @Slot()
+    def on_timeout(self):
+        self.error.emit(NoReply())
+
+
+class NoLaunchpad(Message):
+    english = "No Launchpad found"
+
+
+class NoReply(Message):
+    english = "No reply received"
+
+
+class InvalidFirmwareVersion(Message):
+    english = "Invalid firmware version"
