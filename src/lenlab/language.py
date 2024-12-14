@@ -1,0 +1,2 @@
+class Language:
+    language = "english"
