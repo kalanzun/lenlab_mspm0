@@ -65,25 +65,25 @@ class Terminal(QObject):
 
     @Slot()
     def on_ready_read(self, n: int) -> None:
-        head = self.port.peek(4)
+        head = self.peek(4)
         if not self.ack_mode and (head[0:1] == b"L" or head[0:2] == b"\x00\x08"):
             if n >= 8:
                 length = int.from_bytes(head[2:4], "little") + 8
                 if n == length:
-                    reply = self.port.read(n)
+                    reply = self.read(n)
                     self.reply.emit(reply)
                 elif n > length:
-                    packet = self.port.read(n)
+                    packet = self.read(n)
                     self.error.emit(OverlongPacket(n, packet[:12]))
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
             if self.ack_mode:
-                self.port.read(n)
+                self.read(n)
                 self.ack.emit()
 
         else:
-            packet = self.port.read(n)
+            packet = self.read(n)
             self.error.emit(InvalidPacket(n, packet[:12]))
 
 

@@ -1,20 +1,11 @@
 import pytest
-from PySide6.QtTest import QSignalSpy
 
 from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply
 from lenlab.controller.terminal import PortError, Terminal
 from lenlab.model.launchpad import ti_pid, ti_vid
 from lenlab.model.port_info import PortInfo
 from lenlab.model.protocol import get_app_version
-
-
-class Spy(QSignalSpy):
-    def get_single_arg(self):
-        if self.count() == 1:
-            return self.at(0)[0]
-
-    def is_single_message(self, __class) -> bool:
-        return isinstance(self.get_single_arg(), __class)
+from lenlab.spy import Spy
 
 
 @pytest.fixture()

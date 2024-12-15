@@ -3,7 +3,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from ..message import Message
 from ..model.launchpad import find_launchpad
 from ..model.port_info import PortInfo
-from ..model.protocol import get_app_version, unpack_fw_version
+from ..model.protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
 
 
@@ -36,7 +36,7 @@ class Lenlab(QObject):
             self.terminal = terminal
 
             self.timer.start()
-            self.terminal.write(b"8ver?")  # calls on_reply eventually
+            self.terminal.write(pack(b"8ver?"))  # calls on_reply eventually
 
     @Slot(bytes)
     def on_reply(self, reply: bytes):
