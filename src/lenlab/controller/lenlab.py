@@ -1,9 +1,12 @@
+import sys
+
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from ..message import Message
 from ..model.launchpad import find_launchpad
 from ..model.port_info import PortInfo
 from ..model.protocol import get_app_version, pack, unpack_fw_version
+from . import linux
 from .terminal import Terminal
 
 
@@ -22,6 +25,11 @@ class Lenlab(QObject):
         self.timer.timeout.connect(self.on_timeout)
 
     def discover(self):
+        if sys.platform == "linux":
+            if not linux.check_rules():
+                self.error.emit(NoRules())
+                return
+
         available_ports = PortInfo.available_ports()
         matches = find_launchpad(available_ports)
         if not matches:
@@ -57,6 +65,10 @@ class Lenlab(QObject):
     @Slot()
     def on_timeout(self):
         self.error.emit(NoReply())
+
+
+class NoRules(Message):
+    english = "No Launchpad rules installed"
 
 
 class NoLaunchpad(Message):

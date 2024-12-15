@@ -1,6 +1,9 @@
+import sys
+
 import pytest
 
-from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply
+from lenlab.controller import linux
+from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply, NoRules
 from lenlab.controller.terminal import PortError, Terminal
 from lenlab.model.launchpad import ti_pid, ti_vid
 from lenlab.model.port_info import PortInfo
@@ -9,7 +12,13 @@ from lenlab.spy import Spy
 
 
 @pytest.fixture()
-def available_ports(monkeypatch):
+def mock_rules(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(linux, "check_rules", lambda: True)
+
+
+@pytest.fixture()
+def available_ports(monkeypatch, mock_rules):
     ap = list()
     monkeypatch.setattr(PortInfo, "available_ports", lambda: ap)
     return ap
@@ -50,6 +59,14 @@ def test_discover(lenlab, mock_port_info, mock_terminal):
 def test_open_error(lenlab, mock_port_info, mock_terminal):
     lenlab.discover()
     assert not hasattr(lenlab, "terminal")
+
+
+def test_no_rules(monkeypatch, lenlab):
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(linux, "check_rules", lambda: False)
+    spy = Spy(lenlab.error)
+    lenlab.discover()
+    assert spy.is_single_message(NoRules)
 
 
 def test_no_launchpad(lenlab, available_ports):
