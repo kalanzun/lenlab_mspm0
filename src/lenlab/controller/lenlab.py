@@ -3,7 +3,7 @@ import sys
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from ..message import Message
-from ..model.launchpad import find_launchpad
+from ..model.launchpad import find_launchpad, ti_vid
 from ..model.port_info import PortInfo
 from ..model.protocol import get_app_version, pack, unpack_fw_version
 from . import linux
@@ -33,6 +33,10 @@ class Lenlab(QObject):
         available_ports = PortInfo.available_ports()
         matches = find_launchpad(available_ports)
         if not matches:
+            if [pi for pi in available_ports if pi.vid_pid == (ti_vid, 0xFD)]:
+                self.error.emit(TivaLaunchpad())
+                return
+
             self.error.emit(NoLaunchpad())
             return
 
@@ -73,6 +77,10 @@ class NoRules(Message):
 
 class NoLaunchpad(Message):
     english = "No Launchpad found"
+
+
+class TivaLaunchpad(Message):
+    english = "Tiva Launchpad found"
 
 
 class NoReply(Message):

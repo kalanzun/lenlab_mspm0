@@ -3,7 +3,7 @@ import sys
 import pytest
 
 from lenlab.controller import linux
-from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply, NoRules
+from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply, NoRules, TivaLaunchpad
 from lenlab.controller.terminal import PortError, Terminal
 from lenlab.model.launchpad import ti_pid, ti_vid
 from lenlab.model.port_info import PortInfo
@@ -18,15 +18,20 @@ def mock_rules(monkeypatch):
 
 
 @pytest.fixture()
-def available_ports(monkeypatch, mock_rules):
-    ap = list()
-    monkeypatch.setattr(PortInfo, "available_ports", lambda: ap)
-    return ap
+def mock_available_ports(monkeypatch, mock_rules):
+    available_ports = list()
+    monkeypatch.setattr(PortInfo, "available_ports", lambda: available_ports)
+    return available_ports
 
 
 @pytest.fixture()
-def mock_port_info(available_ports):
-    available_ports.append(PortInfo("ttySmock0", ti_vid, ti_pid))
+def mock_port_info(mock_available_ports):
+    mock_available_ports.append(PortInfo("ttySmock0", ti_vid, ti_pid))
+
+
+@pytest.fixture()
+def mock_tiva_port_info(mock_available_ports):
+    mock_available_ports.append(PortInfo("ttySmock0", ti_vid, 0xFD))
 
 
 class MockTerminal(Terminal):
@@ -56,6 +61,13 @@ def test_discover(lenlab, mock_port_info, mock_terminal):
     assert isinstance(lenlab.terminal, MockTerminal)
 
 
+def test_discover_extra_tiva(lenlab, mock_port_info, mock_tiva_port_info, mock_terminal):
+    mock_terminal.open_result = True
+    lenlab.discover()
+    assert hasattr(lenlab, "terminal")
+    assert isinstance(lenlab.terminal, MockTerminal)
+
+
 def test_open_error(lenlab, mock_port_info, mock_terminal):
     lenlab.discover()
     assert not hasattr(lenlab, "terminal")
@@ -69,10 +81,16 @@ def test_no_rules(monkeypatch, lenlab):
     assert spy.is_single_message(NoRules)
 
 
-def test_no_launchpad(lenlab, available_ports):
+def test_no_launchpad(lenlab, mock_available_ports):
     spy = Spy(lenlab.error)
     lenlab.discover()
     assert spy.is_single_message(NoLaunchpad)
+
+
+def test_tiva_launchpad(lenlab, mock_tiva_port_info):
+    spy = Spy(lenlab.error)
+    lenlab.discover()
+    assert spy.is_single_message(TivaLaunchpad)
 
 
 def test_version_reply(lenlab):
