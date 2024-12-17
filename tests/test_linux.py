@@ -1,3 +1,4 @@
+import sys
 from subprocess import run
 
 import pytest
@@ -8,6 +9,11 @@ from lenlab.controller import linux
 def test_pk_exec(monkeypatch):
     monkeypatch.setattr(linux, "run", lambda *args, **kwargs: None)
     linux.pk_exec(["ls"])
+
+
+def test_pk_write(monkeypatch):
+    monkeypatch.setattr(linux, "run", lambda *args, **kwargs: None)
+    linux.pk_write(linux.rules_path, "content")
 
 
 @pytest.fixture()
@@ -31,7 +37,13 @@ def mock_pk_exec(monkeypatch):
     monkeypatch.setattr(linux, "pk_exec", run)
 
 
-def test_install_rules(tmp_rules, mock_pk_exec):
+@pytest.fixture()
+def mock_pk_write(monkeypatch, mock_pk_exec):
+    if sys.platform == "win32":  # no tee on windows
+        monkeypatch.setattr(linux, "pk_write", lambda path, content: path.write_text(content))
+
+
+def test_install_rules(tmp_rules, mock_pk_write):
     linux.install_rules()
     assert linux.check_rules()
 
