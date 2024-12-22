@@ -27,11 +27,14 @@ The USB interface of the XDS110 debug chip on the Launchpad has two serial ports
 - XDS110 Class Auxiliary Data Port
 
 The port information (QtSerialPortInfo) only differs in the description and only on Windows if the TI driver
-is installed. The order is random. MacOS shows four ports per Launchpad without description.
+is installed. The order might be reversed on Windows. Mac shows four ports, two variants of two ports
+per Launchpad without description and the variants block each other. The port names on Linux and Mac
+seem to follow the order of the USB interfaces and thus are static.
 
-> Discovery opens all ports, sends a command, and selects the port which receives a reply.
+> Discovery filters and sorts the ports. On Mac and Linux it knows the correct one is the first one. 
+> On Windows, it opens the first one. If communication fails, it opens the second one.
 
-> Discovery either looks for the firmware (for Lenlab measurement) or the BSL (for programming), not for both.
+> Discovery looks for the firmware. It does not connect to the BSL.
 
 > The programmer explains the reset procedure to the user.
 > When the user clicks start, it starts to look for the BSL.
@@ -50,12 +53,33 @@ Test: `test_protocol.test_firmware_resilience_to_false_baud_rate`
 The microcontroller seems to receive some invalid data after initialization
 on first boot after plugging in the USB cable.
 
+Mac seems to cause trouble if closing the port and re-opening it shortly after.
+
+> Lenlab opens the port once and re-uses it throughout the program
+
+### ModemManager (Linux)
+
+On Linux, a programm called ModemManager will open the serial port and probe it
+for about 30 seconds. The port is blocked during that time. If Lenlab got to open the port
+before ModemManager, communication is spotty and some packets go missing.
+
+> Lenlab checks and installs udev rules to prevent ModemManager from accessing the port
+
+The rules installation is mandatory and Lenlab checks it because of the erratic behaviour otherwise.
+
+### Group (Linux)
+
+The help describes adding the user to the group and the error message for access denied suggests
+the command.
+
+Lenlab does not run the command itself, and it cannot restart the session for the changes to take effect.
+
 ### Intended usage
 
 - New Launchpad (TI out-of-box experience): Lenlab offers an explanation and the programmer to flash the firmware.
 - Launchpad with old firmware: Lenlab offers an update.
 - Launchpad with current firmware: Lenlab offers the measurement functions.
-- Launchpad with BSL: Lenlab offers the programmer (discovery did not find the firmware and did not connect to the BSL).
+- Launchpad with BSL: Lenlab offers the programmer (discovery did not find the firmware).
 - Two Launchpads: One wins at discovery.
 
 ### Counterfactual
