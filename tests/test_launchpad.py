@@ -273,6 +273,37 @@ examples = [
         ],
         "uart_port": "COM9",
     },
+    {  # order reversed (North)
+        "sys_info": {
+            "currentCpuArchitecture": "x86_64",
+            "kernelType": "winnt",
+            "kernelVersion": "10.0.22631",
+            "prettyProductName": "Windows 11 Version 23H2",
+            "productType": "windows",
+            "productVersion": "11",
+        },
+        "available_ports": [
+            {
+                "description": "Serielles USB-Gerät",
+                "manufacturer": "Microsoft",
+                "portName": "COM3",
+                "productIdentifier": 48_883,
+                "vendorIdentifier": 1_105,
+                "serialNumber": "MG350001",
+                "systemLocation": "\\\\.\\COM3",
+            },
+            {
+                "description": "Serielles USB-Gerät",
+                "manufacturer": "Microsoft",
+                "portName": "COM4",
+                "productIdentifier": 48_883,
+                "vendorIdentifier": 1_105,
+                "serialNumber": "MG350001",
+                "systemLocation": "\\\\.\\COM4",
+            },
+        ],
+        "uart_port": "COM4",
+    },
 ]
 
 
