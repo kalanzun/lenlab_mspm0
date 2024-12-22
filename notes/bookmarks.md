@@ -12,6 +12,8 @@ Code Composer Studio Theia User's guide https://software-dl.ti.com/ccs/esd/docum
 
 ## Software
 
+Python documentation https://docs.python.org/3/
+
 PySide6 documentation https://doc.qt.io/qtforpython-6/index.html
 
 Qt (C++) documentation https://doc.qt.io/qt.html
