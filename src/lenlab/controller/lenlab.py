@@ -10,7 +10,6 @@ from ..model.protocol import get_app_version, pack, unpack_fw_version
 from . import linux
 from .terminal import Terminal
 
-
 logger = logging.getLogger(__name__)
 
 

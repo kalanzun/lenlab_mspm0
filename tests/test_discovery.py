@@ -3,7 +3,13 @@ import sys
 import pytest
 
 from lenlab.controller import linux
-from lenlab.controller.lenlab import InvalidFirmwareVersion, NoLaunchpad, NoReply, NoRules, TivaLaunchpad
+from lenlab.controller.lenlab import (
+    InvalidFirmwareVersion,
+    NoLaunchpad,
+    NoReply,
+    NoRules,
+    TivaLaunchpad,
+)
 from lenlab.controller.terminal import PortError, Terminal
 from lenlab.model.launchpad import ti_pid, ti_vid
 from lenlab.model.port_info import PortInfo
