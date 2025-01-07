@@ -34,6 +34,7 @@ examples = [
             },
         ],
         "uart_port": "ttyACM0",
+        "ports": ["ttyACM0", "ttyACM1"],
     },
     {
         "sys_info": {
@@ -85,6 +86,7 @@ examples = [
             },
         ],
         "uart_port": "cu.usbmodemMG3500011",
+        "ports": ["cu.usbmodemMG3500011", "cu.usbmodemMG3500014"],
     },
     {
         "sys_info": {
@@ -148,6 +150,7 @@ examples = [
             {"portName": "ttyS9"},
         ],
         "uart_port": "ttyACM0",
+        "ports": ["ttyACM0", "ttyACM1"],
     },
     {
         "sys_info": {
@@ -179,6 +182,7 @@ examples = [
             },
         ],
         "uart_port": "COM6",
+        "ports": ["COM6", "COM8"],
     },
     {
         "sys_info": {
@@ -210,6 +214,7 @@ examples = [
             },
         ],
         "uart_port": "COM6",
+        "ports": ["COM6", "COM7"],
     },
     {
         "sys_info": {
@@ -241,6 +246,7 @@ examples = [
             },
         ],
         "uart_port": "COM3",
+        "ports": ["COM3", "COM4"],
     },
     {  # artificial example COM9, COM10
         "sys_info": {
@@ -272,6 +278,7 @@ examples = [
             },
         ],
         "uart_port": "COM9",
+        "ports": ["COM9", "COM10"],
     },
     {  # order reversed (North)
         "sys_info": {
@@ -303,6 +310,7 @@ examples = [
             },
         ],
         "uart_port": "COM4",
+        "ports": ["COM3", "COM4"],
     },
 ]
 
@@ -327,4 +335,5 @@ def available_ports(example):
 def test_find_launchpad(example, available_ports):
     port_infos = find_launchpad(available_ports)
     assert len(port_infos) == 2
-    assert port_infos[0].name == example["uart_port"]
+    names = [pi.name for pi in port_infos]
+    assert names == example["ports"]
