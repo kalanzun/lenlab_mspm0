@@ -34,6 +34,9 @@ class MockPort(QSerialPort):
     def setBaudRate(self, baudRate):
         assert isinstance(baudRate, int)
 
+    def bytesAvailable(self):
+        return 7
+
     def peek(self, maxlen):
         return QByteArray(b"example")
 
@@ -62,8 +65,10 @@ def test_close(terminal):
 def test_port_interface(terminal):
     assert terminal.port_name == "ttySmock0"
     terminal.set_baud_rate(1_000_000)
-    packet = terminal.peek(8)
+    n = terminal.bytes_available()
+    assert n == 7
+    packet = terminal.peek(7)
     assert isinstance(packet, bytes)
-    packet = terminal.read(8)
+    packet = terminal.read(7)
     assert isinstance(packet, bytes)
     terminal.write(b"command")
