@@ -31,6 +31,11 @@ def app(args):
     return _app.exec()
 
 
+@command
+def blank(args):
+    pass
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
 
