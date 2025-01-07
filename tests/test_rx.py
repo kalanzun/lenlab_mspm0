@@ -9,6 +9,9 @@ class StaticReplyTerminal(Terminal):
         super().__init__()
         self.packet = packet
 
+    def bytes_available(self) -> int:
+        return len(self.packet)
+
     def peek(self, n: int) -> bytes:
         return self.packet[:n]
 
@@ -21,7 +24,7 @@ class StaticReplyTerminal(Terminal):
         error = Spy(self.error)
         reply = Spy(self.reply)
 
-        self.on_ready_read(len(self.packet))
+        self.on_ready_read()
 
         count = ack.count() + error.count() + reply.count()
         assert count <= 1
