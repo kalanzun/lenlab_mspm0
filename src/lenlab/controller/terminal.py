@@ -44,6 +44,9 @@ class Terminal(QObject):
     def port_name(self) -> str:
         return self.port.portName()
 
+    def bytes_available(self) -> int:
+        return self.port.bytesAvailable()
+
     def set_baud_rate(self, baud_rate: int) -> None:
         self.port.setBaudRate(baud_rate)
 
@@ -64,7 +67,8 @@ class Terminal(QObject):
         self.error.emit(PortError(error, self.port.errorString()))
 
     @Slot()
-    def on_ready_read(self, n: int) -> None:
+    def on_ready_read(self) -> None:
+        n = self.bytes_available()
         head = self.peek(4)
         if not self.ack_mode and (head[0:1] == b"L" or head[0:2] == b"\x00\x08"):
             if n >= 8:

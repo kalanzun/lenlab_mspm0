@@ -1,3 +1,3 @@
-from lenlab import cli
+from lenlab.cli import cli
 
 cli.main()

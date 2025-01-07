@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
@@ -8,6 +9,9 @@ from ..model.port_info import PortInfo
 from ..model.protocol import get_app_version, pack, unpack_fw_version
 from . import linux
 from .terminal import Terminal
+
+
+logger = logging.getLogger(__name__)
 
 
 class Lenlab(QObject):
@@ -52,6 +56,7 @@ class Lenlab(QObject):
 
     @Slot(bytes)
     def on_reply(self, reply: bytes):
+        logger.info(f"probe reply received in {self.timer.remainingTime()} ms")
         self.timer.stop()
         if reply.startswith(b"L8"):
             fw_version = unpack_fw_version(reply)
