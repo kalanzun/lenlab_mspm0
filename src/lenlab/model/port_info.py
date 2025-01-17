@@ -23,6 +23,10 @@ class PortInfo:
         )
 
     @classmethod
+    def from_port_name(cls, port_name: str) -> Self:
+        return cls.from_q_port_info(QSerialPortInfo(port_name))
+
+    @classmethod
     def available_ports(cls) -> list[Self]:
         return [cls.from_q_port_info(qpi) for qpi in QSerialPortInfo.availablePorts()]
 
