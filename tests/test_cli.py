@@ -13,3 +13,7 @@ def test_main(monkeypatch):
     from lenlab import __main__
 
     assert __main__
+
+
+def test_port_arg():
+    main(["--preview", "--port", "COM0"])

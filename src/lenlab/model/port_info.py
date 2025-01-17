@@ -7,9 +7,9 @@ from PySide6.QtSerialPort import QSerialPortInfo
 
 @frozen
 class PortInfo:
-    name: str
-    vid: int
-    pid: int
+    name: str = ""
+    vid: int = 0
+    pid: int = 0
 
     q_port_info: QSerialPortInfo | None = None
 
@@ -21,6 +21,10 @@ class PortInfo:
             pid=q_port_info.productIdentifier(),
             q_port_info=q_port_info,
         )
+
+    @classmethod
+    def from_port_name(cls, name: str) -> Self:
+        return cls.from_q_port_info(QSerialPortInfo(name))
 
     @classmethod
     def available_ports(cls) -> list[Self]:
