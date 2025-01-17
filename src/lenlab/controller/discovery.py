@@ -13,6 +13,8 @@ class Discovery(QObject):
     error = Signal(Message)
     ready = Signal()
 
+    Terminal = Terminal
+
     def __init__(self):
         super().__init__()
 
@@ -32,7 +34,7 @@ class Discovery(QObject):
         if select_first:
             del matches[1:]
 
-        self.available_terminals = [Terminal(match) for match in matches]
+        self.available_terminals = [self.Terminal().init_port_info(match) for match in matches]
 
 
 class NoLaunchpad(Message):
