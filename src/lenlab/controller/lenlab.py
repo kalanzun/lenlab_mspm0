@@ -27,31 +27,37 @@ class Lenlab(QObject):
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.on_timeout)
 
-    def discover(self):
+    def discover(self, port=None):
         if sys.platform == "linux":
             if not linux.check_rules():
                 self.error.emit(NoRules())
                 return
 
-        available_ports = PortInfo.available_ports()
-        matches = find_launchpad(available_ports)
-        if not matches:
-            if [pi for pi in available_ports if pi.vid_pid == (ti_vid, 0xFD)]:
-                self.error.emit(TivaLaunchpad())
+        if port is None:
+            available_ports = PortInfo.available_ports()
+            matches = find_launchpad(available_ports)
+            if not matches:
+                if [pi for pi in available_ports if pi.vid_pid == (ti_vid, 0xFD)]:
+                    self.error.emit(TivaLaunchpad())
+                    return
+
+                self.error.emit(NoLaunchpad())
                 return
 
-            self.error.emit(NoLaunchpad())
-            return
+        else:
+            matches = [PortInfo.from_port_name(port)]
 
-        terminal = Terminal.from_port_info(matches[0])
-        terminal.reply.connect(self.on_reply)
-        terminal.error.connect(self.on_error)
-        if terminal.open():
-            terminal.set_baud_rate(1_000_000)
-            self.terminal = terminal
+        for match in matches:
+            # TODO save terminal object
+            # TODO individual timeout for each terminal (mostly to close the other on timeout)
+            terminal = Terminal.from_port_info(match)
+            terminal.reply.connect(self.on_reply)
+            terminal.error.connect(self.on_error)
+            if terminal.open():
+                terminal.set_baud_rate(1_000_000)
 
-            self.timer.start()
-            self.terminal.write(pack(b"8ver?"))  # calls on_reply eventually
+                self.timer.start()
+                terminal.write(pack(b"8ver?"))  # calls on_reply eventually
 
     @Slot(bytes)
     def on_reply(self, reply: bytes):
