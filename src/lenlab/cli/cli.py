@@ -3,7 +3,7 @@ import sys
 from argparse import ArgumentParser
 from importlib import metadata
 
-from lenlab.controller.lenlab import Lenlab
+from lenlab.app.window import MainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +19,12 @@ def command(func):
 def app(args):
     from lenlab.app.app import App
 
-    _app = App.get_instance()
+    app = App.get_instance()
 
-    lenlab = Lenlab()
-    lenlab.ready.connect(lambda: logger.info("ready"))
-    lenlab.ready.connect(_app.quit)
-    lenlab.error.connect(logger.error)
-    lenlab.error.connect(lambda error: _app.quit())
-    lenlab.discover()
+    window = MainWindow()
+    window.show()
 
-    return _app.exec()
+    return app.exec()
 
 
 @command
