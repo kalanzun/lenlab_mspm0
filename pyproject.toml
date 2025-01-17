@@ -58,3 +58,10 @@ select = [
     "SIM",  # flake8-simplify
     "I",  # isort
 ]
+
+[tool.coverage.report]
+omit = [
+    "shibokensupport/*",
+    "pyscript",
+    "signature_bootstrap.py",
+]
