@@ -38,7 +38,7 @@ def error(discovery):
 def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
 
-    assert error.is_single_message(NoLaunchpad)
+    assert isinstance(error.get_single_arg(), NoLaunchpad)
     assert discovery.terminals == []
 
 
@@ -47,7 +47,7 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert error.is_single_message(TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), TivaLaunchpad)
     assert discovery.terminals == []
 
 
@@ -125,7 +125,7 @@ def test_invalid_firmware_version(discovery, terminal, error):
     reply = b"L8\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert error.is_single_message(InvalidFirmwareVersion)
+    assert isinstance(error.get_single_arg(), InvalidFirmwareVersion)
 
 
 def test_invalid_reply(discovery, terminal, error):
@@ -134,7 +134,7 @@ def test_invalid_reply(discovery, terminal, error):
     reply = b"\x00\x00\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert error.is_single_message(InvalidReply)
+    assert isinstance(error.get_single_arg(), InvalidReply)
 
 
 def test_terminal_error(discovery, terminal, error):
@@ -142,7 +142,7 @@ def test_terminal_error(discovery, terminal, error):
 
     terminal.error.emit(TerminalResourceError())
 
-    assert error.is_single_message(TerminalResourceError)
+    assert isinstance(error.get_single_arg(), TerminalResourceError)
 
 
 def test_no_firmware(discovery, terminal, error):
@@ -151,7 +151,7 @@ def test_no_firmware(discovery, terminal, error):
     assert discovery.timer.isActive()
     discovery.timer.timeout.emit()
 
-    assert error.is_single_message(NoFirmware)
+    assert isinstance(error.get_single_arg(), NoFirmware)
 
 
 def test_open_fails(discovery, terminal, error):
@@ -161,7 +161,7 @@ def test_open_fails(discovery, terminal, error):
 
     terminal.error.emit(TerminalPermissionError())
 
-    assert error.is_single_message(TerminalPermissionError)
+    assert isinstance(error.get_single_arg(), TerminalPermissionError)
 
 
 def test_ignore_replies_when_inactive(discovery):

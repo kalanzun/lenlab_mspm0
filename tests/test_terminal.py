@@ -19,7 +19,7 @@ def test_open_fails():
     error = Spy(terminal.error)
 
     assert not terminal.open()
-    assert error.is_single_message(TerminalNotFoundError)
+    assert isinstance(error.get_single_arg(), TerminalNotFoundError)
 
 
 class MockPort(QSerialPort):
@@ -118,14 +118,14 @@ def test_permission_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.PermissionError)
 
-    assert error.is_single_message(TerminalPermissionError)
+    assert isinstance(error.get_single_arg(), TerminalPermissionError)
 
 
 def test_resource_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.ResourceError)
 
-    assert error.is_single_message(TerminalResourceError)
+    assert isinstance(error.get_single_arg(), TerminalResourceError)
 
     assert not terminal.is_open
 
@@ -134,6 +134,6 @@ def test_terminal_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.UnknownError)
 
-    assert error.is_single_message(TerminalError)
+    assert isinstance(error.get_single_arg(), TerminalError)
 
     assert not terminal.is_open

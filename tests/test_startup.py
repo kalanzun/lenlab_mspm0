@@ -6,11 +6,18 @@ from attrs import frozen
 from PySide6.QtCore import QByteArray
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad.discovery import Discovery, NoLaunchpad, TivaLaunchpad
+from lenlab.launchpad.discovery import (
+    Discovery,
+    InvalidFirmwareVersion,
+    InvalidReply,
+    NoFirmware,
+    NoLaunchpad,
+    TivaLaunchpad,
+)
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
-from lenlab.launchpad.terminal import TerminalNotFoundError, TerminalPermissionError
+from lenlab.launchpad.terminal import InvalidPacket, TerminalNotFoundError, TerminalPermissionError
 from lenlab.spy import Spy
 
 logger = getLogger(__name__)
@@ -173,7 +180,7 @@ def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert error.is_single_message(NoLaunchpad)
+    assert isinstance(error.get_single_arg(), NoLaunchpad)
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -187,7 +194,7 @@ def test_tiva_launchpad(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert error.is_single_message(TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), TivaLaunchpad)
 
 
 def test_no_permission(available_ports, discovery, error):
@@ -206,7 +213,7 @@ def test_no_permission(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert error.is_single_message(TerminalPermissionError)
+    assert isinstance(error.get_single_arg(), TerminalPermissionError)
 
 
 def test_not_found(available_ports, discovery, error):
@@ -216,4 +223,62 @@ def test_not_found(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert error.is_single_message(TerminalNotFoundError)
+    assert isinstance(error.get_single_arg(), TerminalNotFoundError)
+
+
+def test_invalid_firmware_version(available_ports, discovery, error):
+    logger.info("Invalid Firmware Version")
+    available_ports.extend(
+        [
+            MockPortInfo("COM1", ti_vid, lp_pid, reply=b"L8\x00\x000a0\x00"),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    assert isinstance(error.get_single_arg(), InvalidFirmwareVersion)
+
+
+def test_invalid_packet(available_ports, discovery, error):
+    logger.info("Invalid Packet")
+    available_ports.extend(
+        [
+            MockPortInfo("COM1", ti_vid, lp_pid, reply=bytearray(8)),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    assert isinstance(error.get_single_arg(), InvalidPacket)
+
+
+def test_invalid_reply(available_ports, discovery, error):
+    logger.info("Invalid Reply")
+    available_ports.extend(
+        [
+            MockPortInfo("COM1", ti_vid, lp_pid, reply=b"L\x00\x00\x00\x00\x00\x00\x00"),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    assert isinstance(error.get_single_arg(), InvalidReply)
+
+
+def test_no_firmware(available_ports, discovery, error):
+    logger.info("No Firmware")
+    available_ports.extend(
+        [
+            MockPortInfo("COM1", ti_vid, lp_pid),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    discovery.timer.timeout.emit()
+
+    assert isinstance(error.get_single_arg(), NoFirmware)
