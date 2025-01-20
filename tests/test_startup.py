@@ -1,15 +1,19 @@
 import sys
+from logging import getLogger
 
 import pytest
 from attrs import frozen
 from PySide6.QtCore import QByteArray
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad.discovery import Discovery
-from lenlab.launchpad.launchpad import lp_pid, ti_vid
+from lenlab.launchpad.discovery import Discovery, NoLaunchpad, TivaLaunchpad
+from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
+from lenlab.launchpad.terminal import TerminalNotFoundError, TerminalPermissionError
 from lenlab.spy import Spy
+
+logger = getLogger(__name__)
 
 
 @pytest.fixture()
@@ -35,13 +39,22 @@ def win32(monkeypatch):
 
 
 class MockPort(QSerialPort):
-    def __init__(self, reply: bytes | None = None):
+    def __init__(
+        self, reply: bytes | None = None, error: QSerialPort.SerialPortError | None = None
+    ):
         super().__init__()
 
         self.reply = reply
+        self.error = error
 
     def open(self, mode):
-        return True
+        self.errorOccurred.emit(QSerialPort.SerialPortError.NoError)
+
+        if self.error is None:
+            return True
+        else:
+            self.errorOccurred.emit(self.error)
+            return False
 
     def clear(self) -> None:
         pass
@@ -69,9 +82,10 @@ class MockPort(QSerialPort):
 @frozen
 class MockPortInfo(PortInfo):
     reply: bytes | None = None
+    error: QSerialPort.SerialPortError | None = None
 
     def create_port(self) -> QSerialPort:
-        return MockPort(self.reply)
+        return MockPort(reply=self.reply, error=self.error)
 
 
 @pytest.fixture()
@@ -84,7 +98,14 @@ def ready(discovery):
     return Spy(discovery.ready)
 
 
+@pytest.fixture()
+def error(discovery):
+    discovery.error.connect(logger.info)
+    return Spy(discovery.error)
+
+
 def test_darwin(available_ports, darwin, discovery, ready):
+    logger.info("Mac, Launchpad ready")
     available_ports.extend(
         [
             MockPortInfo("cu.usbmodemMG3500014", ti_vid, lp_pid),
@@ -103,6 +124,7 @@ def test_darwin(available_ports, darwin, discovery, ready):
 
 
 def test_linux(available_ports, linux, discovery, ready):
+    logger.info("Linux, Launchpad ready")
     available_ports.extend(
         [
             MockPortInfo("ttyACM0", ti_vid, lp_pid, reply=get_example_version_reply()),
@@ -117,6 +139,7 @@ def test_linux(available_ports, linux, discovery, ready):
 
 
 def test_windows(available_ports, win32, discovery, ready):
+    logger.info("Windows, Launchpad ready")
     available_ports.extend(
         [
             MockPortInfo("COM3", ti_vid, lp_pid),
@@ -131,6 +154,7 @@ def test_windows(available_ports, win32, discovery, ready):
 
 
 def test_windows_reversed(available_ports, win32, discovery, ready):
+    logger.info("Windows, Launchpad reversed and ready")
     available_ports.extend(
         [
             MockPortInfo("COM3", ti_vid, lp_pid, reply=get_example_version_reply()),
@@ -142,3 +166,54 @@ def test_windows_reversed(available_ports, win32, discovery, ready):
     discovery.probe()
 
     assert ready.count() == 1
+
+
+def test_no_launchpad(available_ports, discovery, error):
+    logger.info("No Launchpad")
+    discovery.find()
+    discovery.probe()
+
+    assert error.is_single_message(NoLaunchpad)
+
+
+def test_tiva_launchpad(available_ports, discovery, error):
+    logger.info("Tiva Launchpad")
+    available_ports.extend(
+        [
+            MockPortInfo("COM1", ti_vid, tiva_pid),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    assert error.is_single_message(TivaLaunchpad)
+
+
+def test_no_permission(available_ports, discovery, error):
+    logger.info("No Permission")
+    available_ports.extend(
+        [
+            MockPortInfo(
+                "COM1",
+                ti_vid,
+                lp_pid,
+                error=QSerialPort.SerialPortError.PermissionError,
+            ),
+        ]
+    )
+
+    discovery.find()
+    discovery.probe()
+
+    assert error.is_single_message(TerminalPermissionError)
+
+
+def test_not_found(available_ports, discovery, error):
+    logger.info("Not Found")
+
+    discovery.port = "COM0"
+    discovery.find()
+    discovery.probe()
+
+    assert error.is_single_message(TerminalNotFoundError)
