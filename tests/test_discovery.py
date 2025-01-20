@@ -176,7 +176,7 @@ def test_open_fails(discovery, terminal, error):
 
     discovery.probe()
 
-    terminal.error.emit(Terminal.NoPermission())
+    terminal.error.emit(Terminal.NoPermission("COM0"))
 
     assert isinstance(error.get_single_arg(), Terminal.NoPermission)
 

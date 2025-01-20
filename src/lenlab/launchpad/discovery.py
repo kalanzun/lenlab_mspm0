@@ -2,8 +2,10 @@ import logging
 import sys
 from typing import cast
 
+from attrs import frozen
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
+from ..message import Message
 from . import linux
 from .launchpad import find_launchpad, find_tiva_launchpad
 from .port_info import PortInfo
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Discovery(QObject):
     available = Signal()  # terminals available for programming or probing
     ready = Signal(Terminal)  # firmware (correct version) connection established
-    error = Signal(Exception)
+    error = Signal(Message)
 
     port: str
     interval: int = 600
@@ -85,17 +87,17 @@ class Discovery(QObject):
         terminal = cast(Terminal, self.sender())
         self.terminals = [terminal]
 
+        app_version = get_app_version()
         if fw_version := unpack_fw_version(reply):
-            app_version = get_app_version()
             if fw_version == app_version:
                 self.ready.emit(terminal)
             else:
                 self.error.emit(self.InvalidVersion(fw_version, app_version))
 
         else:
-            self.error.emit(self.InvalidReply())
+            self.error.emit(self.InvalidReply(app_version))
 
-    @Slot(Exception)
+    @Slot(Message)
     def on_error(self, error):
         if not self.timer.isActive():
             return
@@ -107,20 +109,111 @@ class Discovery(QObject):
     def on_timeout(self):
         self.error.emit(self.NoFirmware())
 
-    class NoLaunchpad(Exception):
-        pass
+    @frozen
+    class NoLaunchpad(Message):
+        english = """
+        No Launchpad found
 
-    class TivaLaunchpad(Exception):
-        pass
+        Connect the Launchpad via USB to your computer.
+        """
 
-    class NoRules(Exception):
-        pass
+        german = """
+        Kein Launchpad gefunden
 
-    class InvalidVersion(Exception):
-        pass
+        Verbinden Sie das Launchpad über USB mit Ihrem Computer.
+        """
 
-    class InvalidReply(Exception):
-        pass
+    @frozen
+    class TivaLaunchpad(Message):
+        english = """
+        Tiva C-Series Launchpad found
 
-    class NoFirmware(Exception):
-        pass
+        This Lenlab Version 8 works with the Launchpad LP-MSPM0G3507.
+        Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
+        works with the Tiva C-Series Launchpad EK-TM4C123GXL.
+        """
+
+        german = """
+        Tiva C-Serie Launchpad gefunden
+
+        Dieses Lenlab in Version 8 funktioniert mit dem Launchpad LP-MSPM0G3507.
+        Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
+        funktioniert mit dem Tiva C-Serie Launchpad EK-TM4C123GXL.
+        """
+
+    @frozen
+    class NoRules(Message):
+        english = """
+        No Launchpad rules installed
+
+        The Launchpad rules prevent a program called ModemManager
+        to connect to the Launchpad and block Lenlab.
+
+        Disconnect the Launchpad from the computer and install the Launchpad rules.
+
+        "Install rules" will asks for root access.
+        """
+
+        german = """
+        Keine Launchpad-Regeln installiert
+
+        Die Launchpad-Regeln verbieten einem Programms namens ModemManager
+        den Verbindungsaufbau mit dem Launchpad und die Blockade Lenlabs.
+
+        Trennen Sie das Launchpad vom Computer und installieren Sie die Launchpad-Regeln. 
+
+        "Regeln installieren" wird nach root-Zugriff fragen.
+        """
+
+    @frozen
+    class InvalidVersion(Message):
+        fw_version: str
+        app_version: str
+
+        english = """
+        Invalid firmware version: {fw_version}
+
+        This Lenlab requires version {app_version}.
+        Write the current version to the Launchpad with the Programmer.
+        """
+
+        german = """
+        Ungültige Firmware-Version: {fw_version}
+
+        Dieses Lenlab benötigt Version {app_version}.
+        Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
+        """
+
+    @frozen
+    class InvalidReply(Message):
+        app_version: str
+
+        english = """
+        Invalid firmware version
+
+        This Lenlab requires version {app_version}.
+        Write the current version to the Launchpad with the Programmer.
+        """
+
+        german = """
+        Ungültige Firmware-Version
+
+        Dieses Lenlab benötigt Version {app_version}.
+        Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
+        """
+
+    @frozen
+    class NoFirmware(Message):
+        english = """
+        No reply received from the Launchpad
+
+        Lenlab requires the Lenlab firmware on the Launchpad.
+        Write the firmware on the Launchpad with the Programmer.
+        """
+
+        german = """
+        Keine Antwort vom Launchpad erhalten
+
+        Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
+        Schreiben Sie die Firmware mit dem Programmierer auf das Launchpad.
+        """

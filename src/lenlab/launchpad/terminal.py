@@ -1,9 +1,11 @@
 import logging
 from typing import Self
 
+from attrs import frozen
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
+from ..message import Message
 from .port_info import PortInfo
 
 logger = logging.getLogger(__name__)
@@ -11,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Terminal(QObject):
     ack = Signal()
-    error = Signal(Exception)
+    error = Signal(Message)
     reply = Signal(bytes)
     closed = Signal()
 
@@ -86,7 +88,7 @@ class Terminal(QObject):
         elif error is QSerialPort.SerialPortError.PermissionError:
             self.error.emit(self.NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(self.ResourceError(self.port_name))
+            self.error.emit(self.ResourceError())
             self.close()
         else:
             logger.debug(f"{self.port_name}: {self.port.errorString()}")
@@ -117,20 +119,94 @@ class Terminal(QObject):
             packet = self.read(n)
             self.error.emit(self.InvalidPacket(n, packet[:12]))
 
-    class NotFound(Exception):
-        pass
+    @frozen
+    class NotFound(Message):
+        name: str
 
-    class NoPermission(Exception):
-        pass
+        english = """
+        Port {name} not found
+        
+        The system does not know about a port "{name}".
+        """
 
-    class ResourceError(Exception):
-        pass
+        german = """
+        Port {name} nicht gefunden
+        
+        Das System kennt keinen Port "{name}".
+        """
 
-    class OtherError(Exception):
-        pass
+    @frozen
+    class NoPermission(Message):
+        name: str
 
-    class OverlongPacket(Exception):
-        pass
+        english = """
+        Permission denied on the Launchpad port {name}
 
-    class InvalidPacket(Exception):
-        pass
+        Lenlab was not allowed to access the Launchpad port.
+        
+        Maybe another instance of Lenlab is running and blocking the port?
+        """
+
+        german = """
+        Zugriff verweigert auf den Launchpad-Port {name}
+        
+        Lenlab wurde der Zugriff auf den Launchpad-Port nicht erlaubt.
+        
+        Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Port?
+        """
+
+    @frozen
+    class ResourceError(Message):
+        english = """
+        The Launchpad vanished
+        
+        Connect the Launchpad via USB to your computer again.
+        """
+
+        german = """
+        Das Launchpad ist verschwunden.
+        
+        Verbinden Sie das Launchpad wieder über USB mit Ihrem Computer.
+        """
+
+    @frozen
+    class OtherError(Message):
+        name: str
+        text: str
+
+        english = """
+        Other error on port {name}
+        
+        {text}
+        """
+
+        german = """
+        Anderer Fehler auf Port {name}
+        
+        {text}
+        """
+
+    @frozen
+    class OverlongPacket(Message):
+        n: int
+        packet: bytes
+
+        english = """
+        Overlong packet received: length = {n}, packet = {packet}
+        """
+
+        german = """
+        Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
+        """
+
+    @frozen
+    class InvalidPacket(Message):
+        n: int
+        packet: bytes
+
+        english = """
+        Invalid packet received: length = {n}, packet = {packet}
+        """
+        german = """
+        Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
+        """
