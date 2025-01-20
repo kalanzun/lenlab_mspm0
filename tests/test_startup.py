@@ -6,14 +6,8 @@ from attrs import frozen
 from PySide6.QtCore import QByteArray
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.launchpad.discovery import (
-    Discovery,
-    InvalidFirmwareVersion,
-    InvalidReply,
-    NoFirmware,
-    NoLaunchpad,
-    TivaLaunchpad,
-)
+from lenlab.launchpad import discovery as discovery_module
+from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
@@ -23,26 +17,37 @@ from lenlab.spy import Spy
 logger = getLogger(__name__)
 
 
+@pytest.fixture(autouse=True)
+def platform_any(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "any")
+
+
+@pytest.fixture()
+def platform_darwin(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "darwin")
+
+
+@pytest.fixture()
+def platform_linux(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(discovery_module, "check_rules", lambda: True)
+
+
+@pytest.fixture()
+def no_rules(monkeypatch):
+    monkeypatch.setattr(discovery_module, "check_rules", lambda: False)
+
+
+@pytest.fixture()
+def platform_win32(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+
+
 @pytest.fixture()
 def available_ports(monkeypatch):
     available_ports = []
     monkeypatch.setattr(PortInfo, "available_ports", lambda: available_ports)
     return available_ports
-
-
-@pytest.fixture()
-def darwin(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "darwin")
-
-
-@pytest.fixture()
-def linux(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "linux")
-
-
-@pytest.fixture()
-def win32(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "win32")
 
 
 class MockPort(QSerialPort):
@@ -111,7 +116,7 @@ def error(discovery):
     return Spy(discovery.error)
 
 
-def test_darwin(available_ports, darwin, discovery, ready):
+def test_darwin(platform_darwin, available_ports, discovery, ready):
     logger.info("Mac, Launchpad ready")
     available_ports.extend(
         [
@@ -130,7 +135,7 @@ def test_darwin(available_ports, darwin, discovery, ready):
     assert ready.count() == 1
 
 
-def test_linux(available_ports, linux, discovery, ready):
+def test_linux(platform_linux, available_ports, discovery, ready):
     logger.info("Linux, Launchpad ready")
     available_ports.extend(
         [
@@ -145,7 +150,7 @@ def test_linux(available_ports, linux, discovery, ready):
     assert ready.count() == 1
 
 
-def test_windows(available_ports, win32, discovery, ready):
+def test_windows(platform_win32, available_ports, discovery, ready):
     logger.info("Windows, Launchpad ready")
     available_ports.extend(
         [
@@ -160,7 +165,7 @@ def test_windows(available_ports, win32, discovery, ready):
     assert ready.count() == 1
 
 
-def test_windows_reversed(available_ports, win32, discovery, ready):
+def test_windows_reversed(platform_win32, available_ports, discovery, ready):
     logger.info("Windows, Launchpad reversed and ready")
     available_ports.extend(
         [
@@ -178,9 +183,15 @@ def test_windows_reversed(available_ports, win32, discovery, ready):
 def test_no_launchpad(available_ports, discovery, error):
     logger.info("No Launchpad")
     discovery.find()
-    discovery.probe()
 
-    assert isinstance(error.get_single_arg(), NoLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_module.NoLaunchpad)
+
+
+def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
+    logger.info("Linux, No Rules")
+    discovery.find()
+
+    assert isinstance(error.get_single_arg(), discovery_module.NoRules)
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -192,9 +203,8 @@ def test_tiva_launchpad(available_ports, discovery, error):
     )
 
     discovery.find()
-    discovery.probe()
 
-    assert isinstance(error.get_single_arg(), TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_module.TivaLaunchpad)
 
 
 def test_no_permission(available_ports, discovery, error):
@@ -237,7 +247,7 @@ def test_invalid_firmware_version(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), InvalidFirmwareVersion)
+    assert isinstance(error.get_single_arg(), discovery_module.InvalidFirmwareVersion)
 
 
 def test_invalid_packet(available_ports, discovery, error):
@@ -265,7 +275,7 @@ def test_invalid_reply(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), InvalidReply)
+    assert isinstance(error.get_single_arg(), discovery_module.InvalidReply)
 
 
 def test_no_firmware(available_ports, discovery, error):
@@ -281,4 +291,4 @@ def test_no_firmware(available_ports, discovery, error):
 
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), NoFirmware)
+    assert isinstance(error.get_single_arg(), discovery_module.NoFirmware)

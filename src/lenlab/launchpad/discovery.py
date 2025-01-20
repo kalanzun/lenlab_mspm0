@@ -5,6 +5,7 @@ from typing import cast
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from .launchpad import find_launchpad, find_tiva_launchpad
+from .linux import check_rules
 from .port_info import PortInfo
 from .protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
@@ -35,6 +36,11 @@ class Discovery(QObject):
 
     @Slot()
     def find(self):
+        if sys.platform == "linux":
+            if not check_rules():
+                self.error.emit(NoRules())
+                return
+
         if self.port:
             matches = [PortInfo.from_name(self.port)]
         else:
@@ -100,6 +106,10 @@ class Discovery(QObject):
     @Slot()
     def on_timeout(self):
         self.error.emit(NoFirmware())
+
+
+class NoRules(Exception):
+    pass
 
 
 class TivaLaunchpad(Exception):

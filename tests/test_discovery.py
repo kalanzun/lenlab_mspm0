@@ -2,19 +2,39 @@ import sys
 
 import pytest
 
-from lenlab.launchpad.discovery import (
-    Discovery,
-    InvalidFirmwareVersion,
-    InvalidReply,
-    NoFirmware,
-    NoLaunchpad,
-    TivaLaunchpad,
-)
+from lenlab.launchpad import discovery as discovery_module
+from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
 from lenlab.launchpad.terminal import Terminal, TerminalPermissionError, TerminalResourceError
 from lenlab.spy import Spy
+
+
+@pytest.fixture(autouse=True)
+def platform_any(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "any")
+
+
+@pytest.fixture()
+def platform_darwin(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "darwin")
+
+
+@pytest.fixture()
+def platform_linux(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(discovery_module, "check_rules", lambda: True)
+
+
+@pytest.fixture()
+def no_rules(monkeypatch):
+    monkeypatch.setattr(discovery_module, "check_rules", lambda: False)
+
+
+@pytest.fixture()
+def platform_win32(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
 
 
 @pytest.fixture()
@@ -38,7 +58,14 @@ def error(discovery):
 def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), NoLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_module.NoLaunchpad)
+    assert discovery.terminals == []
+
+
+def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
+    discovery.find()
+
+    assert isinstance(error.get_single_arg(), discovery_module.NoRules)
     assert discovery.terminals == []
 
 
@@ -47,7 +74,7 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_module.TivaLaunchpad)
     assert discovery.terminals == []
 
 
@@ -60,17 +87,7 @@ def test_port_argument(available_ports):
     assert isinstance(discovery.terminals[0], Terminal)
 
 
-@pytest.fixture()
-def win32(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "win32")
-
-
-@pytest.fixture()
-def linux(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "linux")
-
-
-def test_select_first(available_ports, discovery, linux):
+def test_select_first(available_ports, discovery):
     available_ports.append(PortInfo("ttyS0", ti_vid, lp_pid))
     available_ports.append(PortInfo("ttyS1", ti_vid, lp_pid))
 
@@ -80,7 +97,7 @@ def test_select_first(available_ports, discovery, linux):
     assert isinstance(discovery.terminals[0], Terminal)
 
 
-def test_no_selection_on_windows(available_ports, discovery, win32):
+def test_no_selection_on_windows(platform_win32, available_ports, discovery):
     available_ports.append(PortInfo("COM0", ti_vid, lp_pid))
     available_ports.append(PortInfo("COM1", ti_vid, lp_pid))
 
@@ -125,7 +142,7 @@ def test_invalid_firmware_version(discovery, terminal, error):
     reply = b"L8\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), InvalidFirmwareVersion)
+    assert isinstance(error.get_single_arg(), discovery_module.InvalidFirmwareVersion)
 
 
 def test_invalid_reply(discovery, terminal, error):
@@ -134,7 +151,7 @@ def test_invalid_reply(discovery, terminal, error):
     reply = b"\x00\x00\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), InvalidReply)
+    assert isinstance(error.get_single_arg(), discovery_module.InvalidReply)
 
 
 def test_terminal_error(discovery, terminal, error):
@@ -151,7 +168,7 @@ def test_no_firmware(discovery, terminal, error):
     assert discovery.timer.isActive()
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), NoFirmware)
+    assert isinstance(error.get_single_arg(), discovery_module.NoFirmware)
 
 
 def test_open_fails(discovery, terminal, error):
