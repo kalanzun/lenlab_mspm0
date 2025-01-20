@@ -4,22 +4,8 @@ from PySide6.QtSerialPort import QSerialPort
 from PySide6.QtTest import QSignalSpy
 
 from lenlab.launchpad.port_info import PortInfo
-from lenlab.launchpad.terminal import (
-    Terminal,
-    TerminalError,
-    TerminalNotFoundError,
-    TerminalPermissionError,
-    TerminalResourceError,
-)
+from lenlab.launchpad.terminal import Terminal
 from lenlab.spy import Spy
-
-
-def test_open_fails():
-    terminal = Terminal.from_port_info(PortInfo.from_name("COM0"))
-    error = Spy(terminal.error)
-
-    assert not terminal.open()
-    assert isinstance(error.get_single_arg(), TerminalNotFoundError)
 
 
 class MockPort(QSerialPort):
@@ -73,6 +59,14 @@ def error(terminal):
     return error
 
 
+def test_open_fails():
+    terminal = Terminal.from_port_info(PortInfo.from_name("COM0"))
+    error = Spy(terminal.error)
+
+    assert not terminal.open()
+    assert isinstance(error.get_single_arg(), Terminal.NotFound)
+
+
 def test_open_and_close(terminal, error):
     closed = QSignalSpy(terminal.closed)
 
@@ -118,14 +112,14 @@ def test_permission_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.PermissionError)
 
-    assert isinstance(error.get_single_arg(), TerminalPermissionError)
+    assert isinstance(error.get_single_arg(), Terminal.NoPermission)
 
 
 def test_resource_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.ResourceError)
 
-    assert isinstance(error.get_single_arg(), TerminalResourceError)
+    assert isinstance(error.get_single_arg(), Terminal.ResourceError)
 
     assert not terminal.is_open
 
@@ -134,6 +128,6 @@ def test_terminal_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.UnknownError)
 
-    assert isinstance(error.get_single_arg(), TerminalError)
+    assert isinstance(error.get_single_arg(), Terminal.OtherError)
 
     assert not terminal.is_open

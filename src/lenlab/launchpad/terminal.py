@@ -82,15 +82,15 @@ class Terminal(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.DeviceNotFoundError:
-            self.error.emit(TerminalNotFoundError(self.port_name))
+            self.error.emit(self.NotFound(self.port_name))
         elif error is QSerialPort.SerialPortError.PermissionError:
-            self.error.emit(TerminalPermissionError(self.port_name))
+            self.error.emit(self.NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(TerminalResourceError(self.port_name))
+            self.error.emit(self.ResourceError(self.port_name))
             self.close()
         else:
             logger.debug(f"{self.port_name}: {self.port.errorString()}")
-            self.error.emit(TerminalError(self.port_name, self.port.errorString()))
+            self.error.emit(self.OtherError(self.port_name, self.port.errorString()))
             self.close()
 
     @Slot()
@@ -105,7 +105,7 @@ class Terminal(QObject):
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)
-                    self.error.emit(OverlongPacket(n, packet[:12]))
+                    self.error.emit(self.OverlongPacket(n, packet[:12]))
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
@@ -115,28 +115,22 @@ class Terminal(QObject):
 
         else:
             packet = self.read(n)
-            self.error.emit(InvalidPacket(n, packet[:12]))
+            self.error.emit(self.InvalidPacket(n, packet[:12]))
 
+    class NotFound(Exception):
+        pass
 
-class TerminalError(Exception):
-    pass
+    class NoPermission(Exception):
+        pass
 
+    class ResourceError(Exception):
+        pass
 
-class TerminalNotFoundError(Exception):
-    pass
+    class OtherError(Exception):
+        pass
 
+    class OverlongPacket(Exception):
+        pass
 
-class TerminalPermissionError(Exception):
-    pass
-
-
-class TerminalResourceError(Exception):
-    pass
-
-
-class OverlongPacket(Exception):
-    pass
-
-
-class InvalidPacket(Exception):
-    pass
+    class InvalidPacket(Exception):
+        pass

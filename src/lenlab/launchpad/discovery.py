@@ -4,8 +4,8 @@ from typing import cast
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
+from . import linux
 from .launchpad import find_launchpad, find_tiva_launchpad
-from .linux import check_rules
 from .port_info import PortInfo
 from .protocol import get_app_version, pack, unpack_fw_version
 from .terminal import Terminal
@@ -37,8 +37,8 @@ class Discovery(QObject):
     @Slot()
     def find(self):
         if sys.platform == "linux":
-            if not check_rules():
-                self.error.emit(NoRules())
+            if not linux.check_rules():
+                self.error.emit(self.NoRules())
                 return
 
         if self.port:
@@ -48,10 +48,10 @@ class Discovery(QObject):
             matches = find_launchpad(available_ports)
             if not matches:
                 if find_tiva_launchpad(available_ports):
-                    self.error.emit(TivaLaunchpad())
+                    self.error.emit(self.TivaLaunchpad())
                     return
 
-                self.error.emit(NoLaunchpad())
+                self.error.emit(self.NoLaunchpad())
                 return
 
             if sys.platform != "win32":
@@ -90,10 +90,10 @@ class Discovery(QObject):
             if fw_version == app_version:
                 self.ready.emit(terminal)
             else:
-                self.error.emit(InvalidFirmwareVersion(fw_version, app_version))
+                self.error.emit(self.InvalidVersion(fw_version, app_version))
 
         else:
-            self.error.emit(InvalidReply())
+            self.error.emit(self.InvalidReply())
 
     @Slot(Exception)
     def on_error(self, error):
@@ -105,28 +105,22 @@ class Discovery(QObject):
 
     @Slot()
     def on_timeout(self):
-        self.error.emit(NoFirmware())
+        self.error.emit(self.NoFirmware())
 
+    class NoLaunchpad(Exception):
+        pass
 
-class NoRules(Exception):
-    pass
+    class TivaLaunchpad(Exception):
+        pass
 
+    class NoRules(Exception):
+        pass
 
-class TivaLaunchpad(Exception):
-    pass
+    class InvalidVersion(Exception):
+        pass
 
+    class InvalidReply(Exception):
+        pass
 
-class NoLaunchpad(Exception):
-    pass
-
-
-class InvalidFirmwareVersion(Exception):
-    pass
-
-
-class InvalidReply(Exception):
-    pass
-
-
-class NoFirmware(Exception):
-    pass
+    class NoFirmware(Exception):
+        pass
