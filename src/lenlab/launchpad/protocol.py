@@ -20,3 +20,8 @@ def get_app_version() -> str:
     # compare without bugfix release (third version number)
     major, minor, *rest = metadata.version("lenlab").split(".")
     return f"{major}.{minor}"
+
+
+def get_example_version_reply() -> bytes:
+    version = get_app_version()
+    return b"L8\x00\x00" + version[2:].encode("ascii").ljust(4, b"\x00")

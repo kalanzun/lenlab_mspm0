@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import cast
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
@@ -12,19 +13,20 @@ logger = logging.getLogger(__name__)
 
 
 class Discovery(QObject):
-    result = Signal(Terminal)
+    available = Signal()  # terminals available for programming or probing
+    ready = Signal(Terminal)  # firmware (correct version) connection established
     error = Signal(Exception)
 
     port: str
     interval: int = 600
 
-    available_terminals: list[Terminal]
+    terminals: list[Terminal]
 
     def __init__(self, port: str = ""):
         super().__init__()
 
         self.port = port
-        self.available_terminals = []
+        self.terminals = []
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
@@ -49,12 +51,13 @@ class Discovery(QObject):
             if sys.platform != "win32":
                 del matches[1:]
 
-        self.available_terminals = [Terminal.from_port_info(pi) for pi in matches]
+        self.terminals = [Terminal.from_port_info(pi) for pi in matches]
+        self.available.emit()
 
     @Slot()
     def probe(self):
         self.timer.start()
-        for terminal in self.available_terminals:
+        for terminal in self.terminals:
             terminal.reply.connect(self.on_reply)
             terminal.error.connect(self.on_error)
 
@@ -71,13 +74,15 @@ class Discovery(QObject):
             return
 
         self.timer.stop()
+
         # now we know which terminal talks to the firmware
-        self.available_terminals = [self.sender()]
+        terminal = cast(Terminal, self.sender())
+        self.terminals = [terminal]
 
         if fw_version := unpack_fw_version(reply):
             app_version = get_app_version()
             if fw_version == app_version:
-                self.result.emit(self.sender())
+                self.ready.emit(terminal)
             else:
                 self.error.emit(InvalidFirmwareVersion(fw_version, app_version))
 

@@ -12,7 +12,7 @@ from lenlab.launchpad.discovery import (
 )
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
-from lenlab.launchpad.protocol import get_app_version
+from lenlab.launchpad.protocol import get_example_version_reply
 from lenlab.launchpad.terminal import Terminal, TerminalPermissionError, TerminalResourceError
 from lenlab.spy import Spy
 
@@ -39,7 +39,7 @@ def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
 
     assert error.is_single_message(NoLaunchpad)
-    assert discovery.available_terminals == []
+    assert discovery.terminals == []
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -48,7 +48,7 @@ def test_tiva_launchpad(available_ports, discovery, error):
     discovery.find()
 
     assert error.is_single_message(TivaLaunchpad)
-    assert discovery.available_terminals == []
+    assert discovery.terminals == []
 
 
 def test_port_argument(available_ports):
@@ -56,8 +56,8 @@ def test_port_argument(available_ports):
 
     discovery.find()
 
-    assert len(discovery.available_terminals) == 1
-    assert isinstance(discovery.available_terminals[0], Terminal)
+    assert len(discovery.terminals) == 1
+    assert isinstance(discovery.terminals[0], Terminal)
 
 
 @pytest.fixture()
@@ -76,8 +76,8 @@ def test_select_first(available_ports, discovery, linux):
 
     discovery.find()
 
-    assert len(discovery.available_terminals) == 1
-    assert isinstance(discovery.available_terminals[0], Terminal)
+    assert len(discovery.terminals) == 1
+    assert isinstance(discovery.terminals[0], Terminal)
 
 
 def test_no_selection_on_windows(available_ports, discovery, win32):
@@ -86,9 +86,9 @@ def test_no_selection_on_windows(available_ports, discovery, win32):
 
     discovery.find()
 
-    assert len(discovery.available_terminals) == 2
-    assert isinstance(discovery.available_terminals[0], Terminal)
-    assert isinstance(discovery.available_terminals[1], Terminal)
+    assert len(discovery.terminals) == 2
+    assert isinstance(discovery.terminals[0], Terminal)
+    assert isinstance(discovery.terminals[1], Terminal)
 
 
 class MockTerminal(Terminal):
@@ -105,18 +105,16 @@ class MockTerminal(Terminal):
 @pytest.fixture()
 def terminal(discovery):
     terminal = MockTerminal()
-    discovery.available_terminals = [terminal]
+    discovery.terminals = [terminal]
     return terminal
 
 
 def test_probe(discovery, terminal):
-    spy = Spy(discovery.result)
+    spy = Spy(discovery.ready)
 
     discovery.probe()
 
-    version = get_app_version()
-    reply = b"L8\x00\x00" + version[2:].encode("ascii").ljust(4, b"\x00")
-    terminal.reply.emit(reply)
+    terminal.reply.emit(get_example_version_reply())
 
     assert spy.get_single_arg() is terminal
 
@@ -167,11 +165,9 @@ def test_open_fails(discovery, terminal, error):
 
 
 def test_ignore_replies_when_inactive(discovery):
-    spy = Spy(discovery.result)
+    spy = Spy(discovery.ready)
 
-    version = get_app_version()
-    reply = b"L8\x00\x00" + version[2:].encode("ascii").ljust(4, b"\x00")
-    discovery.on_reply(reply)
+    discovery.on_reply(get_example_version_reply())
 
     assert spy.count() == 0
 
