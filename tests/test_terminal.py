@@ -1,6 +1,6 @@
 import pytest
 from PySide6.QtCore import QByteArray
-from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
+from PySide6.QtSerialPort import QSerialPort
 from PySide6.QtTest import QSignalSpy
 
 from lenlab.launchpad import terminal as terminal_messages
@@ -13,6 +13,7 @@ class MockPort(QSerialPort):
     def __init__(self):
         super().__init__()
 
+        self.open_result = True
         self.is_open = False
 
     def bytesAvailable(self):
@@ -22,8 +23,8 @@ class MockPort(QSerialPort):
         return self.is_open
 
     def open(self, mode):
-        self.is_open = True
-        return True
+        self.is_open = self.open_result
+        return self.open_result
 
     def close(self):
         self.is_open = False
@@ -57,9 +58,12 @@ def error(terminal):
     return error
 
 
-def test_open_fails():
-    terminal = Terminal.from_port_info(PortInfo.from_q_port_info(QSerialPortInfo("COM0")))
-    error = Spy(terminal.error)
+def test_open_fails(terminal, error):
+    terminal.port.open_result = False
+
+    terminal.open()  # connects the signals
+    terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.NoError)
+    terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.DeviceNotFoundError)
 
     assert not terminal.open()
     assert isinstance(error.get_single_arg(), terminal_messages.PortError)
@@ -70,10 +74,14 @@ def test_open_and_close(terminal, error):
 
     assert not terminal.is_open
     assert terminal.open()
+    terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.NoError)
+
     assert terminal.is_open
     assert error.count() == 0
 
     assert terminal.open()
+    terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.NoError)
+
     assert terminal.is_open
     assert error.count() == 0
 
@@ -125,3 +133,8 @@ def test_terminal_error(terminal, error):
     assert isinstance(error.get_single_arg(), terminal_messages.PortError)
 
     assert not terminal.is_open
+
+
+def test_from_port_info():
+    terminal = Terminal.from_port_info(PortInfo())
+    assert isinstance(terminal, Terminal)
