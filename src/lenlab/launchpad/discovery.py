@@ -20,15 +20,15 @@ class Discovery(QObject):
     ready = Signal(Terminal)  # firmware (correct version) connection established
     error = Signal(Message)
 
-    port: str
+    port_name: str
     interval: int = 600
 
     terminals: list[Terminal]
 
-    def __init__(self, port: str = ""):
+    def __init__(self, port_name: str = ""):
         super().__init__()
 
-        self.port = port
+        self.port_name = port_name
         self.terminals = []
 
         self.timer = QTimer()
@@ -43,8 +43,14 @@ class Discovery(QObject):
                 self.error.emit(self.NoRules())
                 return
 
-        if self.port:
-            matches = [PortInfo.from_name(self.port)]
+        if self.port_name:
+            pi = PortInfo.from_name(self.port_name)
+            if pi:
+                matches = [pi]
+            else:
+                self.error.emit(self.NotFound(self.port_name))
+                return
+
         else:
             available_ports = PortInfo.available_ports()
             matches = find_launchpad(available_ports)
@@ -108,6 +114,22 @@ class Discovery(QObject):
     @Slot()
     def on_timeout(self):
         self.error.emit(self.NoFirmware())
+
+    @frozen
+    class NotFound(Message):
+        port_name: str
+
+        english = """
+        Port {port_name} not found
+
+        The system does not know about a port "{port_name}".
+        """
+
+        german = """
+        Port {port_name} nicht gefunden
+
+        Das System kennt keinen Port "{port_name}".
+        """
 
     @frozen
     class NoLaunchpad(Message):

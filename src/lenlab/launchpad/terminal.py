@@ -19,24 +19,21 @@ class Terminal(QObject):
 
     port: QSerialPort
 
-    def __init__(self):
+    def __init__(self, port_name: str = ""):
         super().__init__()
 
         self.ack_mode = False
+        self.port_name = port_name
 
     @classmethod
     def from_port_info(cls, port_info: PortInfo) -> Self:
-        terminal = cls()
+        terminal = cls(port_info.name)
         terminal.port = port_info.create_port()
         return terminal
 
     @property
     def bytes_available(self) -> int:
         return self.port.bytesAvailable()
-
-    @property
-    def port_name(self) -> str:
-        return self.port.portName()
 
     @property
     def is_open(self) -> bool:
@@ -55,7 +52,6 @@ class Terminal(QObject):
         # on_error_occurred handles the error case
         logger.debug(f"{self.port_name}: open")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-            logger.debug(f"{self.port_name}: open successful")
             self.port.clear()  # windows might have leftovers
             return True
 
@@ -83,8 +79,6 @@ class Terminal(QObject):
     def on_error_occurred(self, error):
         if error is QSerialPort.SerialPortError.NoError:
             pass
-        elif error is QSerialPort.SerialPortError.DeviceNotFoundError:
-            self.error.emit(self.NotFound(self.port_name))
         elif error is QSerialPort.SerialPortError.PermissionError:
             self.error.emit(self.NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
@@ -118,22 +112,6 @@ class Terminal(QObject):
         else:
             packet = self.read(n)
             self.error.emit(self.InvalidPacket(n, packet[:12]))
-
-    @frozen
-    class NotFound(Message):
-        name: str
-
-        english = """
-        Port {name} not found
-        
-        The system does not know about a port "{name}".
-        """
-
-        german = """
-        Port {name} nicht gefunden
-        
-        Das System kennt keinen Port "{name}".
-        """
 
     @frozen
     class NoPermission(Message):

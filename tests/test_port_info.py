@@ -11,9 +11,16 @@ def available_ports(monkeypatch):
     return available_ports
 
 
-def test_from_port_name():
+def test_from_port_name(monkeypatch):
+    monkeypatch.setattr(QSerialPortInfo, "isNull", lambda self: False)
     pi = PortInfo.from_name("COM0")
-    assert isinstance(pi.q_port_info, QSerialPortInfo)
+
+    assert isinstance(pi, PortInfo)
+
+
+def test_from_port_name_not_found():
+    pi = PortInfo.from_name("COM0")
+    assert pi is None
 
 
 def test_available_ports(available_ports):

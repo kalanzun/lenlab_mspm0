@@ -1,6 +1,6 @@
 import pytest
 from PySide6.QtCore import QByteArray
-from PySide6.QtSerialPort import QSerialPort
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtTest import QSignalSpy
 
 from lenlab.launchpad.port_info import PortInfo
@@ -16,9 +16,6 @@ class MockPort(QSerialPort):
 
     def bytesAvailable(self):
         return 7
-
-    def portName(self):
-        return "COM0"
 
     def isOpen(self):
         return self.is_open
@@ -60,11 +57,11 @@ def error(terminal):
 
 
 def test_open_fails():
-    terminal = Terminal.from_port_info(PortInfo.from_name("COM0"))
+    terminal = Terminal.from_port_info(PortInfo.from_q_port_info(QSerialPortInfo("COM0")))
     error = Spy(terminal.error)
 
     assert not terminal.open()
-    assert isinstance(error.get_single_arg(), Terminal.NotFound)
+    assert isinstance(error.get_single_arg(), Terminal.OtherError)
 
 
 def test_open_and_close(terminal, error):
@@ -84,10 +81,6 @@ def test_open_and_close(terminal, error):
 
     terminal.close()
     assert closed.count() == 1
-
-
-def test_port_name(terminal):
-    assert terminal.port_name == "COM0"
 
 
 def test_baud_rate(terminal):

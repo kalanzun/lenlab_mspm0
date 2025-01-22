@@ -107,6 +107,7 @@ def discovery():
 
 @pytest.fixture()
 def ready(discovery):
+    discovery.ready.connect(lambda terminal: logger.info(f"{terminal.port_name} ready"))
     return Spy(discovery.ready)
 
 
@@ -210,11 +211,10 @@ def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
 def test_not_found(available_ports, discovery, error):
     logger.info("Not Found")
 
-    discovery.port = "COM0"
+    discovery.port_name = "COM0"
     discovery.find()
-    discovery.probe()
 
-    assert isinstance(error.get_single_arg(), Terminal.NotFound)
+    assert isinstance(error.get_single_arg(), Discovery.NotFound)
 
 
 def test_no_permission(available_ports, discovery, error):

@@ -23,8 +23,10 @@ class PortInfo:
         )
 
     @classmethod
-    def from_name(cls, name: str) -> Self:
-        return cls.from_q_port_info(QSerialPortInfo(name))
+    def from_name(cls, name: str) -> Self | None:
+        q_port_info = QSerialPortInfo(name)
+        if not q_port_info.isNull():
+            return cls.from_q_port_info(q_port_info)
 
     @classmethod
     def available_ports(cls) -> list[Self]:

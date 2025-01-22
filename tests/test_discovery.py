@@ -55,6 +55,25 @@ def error(discovery):
     return error
 
 
+def test_port_argument(monkeypatch, available_ports, discovery, error):
+    monkeypatch.setattr(PortInfo, "from_name", lambda name: PortInfo(name))
+
+    discovery.port_name = "COM0"
+    discovery.find()
+
+    assert len(discovery.terminals) == 1
+    assert isinstance(discovery.terminals[0], Terminal)
+
+
+def test_not_found(available_ports, discovery, error):
+    discovery.port_name = "COM0"
+
+    discovery.find()
+
+    assert isinstance(error.get_single_arg(), Discovery.NotFound)
+    assert discovery.terminals == []
+
+
 def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
 
@@ -76,15 +95,6 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     assert isinstance(error.get_single_arg(), Discovery.TivaLaunchpad)
     assert discovery.terminals == []
-
-
-def test_port_argument(available_ports):
-    discovery = Discovery("COM0")
-
-    discovery.find()
-
-    assert len(discovery.terminals) == 1
-    assert isinstance(discovery.terminals[0], Terminal)
 
 
 def test_select_first(available_ports, discovery):
