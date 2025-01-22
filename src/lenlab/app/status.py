@@ -11,10 +11,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import symbols
 from ..launchpad.discovery import Discovery
 from ..launchpad.terminal import Terminal
 from ..message import Message
+from . import symbols
 
 
 class BoardStatus(QWidget):
@@ -57,7 +57,7 @@ class BoardStatus(QWidget):
         pass
 
     @Slot(Terminal)
-    def on_ready(self):
+    def on_ready(self, terminal):
         self.symbol_widget.setFixedSize(24, 24)
         self.symbol_widget.load(symbols.dye(symbols.developer_board_24px, symbols.green))
 

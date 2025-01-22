@@ -2,7 +2,6 @@ import os
 import sys
 
 import pytest
-from PySide6.QtCore import QCoreApplication
 
 
 def pytest_configure(config):
@@ -23,4 +22,13 @@ def pytest_collection_modifyitems(config, items):  # pragma: no cover
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    return QCoreApplication()
+    if "CI" in os.environ:
+        from PySide6.QtCore import QCoreApplication
+        # no QtWidgets in CI
+
+        return QCoreApplication()
+
+    else:
+        from lenlab.app.app import App
+
+        return App()

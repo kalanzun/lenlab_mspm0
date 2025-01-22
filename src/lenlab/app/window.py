@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
-from .status import BoardStatus
 from ..launchpad.discovery import Discovery
+from .status import BoardStatus
 
 
 class MainWindow(QMainWindow):
