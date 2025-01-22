@@ -23,12 +23,17 @@ class MainWindow(QMainWindow):
         # widget
         self.board_status = BoardStatus(self.discovery)
 
+        self.tabs = [
+            LaunchpadWidget(),
+            ProgrammerWidget(),
+            VoltmeterWidget(),
+            OscilloscopeWidget(),
+            BodePlotter(),
+        ]
+
         tab_widget = QTabWidget()
-        tab_widget.addTab(QWidget(), "Launchpad")
-        tab_widget.addTab(QWidget(), "Programmer")
-        tab_widget.addTab(QWidget(), "Voltmeter")
-        tab_widget.addTab(QWidget(), "Oscilloscope")
-        tab_widget.addTab(QWidget(), "Bode Plotter")
+        for tab in self.tabs:
+            tab_widget.addTab(tab, tab.title)
 
         layout = QVBoxLayout()
         layout.addWidget(self.board_status)
