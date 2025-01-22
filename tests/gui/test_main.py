@@ -21,7 +21,8 @@ class MockDiscovery(QObject):
 
 
 class MockWindow:
-    def __init__(self, discovery):
+    def __init__(self, error_report, discovery):
+        self.error_report = error_report
         self.discovery = discovery
 
     def show(self):
