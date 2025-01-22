@@ -80,13 +80,13 @@ class Terminal(QObject):
         if error is QSerialPort.SerialPortError.NoError:
             pass
         elif error is QSerialPort.SerialPortError.PermissionError:
-            self.error.emit(self.NoPermission(self.port_name))
+            self.error.emit(NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(self.ResourceError())
+            self.error.emit(ResourceError())
             self.close()
         else:
             logger.debug(f"{self.port_name}: {self.port.errorString()}")
-            self.error.emit(self.OtherError(self.port_name, self.port.errorString()))
+            self.error.emit(PortError(self.port_name, self.port.errorString()))
             self.close()
 
     @Slot()
@@ -101,7 +101,7 @@ class Terminal(QObject):
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)
-                    self.error.emit(self.OverlongPacket(n, packet[:12]))
+                    self.error.emit(OverlongPacket(n, packet[:12]))
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
@@ -111,80 +111,85 @@ class Terminal(QObject):
 
         else:
             packet = self.read(n)
-            self.error.emit(self.InvalidPacket(n, packet[:12]))
+            self.error.emit(InvalidPacket(n, packet[:12]))
 
-    @frozen
-    class NoPermission(Message):
-        name: str
 
-        english = """
-        Permission denied on the Launchpad port {name}
+@frozen
+class NoPermission(Message):
+    port_name: str
 
-        Lenlab was not allowed to access the Launchpad port.
-        
-        Maybe another instance of Lenlab is running and blocking the port?
-        """
+    english = """
+    Permission denied on the Launchpad port {port_name}
 
-        german = """
-        Zugriff verweigert auf den Launchpad-Port {name}
-        
-        Lenlab wurde der Zugriff auf den Launchpad-Port nicht erlaubt.
-        
-        Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Port?
-        """
+    Lenlab was not allowed to access the Launchpad port.
+    
+    Maybe another instance of Lenlab is running and blocking the port?
+    """
 
-    @frozen
-    class ResourceError(Message):
-        english = """
-        The Launchpad vanished
-        
-        Connect the Launchpad via USB to your computer again.
-        """
+    german = """
+    Zugriff verweigert auf den Launchpad-Port {port_name}
+    
+    Lenlab wurde der Zugriff auf den Launchpad-Port nicht erlaubt.
+    
+    Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Port?
+    """
 
-        german = """
-        Das Launchpad ist verschwunden.
-        
-        Verbinden Sie das Launchpad wieder über USB mit Ihrem Computer.
-        """
 
-    @frozen
-    class OtherError(Message):
-        name: str
-        text: str
+@frozen
+class ResourceError(Message):
+    english = """
+    The Launchpad vanished
+    
+    Connect the Launchpad via USB to your computer again.
+    """
 
-        english = """
-        Other error on port {name}
-        
-        {text}
-        """
+    german = """
+    Das Launchpad ist verschwunden.
+    
+    Verbinden Sie das Launchpad wieder über USB mit Ihrem Computer.
+    """
 
-        german = """
-        Anderer Fehler auf Port {name}
-        
-        {text}
-        """
 
-    @frozen
-    class OverlongPacket(Message):
-        n: int
-        packet: bytes
+@frozen
+class PortError(Message):
+    port_name: str
+    text: str
 
-        english = """
-        Overlong packet received: length = {n}, packet = {packet}
-        """
+    english = """
+    Other error on port {port_name}
+    
+    {text}
+    """
 
-        german = """
-        Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
-        """
+    german = """
+    Anderer Fehler auf Port {port_name}
+    
+    {text}
+    """
 
-    @frozen
-    class InvalidPacket(Message):
-        n: int
-        packet: bytes
 
-        english = """
-        Invalid packet received: length = {n}, packet = {packet}
-        """
-        german = """
-        Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
-        """
+@frozen
+class OverlongPacket(Message):
+    n: int
+    packet: bytes
+
+    english = """
+    Overlong packet received: length = {n}, packet = {packet}
+    """
+
+    german = """
+    Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
+    """
+
+
+@frozen
+class InvalidPacket(Message):
+    n: int
+    packet: bytes
+
+    english = """
+    Invalid packet received: length = {n}, packet = {packet}
+    """
+    german = """
+    Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
+    """

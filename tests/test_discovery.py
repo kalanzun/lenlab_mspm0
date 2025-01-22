@@ -2,7 +2,9 @@ import sys
 
 import pytest
 
+from lenlab.launchpad import discovery as discovery_messages
 from lenlab.launchpad import linux
+from lenlab.launchpad import terminal as terminal_messages
 from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
@@ -70,21 +72,21 @@ def test_not_found(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NotFound)
+    assert isinstance(error.get_single_arg(), discovery_messages.NotFound)
     assert discovery.terminals == []
 
 
 def test_no_launchpad(available_ports, discovery, error):
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoLaunchpad)
     assert discovery.terminals == []
 
 
 def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoRules)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoRules)
     assert discovery.terminals == []
 
 
@@ -93,7 +95,7 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_messages.TivaLaunchpad)
     assert discovery.terminals == []
 
 
@@ -152,7 +154,7 @@ def test_invalid_firmware_version(discovery, terminal, error):
     reply = b"L8\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), Discovery.InvalidVersion)
+    assert isinstance(error.get_single_arg(), discovery_messages.InvalidVersion)
 
 
 def test_invalid_reply(discovery, terminal, error):
@@ -161,15 +163,15 @@ def test_invalid_reply(discovery, terminal, error):
     reply = b"\x00\x00\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), Discovery.InvalidReply)
+    assert isinstance(error.get_single_arg(), discovery_messages.InvalidReply)
 
 
 def test_terminal_error(discovery, terminal, error):
     discovery.probe()
 
-    terminal.error.emit(Terminal.ResourceError())
+    terminal.error.emit(terminal_messages.ResourceError())
 
-    assert isinstance(error.get_single_arg(), Terminal.ResourceError)
+    assert isinstance(error.get_single_arg(), terminal_messages.ResourceError)
 
 
 def test_no_firmware(discovery, terminal, error):
@@ -178,7 +180,7 @@ def test_no_firmware(discovery, terminal, error):
     assert discovery.timer.isActive()
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoFirmware)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoFirmware)
 
 
 def test_open_fails(discovery, terminal, error):
@@ -186,9 +188,9 @@ def test_open_fails(discovery, terminal, error):
 
     discovery.probe()
 
-    terminal.error.emit(Terminal.NoPermission("COM0"))
+    terminal.error.emit(terminal_messages.NoPermission("COM0"))
 
-    assert isinstance(error.get_single_arg(), Terminal.NoPermission)
+    assert isinstance(error.get_single_arg(), terminal_messages.NoPermission)
 
 
 def test_ignore_replies_when_inactive(discovery):
@@ -200,6 +202,6 @@ def test_ignore_replies_when_inactive(discovery):
 
 
 def test_ignore_errors_when_inactive(discovery, error):
-    discovery.on_error(Terminal.ResourceError())
+    discovery.on_error(terminal_messages.ResourceError())
 
     assert error.count() == 0

@@ -6,12 +6,13 @@ from attrs import frozen
 from PySide6.QtCore import QByteArray
 from PySide6.QtSerialPort import QSerialPort
 
+from lenlab.launchpad import discovery as discovery_messages
 from lenlab.launchpad import linux
+from lenlab.launchpad import terminal as terminal_messages
 from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
-from lenlab.launchpad.terminal import Terminal
 from lenlab.spy import Spy
 
 logger = getLogger(__name__)
@@ -185,7 +186,7 @@ def test_no_launchpad(available_ports, discovery, error):
     logger.info("No Launchpad")
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoLaunchpad)
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -198,14 +199,14 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.TivaLaunchpad)
+    assert isinstance(error.get_single_arg(), discovery_messages.TivaLaunchpad)
 
 
 def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
     logger.info("Linux, No Rules")
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoRules)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoRules)
 
 
 def test_not_found(available_ports, discovery, error):
@@ -214,7 +215,7 @@ def test_not_found(available_ports, discovery, error):
     discovery.port_name = "COM0"
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), Discovery.NotFound)
+    assert isinstance(error.get_single_arg(), discovery_messages.NotFound)
 
 
 def test_no_permission(available_ports, discovery, error):
@@ -233,7 +234,7 @@ def test_no_permission(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), Terminal.NoPermission)
+    assert isinstance(error.get_single_arg(), terminal_messages.NoPermission)
 
 
 def test_invalid_packet(available_ports, discovery, error):
@@ -247,7 +248,7 @@ def test_invalid_packet(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), Terminal.InvalidPacket)
+    assert isinstance(error.get_single_arg(), terminal_messages.InvalidPacket)
 
 
 def test_invalid_version(available_ports, discovery, error):
@@ -261,7 +262,7 @@ def test_invalid_version(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), Discovery.InvalidVersion)
+    assert isinstance(error.get_single_arg(), discovery_messages.InvalidVersion)
 
 
 def test_invalid_reply(available_ports, discovery, error):
@@ -275,7 +276,7 @@ def test_invalid_reply(available_ports, discovery, error):
     discovery.find()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), Discovery.InvalidReply)
+    assert isinstance(error.get_single_arg(), discovery_messages.InvalidReply)
 
 
 def test_no_firmware(available_ports, discovery, error):
@@ -291,4 +292,4 @@ def test_no_firmware(available_ports, discovery, error):
 
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), Discovery.NoFirmware)
+    assert isinstance(error.get_single_arg(), discovery_messages.NoFirmware)
