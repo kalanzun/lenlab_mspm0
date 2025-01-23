@@ -1,24 +1,19 @@
-from io import StringIO
-
 import pytest
 from PySide6.QtWidgets import QFileDialog
 
 from lenlab.app.window import MainWindow
-from lenlab.launchpad.discovery import Discovery
+from lenlab.device.lenlab import Lenlab
 
 
 @pytest.mark.gui
 def test_window():
-    error_report = StringIO()
-    discovery = Discovery()
-    MainWindow(error_report, discovery)
+    assert MainWindow(Lenlab())
 
 
 @pytest.mark.gui
 def test_save_error_report(monkeypatch, tmp_path):
-    error_report = StringIO("Example")
-    discovery = Discovery()
-    window = MainWindow(error_report, discovery)
+    window = MainWindow(Lenlab())
+    window.lenlab.error_report.write("Example\n")
 
     file_path = tmp_path / "lenlab8-error-report.txt"
     monkeypatch.setattr(
@@ -26,14 +21,13 @@ def test_save_error_report(monkeypatch, tmp_path):
     )
     window.save_error_report()
 
-    assert file_path.read_text() == "Example"
+    assert file_path.read_text() == "Example\n"
 
 
 @pytest.mark.gui
 def test_save_error_report_cancel(monkeypatch):
-    error_report = StringIO("Example")
-    discovery = Discovery()
-    window = MainWindow(error_report, discovery)
+    window = MainWindow(Lenlab())
+    window.lenlab.error_report.write("Example\n")
 
     monkeypatch.setattr(
         QFileDialog, "getSaveFileName", lambda parent, caption, dir, filter: (None, None)

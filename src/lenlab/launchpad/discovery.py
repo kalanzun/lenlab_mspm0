@@ -3,14 +3,14 @@ import sys
 from typing import cast
 
 from attrs import frozen
-from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 
 from ..message import Message
 from . import linux
 from .launchpad import find_launchpad, find_tiva_launchpad
 from .port_info import PortInfo
 from .protocol import get_app_version, pack, unpack_fw_version
-from .terminal import Terminal
+from .terminal import FirmwareError, LaunchpadError, Terminal
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,8 @@ class Discovery(QObject):
         self.timer.setSingleShot(True)
         self.timer.setInterval(self.interval)
         self.timer.timeout.connect(self.on_timeout)
+
+        self.available.connect(self.probe, Qt.ConnectionType.QueuedConnection)
 
     @Slot()
     def find(self):
@@ -117,30 +119,12 @@ class Discovery(QObject):
 
 
 @frozen
-class NotFound(Message):
-    port_name: str
-
-    english = """
-    Port {port_name} not found
-
-    The system does not know about a port "{port_name}".
-    """
-
-    german = """
-    Port {port_name} nicht gefunden
-
-    Das System kennt keinen Port "{port_name}".
-    """
-
-
-@frozen
-class NoLaunchpad(Message):
+class NoLaunchpad(LaunchpadError):
     english = """
     No Launchpad found
 
     Connect the Launchpad via USB to your computer.
     """
-
     german = """
     Kein Launchpad gefunden
 
@@ -149,7 +133,22 @@ class NoLaunchpad(Message):
 
 
 @frozen
-class TivaLaunchpad(Message):
+class NotFound(LaunchpadError):
+    port_name: str
+    english = """
+    Port {port_name} not found
+
+    The system does not know about a port "{port_name}".
+    """
+    german = """
+    Port {port_name} nicht gefunden
+
+    Das System kennt keinen Port "{port_name}".
+    """
+
+
+@frozen
+class TivaLaunchpad(LaunchpadError):
     english = """
     Tiva C-Series Launchpad found
 
@@ -157,7 +156,6 @@ class TivaLaunchpad(Message):
     Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
     works with the Tiva C-Series Launchpad EK-TM4C123GXL.
     """
-
     german = """
     Tiva C-Serie Launchpad gefunden
 
@@ -168,7 +166,7 @@ class TivaLaunchpad(Message):
 
 
 @frozen
-class NoRules(Message):
+class NoRules(LaunchpadError):
     english = """
     No Launchpad rules installed
 
@@ -179,7 +177,6 @@ class NoRules(Message):
 
     "Install rules" will asks for root access.
     """
-
     german = """
     Keine Launchpad-Regeln installiert
 
@@ -193,17 +190,31 @@ class NoRules(Message):
 
 
 @frozen
-class InvalidVersion(Message):
+class NoFirmware(FirmwareError):
+    english = """
+    No reply received from the Launchpad
+
+    Lenlab requires the Lenlab firmware on the Launchpad.
+    Write the firmware on the Launchpad with the Programmer.
+    """
+    german = """
+    Keine Antwort vom Launchpad erhalten
+
+    Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
+    Schreiben Sie die Firmware mit dem Programmierer auf das Launchpad.
+    """
+
+
+@frozen
+class InvalidVersion(FirmwareError):
     fw_version: str
     app_version: str
-
     english = """
     Invalid firmware version: {fw_version}
 
     This Lenlab requires version {app_version}.
     Write the current version to the Launchpad with the Programmer.
     """
-
     german = """
     Ungültige Firmware-Version: {fw_version}
 
@@ -213,36 +224,17 @@ class InvalidVersion(Message):
 
 
 @frozen
-class InvalidReply(Message):
+class InvalidReply(FirmwareError):
     app_version: str
-
     english = """
     Invalid firmware version
 
     This Lenlab requires version {app_version}.
     Write the current version to the Launchpad with the Programmer.
     """
-
     german = """
     Ungültige Firmware-Version
 
     Dieses Lenlab benötigt Version {app_version}.
     Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
-    """
-
-
-@frozen
-class NoFirmware(Message):
-    english = """
-    No reply received from the Launchpad
-
-    Lenlab requires the Lenlab firmware on the Launchpad.
-    Write the firmware on the Launchpad with the Programmer.
-    """
-
-    german = """
-    Keine Antwort vom Launchpad erhalten
-
-    Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
-    Schreiben Sie die Firmware mit dem Programmierer auf das Launchpad.
     """

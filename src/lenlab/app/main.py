@@ -1,8 +1,7 @@
 from importlib import metadata
-from io import StringIO
 from logging import NOTSET, StreamHandler, basicConfig, getLogger
 
-from ..launchpad.discovery import Discovery
+from ..device.lenlab import Lenlab
 from .app import App
 from .window import MainWindow
 
@@ -12,20 +11,16 @@ logger = getLogger(__name__)
 def main():
     app = App()
 
+    lenlab = Lenlab()
+
     basicConfig(level=NOTSET)
-    error_report = StringIO()
-    handler = StreamHandler(error_report)
+    handler = StreamHandler(lenlab.error_report)
     getLogger().addHandler(handler)
 
     version = metadata.version("lenlab")
     logger.info(f"Lenlab {version}")
 
-    discovery = Discovery()
-    discovery.available.connect(discovery.probe)
-
-    window = MainWindow(error_report, discovery)
+    window = MainWindow(lenlab)
     window.show()
-
-    discovery.find()
 
     app.exec()

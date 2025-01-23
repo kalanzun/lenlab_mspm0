@@ -115,9 +115,13 @@ class Terminal(QObject):
 
 
 @frozen
-class NoPermission(Message):
-    port_name: str
+class LaunchpadError(Message):
+    pass
 
+
+@frozen
+class NoPermission(LaunchpadError):
+    port_name: str
     english = """
     Permission denied on the Launchpad port {port_name}
 
@@ -125,7 +129,6 @@ class NoPermission(Message):
     
     Maybe another instance of Lenlab is running and blocking the port?
     """
-
     german = """
     Zugriff verweigert auf den Launchpad-Port {port_name}
     
@@ -136,13 +139,12 @@ class NoPermission(Message):
 
 
 @frozen
-class ResourceError(Message):
+class ResourceError(LaunchpadError):
     english = """
     The Launchpad vanished
     
     Connect the Launchpad via USB to your computer again.
     """
-
     german = """
     Das Launchpad ist verschwunden.
     
@@ -151,16 +153,14 @@ class ResourceError(Message):
 
 
 @frozen
-class PortError(Message):
+class PortError(LaunchpadError):
     port_name: str
     text: str
-
     english = """
     Other error on port {port_name}
     
     {text}
     """
-
     german = """
     Anderer Fehler auf Port {port_name}
     
@@ -169,24 +169,26 @@ class PortError(Message):
 
 
 @frozen
-class OverlongPacket(Message):
+class FirmwareError(Message):
+    pass
+
+
+@frozen
+class OverlongPacket(FirmwareError):
     n: int
     packet: bytes
-
     english = """
     Overlong packet received: length = {n}, packet = {packet}
     """
-
     german = """
     Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
     """
 
 
 @frozen
-class InvalidPacket(Message):
+class InvalidPacket(FirmwareError):
     n: int
     packet: bytes
-
     english = """
     Invalid packet received: length = {n}, packet = {packet}
     """

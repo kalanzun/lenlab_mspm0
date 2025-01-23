@@ -1,34 +1,31 @@
-import io
-
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
-from ..launchpad.discovery import Discovery
+from ..device.lenlab import Lenlab
 from .bode import BodePlotter
 from .launchpad import LaunchpadWidget
 from .oscilloscope import OscilloscopeWidget
 from .programmer import ProgrammerWidget
-from .status import BoardStatus
+from .status import StatusMessage
 from .voltmeter import VoltmeterWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, error_report: io.StringIO, discovery: Discovery):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
 
-        self.error_report = error_report
-        self.discovery = discovery
+        self.lenlab = lenlab
 
         # widget
-        self.board_status = BoardStatus(self.discovery)
+        self.board_status = StatusMessage(self.lenlab)
 
         self.tabs = [
-            LaunchpadWidget(),
-            ProgrammerWidget(),
-            VoltmeterWidget(),
-            OscilloscopeWidget(),
-            BodePlotter(),
+            LaunchpadWidget(self.lenlab),
+            ProgrammerWidget(self.lenlab),
+            VoltmeterWidget(self.lenlab),
+            OscilloscopeWidget(self.lenlab),
+            BodePlotter(self.lenlab),
         ]
 
         tab_widget = QTabWidget()
@@ -70,4 +67,4 @@ class MainWindow(QMainWindow):
             return
 
         with open(file_name, "w", encoding="utf-8") as file:
-            file.write(self.error_report.getvalue())
+            file.write(self.lenlab.error_report.getvalue())
