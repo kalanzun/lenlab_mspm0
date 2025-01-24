@@ -5,6 +5,7 @@ from attrs import frozen
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 
 from ..message import Message
+from ..queued import QueuedCall
 from . import linux
 from .launchpad import find_launchpad, find_tiva_launchpad
 from .port_info import PortInfo
@@ -52,7 +53,6 @@ class Probe(QObject):
 
 
 class Discovery(QObject):
-    found = Signal()
     available = Signal()  # terminals available for programming or probing
     ready = Signal(Terminal)  # firmware (correct version) connection established
     error = Signal(Message)
@@ -75,7 +75,6 @@ class Discovery(QObject):
         self.timer.setInterval(self.interval)
         self.timer.timeout.connect(self.on_timeout)
 
-        self.found.connect(self.open, Qt.ConnectionType.QueuedConnection)
         self.available.connect(self.log_available)
         self.available.connect(self.probe, Qt.ConnectionType.QueuedConnection)
         self.error.connect(logger.error)
@@ -129,7 +128,7 @@ class Discovery(QObject):
                 del matches[1:]
 
         self.terminals = [Terminal.from_port_info(pi) for pi in matches]
-        self.found.emit()
+        QueuedCall(self.open, self)
 
     @Slot()
     def open(self):
