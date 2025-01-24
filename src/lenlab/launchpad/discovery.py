@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import cast
 
 from attrs import frozen
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
@@ -15,7 +14,45 @@ from .terminal import LaunchpadError, Terminal
 logger = logging.getLogger(__name__)
 
 
+class Probe(QObject):
+    select = Signal(Terminal)
+    ready = Signal(Terminal)
+    error = Signal(Message)
+
+    def __init__(self, terminal: Terminal):
+        super().__init__()
+        self.terminal = terminal
+
+    def start(self):
+        logger.info(f"probe {self.terminal.port_name}")
+
+        # disconnects automatically when the probe is destroyed
+        self.terminal.reply.connect(self.on_reply)
+
+        self.terminal.set_baud_rate(1_000_000)
+        self.terminal.write(pack(b"8ver?"))
+
+    @Slot(bytes)
+    def on_reply(self, reply):
+        # now we know which terminal talks to the firmware
+        self.select.emit(self.terminal)
+
+        # the select signal with argument avoids a sender() call in the signal handler,
+        # which would be inconvenient to test
+
+        app_version = get_app_version()
+        if fw_version := unpack_fw_version(reply):
+            if fw_version == app_version:
+                self.ready.emit(self.terminal)
+            else:
+                self.error.emit(InvalidVersion(fw_version, app_version))
+
+        else:
+            self.error.emit(InvalidReply(app_version))
+
+
 class Discovery(QObject):
+    found = Signal()
     available = Signal()  # terminals available for programming or probing
     ready = Signal(Terminal)  # firmware (correct version) connection established
     error = Signal(Message)
@@ -24,18 +61,21 @@ class Discovery(QObject):
     interval: int = 600
 
     terminals: list[Terminal]
+    probes: list[Probe]
 
     def __init__(self, port_name: str = ""):
         super().__init__()
 
         self.port_name = port_name
         self.terminals = []
+        self.probes = []
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
         self.timer.setInterval(self.interval)
         self.timer.timeout.connect(self.on_timeout)
 
+        self.found.connect(self.open, Qt.ConnectionType.QueuedConnection)
         self.available.connect(self.log_available)
         self.available.connect(self.probe, Qt.ConnectionType.QueuedConnection)
         self.error.connect(logger.error)
@@ -88,62 +128,54 @@ class Discovery(QObject):
             if sys.platform != "win32":
                 del matches[1:]
 
-        terminals = [Terminal.from_port_info(pi) for pi in matches]
-        for terminal in terminals:
-            terminal.error.connect(self.on_error)
+        self.terminals = [Terminal.from_port_info(pi) for pi in matches]
+        self.found.emit()
 
-            # on_error handles the error message
+    @Slot()
+    def open(self):
+        for terminal in self.terminals:
+            terminal.error.connect(self.on_terminal_error)
+
+            # on_error handles the error message and cleanup
             if not terminal.open():
                 return
 
-        self.terminals = terminals
         self.available.emit()
 
     @Slot()
     def probe(self):
         self.timer.start()
-        for terminal in self.terminals:
-            logger.info(f"probe {terminal.port_name}")
-            terminal.reply.connect(self.on_reply, Qt.ConnectionType.SingleShotConnection)
-            terminal.set_baud_rate(1_000_000)
-            terminal.write(pack(b"8ver?"))
+        self.probes = [Probe(terminal) for terminal in self.terminals]
+        for probe in self.probes:
+            probe.select.connect(self.on_probe_select)
+            probe.ready.connect(self.ready.emit)
+            probe.error.connect(self.error.emit)
+            probe.start()
 
-    @Slot(bytes)
-    def on_reply(self, reply):
-        if not self.timer.isActive():
-            logger.debug("unexpected reply")
-            return
-
+    @Slot(Message)
+    def on_terminal_error(self, error):
         self.timer.stop()
+        self.probes = []
+        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
+        self.error.emit(error)
 
-        # now we know which terminal talks to the firmware
-        terminal = cast(Terminal, self.sender())
+    @Slot(Terminal)
+    def on_probe_select(self, terminal: Terminal):
+        self.timer.stop()
+        self.probes = []
+
+        logger.info(f"select {terminal.port_name}")
+
         for t in self.terminals:
             if t is not terminal:
                 t.close()
 
         self.terminals = [terminal]
 
-        app_version = get_app_version()
-        if fw_version := unpack_fw_version(reply):
-            if fw_version == app_version:
-                self.ready.emit(terminal)
-            else:
-                self.error.emit(InvalidVersion(fw_version, app_version))
-
-        else:
-            self.error.emit(InvalidReply(app_version))
-
-    @Slot(Message)
-    def on_error(self, error):
-        self.timer.stop()
-        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
-        self.error.emit(error)
-
     @Slot()
     def on_timeout(self):
-        for terminal in self.terminals:
-            terminal.reply.disconnect(self.on_reply)
+        self.probes = []
+        logger.info("timeout")
         self.error.emit(NoFirmware())
 
 

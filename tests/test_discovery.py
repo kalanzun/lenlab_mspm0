@@ -57,6 +57,20 @@ def error(discovery):
     return error
 
 
+def test_no_launchpad(available_ports, discovery, error):
+    discovery.find()
+
+    error.check_single_message(discovery_messages.NoLaunchpad)
+    assert len(discovery.terminals) == 0
+
+
+def test_retry_find(available_ports, discovery, error):
+    discovery.retry()
+
+    error.check_single_message(discovery_messages.NoLaunchpad)
+    assert len(discovery.terminals) == 0
+
+
 def test_port_argument(monkeypatch, available_ports, discovery, error):
     monkeypatch.setattr(PortInfo, "from_name", lambda name: PortInfo(name))
 
@@ -64,30 +78,21 @@ def test_port_argument(monkeypatch, available_ports, discovery, error):
     discovery.find()
 
     assert len(discovery.terminals) == 1
-    assert isinstance(discovery.terminals[0], Terminal)
 
 
 def test_not_found(available_ports, discovery, error):
     discovery.port_name = "COM0"
-
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NotFound)
-    assert discovery.terminals == []
-
-
-def test_no_launchpad(available_ports, discovery, error):
-    discovery.find()
-
-    assert isinstance(error.get_single_arg(), discovery_messages.NoLaunchpad)
-    assert discovery.terminals == []
+    error.check_single_message(discovery_messages.NotFound)
+    assert len(discovery.terminals) == 0
 
 
 def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NoRules)
-    assert discovery.terminals == []
+    error.check_single_message(discovery_messages.NoRules)
+    assert len(discovery.terminals) == 0
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -95,8 +100,8 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.TivaLaunchpad)
-    assert discovery.terminals == []
+    error.check_single_message(discovery_messages.TivaLaunchpad)
+    assert len(discovery.terminals) == 0
 
 
 def test_select_first(available_ports, discovery):
@@ -106,7 +111,6 @@ def test_select_first(available_ports, discovery):
     discovery.find()
 
     assert len(discovery.terminals) == 1
-    assert isinstance(discovery.terminals[0], Terminal)
 
 
 def test_no_selection_on_windows(platform_win32, available_ports, discovery):
@@ -116,13 +120,18 @@ def test_no_selection_on_windows(platform_win32, available_ports, discovery):
     discovery.find()
 
     assert len(discovery.terminals) == 2
-    assert isinstance(discovery.terminals[0], Terminal)
-    assert isinstance(discovery.terminals[1], Terminal)
 
 
 class MockTerminal(Terminal):
     def open(self):
         return True
+
+    def close(self):
+        pass
+
+    @property
+    def is_open(self):
+        return False
 
     def set_baud_rate(self, baud_rate: int) -> None:
         pass
@@ -148,13 +157,36 @@ def test_probe(discovery, terminal):
     assert spy.get_single_arg() is terminal
 
 
+def test_retry_probe(discovery, terminal):
+    spy = Spy(discovery.ready)
+
+    discovery.retry()
+
+    terminal.reply.emit(get_example_version_reply())
+
+    assert spy.get_single_arg() is terminal
+
+
+def test_probe_select(discovery, terminal):
+    discovery.terminals.append(MockTerminal())
+
+    spy = Spy(discovery.ready)
+
+    discovery.probe()
+
+    terminal.reply.emit(get_example_version_reply())
+
+    assert spy.get_single_arg() is terminal
+    assert len(discovery.terminals) == 1
+
+
 def test_invalid_firmware_version(discovery, terminal, error):
     discovery.probe()
 
     reply = b"L8\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), discovery_messages.InvalidVersion)
+    error.check_single_message(discovery_messages.InvalidVersion)
 
 
 def test_invalid_reply(discovery, terminal, error):
@@ -163,15 +195,16 @@ def test_invalid_reply(discovery, terminal, error):
     reply = b"\x00\x00\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    assert isinstance(error.get_single_arg(), discovery_messages.InvalidReply)
+    error.check_single_message(discovery_messages.InvalidReply)
 
 
 def test_terminal_error(discovery, terminal, error):
+    discovery.open()
     discovery.probe()
 
     terminal.error.emit(terminal_messages.ResourceError())
 
-    assert isinstance(error.get_single_arg(), terminal_messages.ResourceError)
+    error.check_single_message(terminal_messages.ResourceError)
 
 
 def test_no_firmware(discovery, terminal, error):
@@ -180,28 +213,14 @@ def test_no_firmware(discovery, terminal, error):
     assert discovery.timer.isActive()
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NoFirmware)
+    error.check_single_message(discovery_messages.NoFirmware)
 
 
 def test_open_fails(discovery, terminal, error):
     terminal.open = lambda: False
 
-    discovery.probe()
+    discovery.open()
 
     terminal.error.emit(terminal_messages.NoPermission("COM0"))
 
-    assert isinstance(error.get_single_arg(), terminal_messages.NoPermission)
-
-
-def test_ignore_replies_when_inactive(discovery):
-    spy = Spy(discovery.ready)
-
-    discovery.on_reply(get_example_version_reply())
-
-    assert spy.count() == 0
-
-
-def test_ignore_errors_when_inactive(discovery, error):
-    discovery.on_error(terminal_messages.ResourceError())
-
-    assert error.count() == 0
+    error.check_single_message(terminal_messages.NoPermission)

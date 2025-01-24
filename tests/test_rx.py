@@ -90,13 +90,17 @@ def test_valid_prefix(packet):
 @pytest.mark.parametrize("packet", [b"Q", b"\x00\x80", b"QQQQ", b"\x00" + knock])
 def test_invalid_prefix(packet):
     terminal = StaticReplyTerminal(packet)
-    assert terminal.capture_error()
+    assert terminal.capture_nothing()
+    # drop invalid bytes
+    assert terminal.packet == b""
 
 
 @pytest.mark.parametrize("packet", [knock + b"\x00", ok + bytes([0x51])])
 def test_invalid_postfix(packet):
     terminal = StaticReplyTerminal(packet)
-    assert terminal.capture_error()
+    assert terminal.capture_nothing()
+    # drop invalid bytes
+    assert terminal.packet == b""
 
 
 @pytest.mark.parametrize(

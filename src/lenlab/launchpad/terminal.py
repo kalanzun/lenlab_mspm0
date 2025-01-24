@@ -84,7 +84,7 @@ class Terminal(QObject):
             self.error.emit(ResourceError())
         else:
             self.close()
-            logger.debug(f"{self.port_name}: {self.port.errorString()}")
+            logger.debug(f"error on {self.port_name}: {self.port.errorString()}")
             self.error.emit(PortError(self.port_name, self.port.errorString()))
 
     @Slot()

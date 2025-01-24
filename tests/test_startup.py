@@ -137,6 +137,7 @@ def test_darwin(platform_darwin, available_ports, discovery, ready):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
     assert ready.count() == 1
@@ -152,6 +153,7 @@ def test_linux(platform_linux, available_ports, discovery, ready):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
     assert ready.count() == 1
@@ -167,6 +169,7 @@ def test_windows(platform_win32, available_ports, discovery, ready):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
     assert ready.count() == 1
@@ -182,6 +185,7 @@ def test_windows_reversed(platform_win32, available_ports, discovery, ready):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
     assert ready.count() == 1
@@ -191,7 +195,7 @@ def test_no_launchpad(available_ports, discovery, error):
     logger.info("No Launchpad")
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NoLaunchpad)
+    error.check_single_message(discovery_messages.NoLaunchpad)
 
 
 def test_tiva_launchpad(available_ports, discovery, error):
@@ -204,14 +208,14 @@ def test_tiva_launchpad(available_ports, discovery, error):
 
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.TivaLaunchpad)
+    error.check_single_message(discovery_messages.TivaLaunchpad)
 
 
 def test_no_rules(platform_linux, no_rules, available_ports, discovery, error):
     logger.info("Linux, No Rules")
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NoRules)
+    error.check_single_message(discovery_messages.NoRules)
 
 
 def test_not_found(available_ports, discovery, error):
@@ -220,7 +224,7 @@ def test_not_found(available_ports, discovery, error):
     discovery.port_name = "COM0"
     discovery.find()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NotFound)
+    error.check_single_message(discovery_messages.NotFound)
 
 
 def test_no_permission(available_ports, discovery, error):
@@ -237,9 +241,9 @@ def test_no_permission(available_ports, discovery, error):
     )
 
     discovery.find()
-    discovery.probe()
+    discovery.open()
 
-    assert isinstance(error.get_single_arg(), terminal_messages.NoPermission)
+    error.check_single_message(terminal_messages.NoPermission)
 
 
 def test_invalid_packet(available_ports, discovery, error):
@@ -251,9 +255,14 @@ def test_invalid_packet(available_ports, discovery, error):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), terminal_messages.InvalidPacket)
+    assert error.count() == 0
+    assert discovery.timer.isActive()
+    discovery.timer.timeout.emit()
+
+    error.check_single_message(discovery_messages.NoFirmware)
 
 
 def test_invalid_version(available_ports, discovery, error):
@@ -265,9 +274,10 @@ def test_invalid_version(available_ports, discovery, error):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.InvalidVersion)
+    error.check_single_message(discovery_messages.InvalidVersion)
 
 
 def test_invalid_reply(available_ports, discovery, error):
@@ -279,9 +289,10 @@ def test_invalid_reply(available_ports, discovery, error):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.InvalidReply)
+    error.check_single_message(discovery_messages.InvalidReply)
 
 
 def test_no_firmware(available_ports, discovery, error):
@@ -293,8 +304,11 @@ def test_no_firmware(available_ports, discovery, error):
     )
 
     discovery.find()
+    discovery.open()
     discovery.probe()
 
+    assert error.count() == 0
+    assert discovery.timer.isActive()
     discovery.timer.timeout.emit()
 
-    assert isinstance(error.get_single_arg(), discovery_messages.NoFirmware)
+    error.check_single_message(discovery_messages.NoFirmware)

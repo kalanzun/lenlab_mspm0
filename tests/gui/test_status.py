@@ -1,9 +1,13 @@
+from unittest.mock import Mock
+
 import pytest
 
 from lenlab.app.status import FirmwareStatus, LaunchpadStatus, StatusMessage
 from lenlab.device.device import Device
 from lenlab.device.lenlab import Lenlab
-from lenlab.launchpad.terminal import FirmwareError, LaunchpadError
+from lenlab.launchpad import linux
+from lenlab.launchpad.discovery import Discovery, FirmwareError, NoRules
+from lenlab.launchpad.terminal import LaunchpadError
 
 
 @pytest.fixture()
@@ -24,8 +28,20 @@ def test_no_firmware(status_message):
     status_message.on_error(FirmwareError())
 
 
-def test_button(status_message):
+def test_no_rules(status_message, monkeypatch):
+    status_message.on_error(NoRules())
+
+    monkeypatch.setattr(linux, "install_rules", install := Mock())
+    monkeypatch.setattr(Discovery, "retry", retry := Mock())
     status_message.on_button_clicked()
+    assert install.call_count == 1
+    assert retry.call_count == 1
+
+
+def test_button(status_message, monkeypatch):
+    monkeypatch.setattr(Discovery, "retry", retry := Mock())
+    status_message.on_button_clicked()
+    assert retry.call_count == 1
 
 
 @pytest.fixture()

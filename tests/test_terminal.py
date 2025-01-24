@@ -1,7 +1,6 @@
 import pytest
 from PySide6.QtCore import QByteArray
 from PySide6.QtSerialPort import QSerialPort
-from PySide6.QtTest import QSignalSpy
 
 from lenlab.launchpad import terminal as terminal_messages
 from lenlab.launchpad.port_info import PortInfo
@@ -66,12 +65,10 @@ def test_open_fails(terminal, error):
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.DeviceNotFoundError)
 
     assert not terminal.open()
-    assert isinstance(error.get_single_arg(), terminal_messages.PortError)
+    error.check_single_message(terminal_messages.PortError)
 
 
 def test_open_and_close(terminal, error):
-    closed = QSignalSpy(terminal.closed)
-
     assert not terminal.is_open
     assert terminal.open()
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.NoError)
@@ -86,10 +83,10 @@ def test_open_and_close(terminal, error):
     assert error.count() == 0
 
     terminal.close()
-    assert closed.count() == 1
+    assert not terminal.is_open
 
     terminal.close()
-    assert closed.count() == 1
+    assert not terminal.is_open
 
 
 def test_baud_rate(terminal):
@@ -114,14 +111,14 @@ def test_permission_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.PermissionError)
 
-    assert isinstance(error.get_single_arg(), terminal_messages.NoPermission)
+    error.check_single_message(terminal_messages.NoPermission)
 
 
 def test_resource_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.ResourceError)
 
-    assert isinstance(error.get_single_arg(), terminal_messages.ResourceError)
+    error.check_single_message(terminal_messages.ResourceError)
 
     assert not terminal.is_open
 
@@ -130,7 +127,7 @@ def test_terminal_error(terminal, error):
     terminal.open()  # connects the signals
     terminal.port.errorOccurred.emit(QSerialPort.SerialPortError.UnknownError)
 
-    assert isinstance(error.get_single_arg(), terminal_messages.PortError)
+    error.check_single_message(terminal_messages.PortError)
 
     assert not terminal.is_open
 
