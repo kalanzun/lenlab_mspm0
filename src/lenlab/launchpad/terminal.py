@@ -15,7 +15,6 @@ class Terminal(QObject):
     ack = Signal()
     error = Signal(Message)
     reply = Signal(bytes)
-    closed = Signal()
 
     port: QSerialPort
 
@@ -50,7 +49,7 @@ class Terminal(QObject):
         # port.open emits a NoError on errorOccurred in any case
         # in case of an error, it emits errorOccurred a second time with the error
         # on_error_occurred handles the error case
-        logger.debug(f"{self.port_name}: open")
+        logger.debug(f"open {self.port_name}")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
             self.port.clear()  # windows might have leftovers
             return True
@@ -59,9 +58,8 @@ class Terminal(QObject):
 
     def close(self) -> None:
         if self.port.isOpen():
-            logger.debug(f"{self.port_name}: close")
+            logger.debug(f"close {self.port_name}")
             self.port.close()
-            self.closed.emit()
 
     def set_baud_rate(self, baud_rate: int) -> None:
         self.port.setBaudRate(baud_rate)
@@ -82,12 +80,12 @@ class Terminal(QObject):
         elif error is QSerialPort.SerialPortError.PermissionError:
             self.error.emit(NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(ResourceError())
             self.close()
+            self.error.emit(ResourceError())
         else:
+            self.close()
             logger.debug(f"{self.port_name}: {self.port.errorString()}")
             self.error.emit(PortError(self.port_name, self.port.errorString()))
-            self.close()
 
     @Slot()
     def on_ready_read(self):
@@ -101,7 +99,7 @@ class Terminal(QObject):
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)
-                    self.error.emit(OverlongPacket(n, packet[:12]))
+                    logger.error(f"Overlong packet received: length = {n}, packet = {packet[:12]}")
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
@@ -111,7 +109,7 @@ class Terminal(QObject):
 
         else:
             packet = self.read(n)
-            self.error.emit(InvalidPacket(n, packet[:12]))
+            logger.error(f"Invalid packet received: length = {n}, packet = {packet[:12]}")
 
 
 @frozen
@@ -160,29 +158,4 @@ class PortError(LaunchpadError):
     german = """Anderer Fehler auf Port {port_name}
     
     {text}
-    """
-
-
-@frozen
-class FirmwareError(Message):
-    pass
-
-
-@frozen
-class OverlongPacket(FirmwareError):
-    n: int
-    packet: bytes
-    english = """Overlong packet received: length = {n}, packet = {packet}
-    """
-    german = """Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
-    """
-
-
-@frozen
-class InvalidPacket(FirmwareError):
-    n: int
-    packet: bytes
-    english = """Invalid packet received: length = {n}, packet = {packet}
-    """
-    german = """Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
     """

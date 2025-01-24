@@ -10,7 +10,7 @@ from . import linux
 from .launchpad import find_launchpad, find_tiva_launchpad
 from .port_info import PortInfo
 from .protocol import get_app_version, pack, unpack_fw_version
-from .terminal import FirmwareError, LaunchpadError, Terminal
+from .terminal import LaunchpadError, Terminal
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Discovery(QObject):
 
     @Slot()
     def log_available(self):
-        logger.info(f"{', '.join(t.port_name for t in self.terminals)} available")
+        logger.info(f"available {', '.join(t.port_name for t in self.terminals)}")
 
     @Slot(Terminal)
     def log_ready(self, terminal):
@@ -88,34 +88,40 @@ class Discovery(QObject):
             if sys.platform != "win32":
                 del matches[1:]
 
-        self.terminals = [Terminal.from_port_info(pi) for pi in matches]
+        terminals = [Terminal.from_port_info(pi) for pi in matches]
+        for terminal in terminals:
+            terminal.error.connect(self.on_error)
+
+            # on_error handles the error message
+            if not terminal.open():
+                return
+
+        self.terminals = terminals
         self.available.emit()
 
     @Slot()
     def probe(self):
-        logger.info("probe")
         self.timer.start()
         for terminal in self.terminals:
-            terminal.reply.connect(self.on_reply)
-            terminal.error.connect(self.on_error)
-            terminal.closed.connect(self.on_closed)
-
-            # on_error handles the error message
-            if not terminal.open():
-                break
-
+            logger.info(f"probe {terminal.port_name}")
+            terminal.reply.connect(self.on_reply, Qt.ConnectionType.SingleShotConnection)
             terminal.set_baud_rate(1_000_000)
             terminal.write(pack(b"8ver?"))
 
     @Slot(bytes)
     def on_reply(self, reply):
         if not self.timer.isActive():
+            logger.debug("unexpected reply")
             return
 
         self.timer.stop()
 
         # now we know which terminal talks to the firmware
         terminal = cast(Terminal, self.sender())
+        for t in self.terminals:
+            if t is not terminal:
+                t.close()
+
         self.terminals = [terminal]
 
         app_version = get_app_version()
@@ -130,18 +136,14 @@ class Discovery(QObject):
 
     @Slot(Message)
     def on_error(self, error):
-        if not self.timer.isActive():
-            return
-
         self.timer.stop()
+        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
         self.error.emit(error)
 
     @Slot()
-    def on_closed(self):
-        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
-
-    @Slot()
     def on_timeout(self):
+        for terminal in self.terminals:
+            terminal.reply.disconnect(self.on_reply)
         self.error.emit(NoFirmware())
 
 
@@ -204,6 +206,11 @@ class NoRules(LaunchpadError):
     Trennen Sie das Launchpad vom Computer und installieren Sie die Launchpad-Regeln.
     Diese Aktion fragt nach Administratorzugriff. 
     """
+
+
+@frozen
+class FirmwareError(Message):
+    pass
 
 
 @frozen
