@@ -120,14 +120,12 @@ class Discovery(QObject):
 
 @frozen
 class NoLaunchpad(LaunchpadError):
-    english = """
-    No Launchpad found
-
+    english = """No Launchpad found
+    
     Connect the Launchpad via USB to your computer.
     """
-    german = """
-    Kein Launchpad gefunden
-
+    german = """Kein Launchpad gefunden
+    
     Verbinden Sie das Launchpad über USB mit Ihrem Computer.
     """
 
@@ -135,30 +133,26 @@ class NoLaunchpad(LaunchpadError):
 @frozen
 class NotFound(LaunchpadError):
     port_name: str
-    english = """
-    Port {port_name} not found
-
+    english = """Port {port_name} not found
+    
     The system does not know about a port "{port_name}".
     """
-    german = """
-    Port {port_name} nicht gefunden
-
+    german = """Port {port_name} nicht gefunden
+    
     Das System kennt keinen Port "{port_name}".
     """
 
 
 @frozen
 class TivaLaunchpad(LaunchpadError):
-    english = """
-    Tiva C-Series Launchpad found
-
+    english = """Tiva C-Series Launchpad found
+    
     This Lenlab Version 8 works with the Launchpad LP-MSPM0G3507.
     Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
     works with the Tiva C-Series Launchpad EK-TM4C123GXL.
     """
-    german = """
-    Tiva C-Serie Launchpad gefunden
-
+    german = """Tiva C-Serie Launchpad gefunden
+    
     Dieses Lenlab in Version 8 funktioniert mit dem Launchpad LP-MSPM0G3507.
     Lenlab Version 7 (https://github.com/kalanzun/red_lenlab)
     funktioniert mit dem Tiva C-Serie Launchpad EK-TM4C123GXL.
@@ -167,39 +161,33 @@ class TivaLaunchpad(LaunchpadError):
 
 @frozen
 class NoRules(LaunchpadError):
-    english = """
-    No Launchpad rules installed
-
+    english = """No Launchpad rules installed
+    
     The Launchpad rules prevent a program called ModemManager
     to connect to the Launchpad and block Lenlab.
 
     Disconnect the Launchpad from the computer and install the Launchpad rules.
-
-    "Install rules" will asks for root access.
+    This action asks for super user access.
     """
-    german = """
-    Keine Launchpad-Regeln installiert
-
+    german = """Keine Launchpad-Regeln installiert
+    
     Die Launchpad-Regeln verbieten einem Programms namens ModemManager
     den Verbindungsaufbau mit dem Launchpad und die Blockade Lenlabs.
 
-    Trennen Sie das Launchpad vom Computer und installieren Sie die Launchpad-Regeln. 
-
-    "Regeln installieren" wird nach root-Zugriff fragen.
+    Trennen Sie das Launchpad vom Computer und installieren Sie die Launchpad-Regeln.
+    Diese Aktion fragt nach Administratorzugriff. 
     """
 
 
 @frozen
 class NoFirmware(FirmwareError):
-    english = """
-    No reply received from the Launchpad
-
+    english = """No reply received from the Launchpad
+    
     Lenlab requires the Lenlab firmware on the Launchpad.
     Write the firmware on the Launchpad with the Programmer.
     """
-    german = """
-    Keine Antwort vom Launchpad erhalten
-
+    german = """Keine Antwort vom Launchpad erhalten
+    
     Lenlab benötigt die Lenlab-Firmware auf dem Launchpad.
     Schreiben Sie die Firmware mit dem Programmierer auf das Launchpad.
     """
@@ -209,14 +197,12 @@ class NoFirmware(FirmwareError):
 class InvalidVersion(FirmwareError):
     fw_version: str
     app_version: str
-    english = """
-    Invalid firmware version: {fw_version}
+    english = """Invalid firmware version: {fw_version}
 
     This Lenlab requires version {app_version}.
     Write the current version to the Launchpad with the Programmer.
     """
-    german = """
-    Ungültige Firmware-Version: {fw_version}
+    german = """Ungültige Firmware-Version: {fw_version}
 
     Dieses Lenlab benötigt Version {app_version}.
     Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
@@ -226,14 +212,12 @@ class InvalidVersion(FirmwareError):
 @frozen
 class InvalidReply(FirmwareError):
     app_version: str
-    english = """
-    Invalid firmware version
+    english = """Invalid firmware version
 
     This Lenlab requires version {app_version}.
     Write the current version to the Launchpad with the Programmer.
     """
-    german = """
-    Ungültige Firmware-Version
+    german = """Ungültige Firmware-Version
 
     Dieses Lenlab benötigt Version {app_version}.
     Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.

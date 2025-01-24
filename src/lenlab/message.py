@@ -10,7 +10,15 @@ class Message:
     english = ""
     german = ""
 
+    def head_and_body(self):
+        template = getattr(self, Language.language) or "\n"
+        message = template.format(**asdict(self))
+        return message.split("\n", 1)
+
     def __str__(self):
-        template = getattr(self, Language.language)
-        template = dedent(template).strip()
-        return template.format(**asdict(self))
+        return self.head_and_body()[0]
+
+    def long_form(self):
+        head, body = self.head_and_body()
+        body = dedent(body).strip()
+        return f"{head}\n{body}"

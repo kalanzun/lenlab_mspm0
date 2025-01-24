@@ -122,15 +122,13 @@ class LaunchpadError(Message):
 @frozen
 class NoPermission(LaunchpadError):
     port_name: str
-    english = """
-    Permission denied on the Launchpad port {port_name}
+    english = """Permission denied on the Launchpad port {port_name}
 
     Lenlab was not allowed to access the Launchpad port.
     
     Maybe another instance of Lenlab is running and blocking the port?
     """
-    german = """
-    Zugriff verweigert auf den Launchpad-Port {port_name}
+    german = """Zugriff verweigert auf den Launchpad-Port {port_name}
     
     Lenlab wurde der Zugriff auf den Launchpad-Port nicht erlaubt.
     
@@ -140,8 +138,7 @@ class NoPermission(LaunchpadError):
 
 @frozen
 class ResourceError(LaunchpadError):
-    english = """
-    The Launchpad vanished
+    english = """The Launchpad vanished
     
     Connect the Launchpad via USB to your computer again.
     """
@@ -156,13 +153,11 @@ class ResourceError(LaunchpadError):
 class PortError(LaunchpadError):
     port_name: str
     text: str
-    english = """
-    Other error on port {port_name}
+    english = """Other error on port {port_name}
     
     {text}
     """
-    german = """
-    Anderer Fehler auf Port {port_name}
+    german = """Anderer Fehler auf Port {port_name}
     
     {text}
     """
@@ -177,11 +172,9 @@ class FirmwareError(Message):
 class OverlongPacket(FirmwareError):
     n: int
     packet: bytes
-    english = """
-    Overlong packet received: length = {n}, packet = {packet}
+    english = """Overlong packet received: length = {n}, packet = {packet}
     """
-    german = """
-    Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
+    german = """Überlanges Paket empfangen: Länge = {n}, Paket = {packet}
     """
 
 
@@ -189,9 +182,7 @@ class OverlongPacket(FirmwareError):
 class InvalidPacket(FirmwareError):
     n: int
     packet: bytes
-    english = """
-    Invalid packet received: length = {n}, packet = {packet}
+    english = """Invalid packet received: length = {n}, packet = {packet}
     """
-    german = """
-    Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
+    german = """Ungültiges Paket empfangen: Länge = {n}, Paket = {packet}
     """

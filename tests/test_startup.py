@@ -13,6 +13,7 @@ from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.launchpad import lp_pid, ti_vid, tiva_pid
 from lenlab.launchpad.port_info import PortInfo
 from lenlab.launchpad.protocol import get_example_version_reply
+from lenlab.message import Message
 from lenlab.spy import Spy
 
 logger = getLogger(__name__)
@@ -112,9 +113,13 @@ def ready(discovery):
     return Spy(discovery.ready)
 
 
+def log_message(message: Message):
+    logger.info(message.long_form())
+
+
 @pytest.fixture()
 def error(discovery):
-    discovery.error.connect(logger.info)
+    discovery.error.connect(log_message)
     return Spy(discovery.error)
 
 

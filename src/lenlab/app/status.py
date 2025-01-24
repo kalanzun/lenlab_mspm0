@@ -65,6 +65,7 @@ class StatusMessage(QWidget):
 
         self.text_widget.setText(f"### {error}")
         self.button.setText("Retry")
+        self.text_widget.setText(f"### {error.long_form()}")
         self.show()
 
     @Slot()
