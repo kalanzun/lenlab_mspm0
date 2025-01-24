@@ -36,10 +36,31 @@ class Discovery(QObject):
         self.timer.setInterval(self.interval)
         self.timer.timeout.connect(self.on_timeout)
 
+        self.available.connect(self.log_available)
         self.available.connect(self.probe, Qt.ConnectionType.QueuedConnection)
+        self.error.connect(logger.error)
+        self.ready.connect(self.log_ready)
+
+    @Slot()
+    def log_available(self):
+        logger.info(f"{', '.join(t.port_name for t in self.terminals)} available")
+
+    @Slot(Terminal)
+    def log_ready(self, terminal):
+        logger.info(f"terminal {terminal.port_name} ready")
+
+    def retry(self):
+        logger.info("retry")
+        if self.terminals:
+            self.log_available()
+            self.probe()
+        else:
+            self.find()
 
     @Slot()
     def find(self):
+        logger.info("find")
+
         if sys.platform == "linux":
             if not linux.check_rules():
                 self.error.emit(NoRules())
@@ -72,10 +93,12 @@ class Discovery(QObject):
 
     @Slot()
     def probe(self):
+        logger.info("probe")
         self.timer.start()
         for terminal in self.terminals:
             terminal.reply.connect(self.on_reply)
             terminal.error.connect(self.on_error)
+            terminal.closed.connect(self.on_closed)
 
             # on_error handles the error message
             if not terminal.open():
@@ -112,6 +135,10 @@ class Discovery(QObject):
 
         self.timer.stop()
         self.error.emit(error)
+
+    @Slot()
+    def on_closed(self):
+        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
 
     @Slot()
     def on_timeout(self):

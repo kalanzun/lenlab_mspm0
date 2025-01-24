@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
 
 from ..device.device import Device
 from ..device.lenlab import Lenlab
-from ..launchpad.terminal import LaunchpadError, Terminal
+from ..launchpad import linux
+from ..launchpad.discovery import NoRules
+from ..launchpad.terminal import LaunchpadError
 from ..message import Message
 from . import symbols
 
@@ -21,6 +23,9 @@ class StatusMessage(QWidget):
         super().__init__()
 
         self.lenlab = lenlab
+        self.discovery = lenlab.discovery
+
+        self.rules = False
 
         self.symbol_widget = QSvgWidget()
         # it does not recompute the size on loading
@@ -48,9 +53,8 @@ class StatusMessage(QWidget):
         layout.addLayout(right, 1)
         self.setLayout(layout)
 
-        discovery = self.lenlab.discovery
-        discovery.ready.connect(self.on_ready)
-        discovery.error.connect(self.on_error)
+        self.discovery.ready.connect(self.on_ready)
+        self.discovery.error.connect(self.on_error)
 
     @Slot()
     def on_ready(self):
@@ -63,14 +67,23 @@ class StatusMessage(QWidget):
         else:
             self.symbol_widget.load(symbols.dye(symbols.developer_board_off_48px, symbols.red))
 
-        self.text_widget.setText(f"### {error}")
-        self.button.setText("Retry")
         self.text_widget.setText(f"### {error.long_form()}")
+
+        if isinstance(error, NoRules):
+            self.rules = True
+            self.button.setText("Install rules")
+        else:
+            self.rules = False
+            self.button.setText("Retry")
+
         self.show()
 
     @Slot()
     def on_button_clicked(self):
-        pass
+        if self.rules:
+            linux.install_rules()
+
+        self.discovery.retry()
 
 
 class StatusWidget(QWidget):
