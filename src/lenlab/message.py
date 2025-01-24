@@ -6,9 +6,11 @@ from .language import Language
 
 
 @frozen
-class Message:
+class Message(Exception):
     english = ""
     german = ""
+
+    progress = 0
 
     def head_and_body(self):
         template = getattr(self, Language.language) or "\n"

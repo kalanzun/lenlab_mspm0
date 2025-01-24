@@ -2,12 +2,13 @@ from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
+from lenlab.app.poster import StatusPoster
+
 from ..device.lenlab import Lenlab
 from .bode import BodePlotter
 from .launchpad import LaunchpadWidget
 from .oscilloscope import OscilloscopeWidget
 from .programmer import ProgrammerWidget
-from .status import StatusMessage
 from .voltmeter import VoltmeterWidget
 
 
@@ -18,7 +19,8 @@ class MainWindow(QMainWindow):
         self.lenlab = lenlab
 
         # widget
-        self.board_status = StatusMessage(self.lenlab)
+        self.status_poster = StatusPoster()
+        self.status_poster.attach(self.lenlab.discovery)
 
         self.tabs = [
             LaunchpadWidget(self.lenlab),
@@ -33,7 +35,7 @@ class MainWindow(QMainWindow):
             tab_widget.addTab(tab, tab.title)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.board_status)
+        layout.addWidget(self.status_poster)
         layout.addWidget(tab_widget, 1)
 
         widget = QWidget()

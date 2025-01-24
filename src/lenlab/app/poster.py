@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -9,38 +9,29 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..device.device import Device
-from ..device.lenlab import Lenlab
 from ..launchpad import linux
-from ..launchpad.discovery import NoRules
+from ..launchpad.discovery import Discovery, NoRules
 from ..launchpad.terminal import LaunchpadError
 from ..message import Message
 from . import symbols
 
 
-class StatusMessage(QWidget):
-    def __init__(self, lenlab: Lenlab):
+class PosterWidget(QWidget):
+    def __init__(self):
         super().__init__()
-
-        self.lenlab = lenlab
-        self.discovery = lenlab.discovery
-
-        self.rules = False
 
         self.symbol_widget = QSvgWidget()
         # it does not recompute the size on loading
         # self.symbol_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.symbol_widget.setFixedSize(48, 48)
-        self.symbol_widget.load(symbols.dye(symbols.progress_activity_48px, symbols.yellow))
 
         self.text_widget = QLabel()
         self.text_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self.text_widget.setTextFormat(Qt.TextFormat.MarkdownText)
         self.text_widget.setWordWrap(True)
-        self.text_widget.setText("Connecting")
 
         self.button = QPushButton()
-        self.button.clicked.connect(self.on_button_clicked)
+        self.button.setHidden(True)
 
         right = QVBoxLayout()
         right.addWidget(self.text_widget)
@@ -51,14 +42,32 @@ class StatusMessage(QWidget):
         layout.setSpacing(8)
         layout.addWidget(self.symbol_widget, alignment=Qt.AlignmentFlag.AlignTop)
         layout.addLayout(right, 1)
+
         self.setLayout(layout)
 
-        self.discovery.ready.connect(self.on_ready)
-        self.discovery.error.connect(self.on_error)
+    def set_success(self, message: Message):
+        self.symbol_widget.load(symbols.dye(symbols.check_box_48px, symbols.green))
+        self.text_widget.setText("### " + message.long_form())
 
-    @Slot()
-    def on_ready(self):
-        self.hide()
+    def set_error(self, message: Message):
+        self.symbol_widget.load(symbols.dye(symbols.error_48px, symbols.red))
+        self.text_widget.setText("### " + message.long_form())
+
+
+class StatusPoster(PosterWidget):
+    retry = Signal()
+
+    def __init__(self):
+        super().__init__()
+
+        self.rules = False
+        self.button.clicked.connect(self.on_button_clicked)
+
+    def attach(self, discovery: Discovery):
+        discovery.ready.connect(self.hide)
+        discovery.error.connect(self.on_error)
+
+        self.retry.connect(discovery.retry)
 
     @Slot(Message)
     def on_error(self, error):
@@ -67,7 +76,7 @@ class StatusMessage(QWidget):
         else:
             self.symbol_widget.load(symbols.dye(symbols.developer_board_off_48px, symbols.red))
 
-        self.text_widget.setText(f"### {error.long_form()}")
+        self.text_widget.setText("### " + error.long_form())
 
         if isinstance(error, NoRules):
             self.rules = True
@@ -83,48 +92,25 @@ class StatusMessage(QWidget):
         if self.rules:
             linux.install_rules()
 
-        self.discovery.retry()
+        self.retry.emit()
 
 
-class StatusWidget(QWidget):
+class LaunchpadStatus(PosterWidget):
     def __init__(self):
         super().__init__()
 
-        self.symbol_widget = QSvgWidget()
-        # it does not recompute the size on loading
-        # self.symbol_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.symbol_widget.setFixedSize(24, 24)
-
-        self.text_widget = QLabel()
-        self.text_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        self.text_widget.setTextFormat(Qt.TextFormat.MarkdownText)
         self.text_widget.setWordWrap(False)
 
         self.no_launchpad()
 
-        layout = QHBoxLayout()
-        layout.setSpacing(8)
-        layout.addWidget(self.symbol_widget, alignment=Qt.AlignmentFlag.AlignTop)
-        layout.addWidget(self.text_widget, 1)
-        self.setLayout(layout)
+    def attach(self, discovery: Discovery):
+        discovery.available.connect(self.on_available)
+        discovery.error.connect(self.on_error)
 
     def no_launchpad(self):
         self.symbol_widget.load(symbols.dye(symbols.usb_off_24px, symbols.red))
         self.text_widget.setText("No Launchpad")
-
-
-class LaunchpadStatus(StatusWidget):
-    def __init__(self, device: Device):
-        super().__init__()
-
-        self.device = device
-
-        lenlab = self.device.lenlab
-        # lenlab.busy.connect(self.on_busy)
-
-        discovery = lenlab.discovery
-        discovery.available.connect(self.on_available)
-        discovery.error.connect(self.on_error)
 
     @Slot()
     def on_available(self):
@@ -137,19 +123,8 @@ class LaunchpadStatus(StatusWidget):
             self.no_launchpad()
 
 
-class FirmwareStatus(StatusWidget):
-    def __init__(self, device: Device):
-        super().__init__()
-
-        self.device = device
-
-        self.error_symbol = symbols.usb_off_24px
-        self.error_message = "No Firmware"
-
-        lenlab = self.device.lenlab
-        # lenlab.busy.connect(self.on_busy)
-
-        discovery = lenlab.discovery
+class FirmwareStatus(LaunchpadStatus):
+    def attach(self, discovery: Discovery):
         discovery.available.connect(self.on_available)
         discovery.ready.connect(self.on_ready)
         discovery.error.connect(self.on_error)

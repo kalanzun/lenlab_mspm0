@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from lenlab.app.status import FirmwareStatus
+from lenlab.app.poster import FirmwareStatus
 from lenlab.device.bode import Bode
 from lenlab.device.lenlab import Lenlab
 
@@ -14,7 +14,8 @@ class BodePlotter(QWidget):
         self.bode = Bode(lenlab)
 
         self.chart = QWidget()
-        self.status = FirmwareStatus(self.bode)
+        status = FirmwareStatus()
+        status.attach(lenlab.discovery)
 
         start = QPushButton("Start")
         cancel = QPushButton("Cancel")
@@ -24,7 +25,7 @@ class BodePlotter(QWidget):
         button_box.addWidget(cancel)
 
         tool_box = QVBoxLayout()
-        tool_box.addWidget(self.status)
+        tool_box.addWidget(status)
         tool_box.addLayout(button_box)
         tool_box.addStretch(1)
 

@@ -31,6 +31,7 @@ class Probe(QObject):
         self.terminal.reply.connect(self.on_reply)
 
         self.terminal.set_baud_rate(1_000_000)
+        self.terminal.ack_mode = False
         self.terminal.write(pack(b"8ver?"))
 
     @Slot(bytes)
@@ -73,6 +74,7 @@ class Discovery(QObject):
         self.timer = QTimer()
         self.timer.setSingleShot(True)
         self.timer.setInterval(self.interval)
+        self.timer.timeout.connect(self.stop)
         self.timer.timeout.connect(self.on_timeout)
 
         self.available.connect(self.log_available)
@@ -88,6 +90,7 @@ class Discovery(QObject):
     def log_ready(self, terminal):
         logger.info(f"terminal {terminal.port_name} ready")
 
+    @Slot()
     def retry(self):
         logger.info("retry")
         if self.terminals:
@@ -133,6 +136,7 @@ class Discovery(QObject):
     @Slot()
     def open(self):
         for terminal in self.terminals:
+            terminal.error.connect(self.stop)
             terminal.error.connect(self.on_terminal_error)
 
             # on_error handles the error message and cleanup
@@ -146,23 +150,24 @@ class Discovery(QObject):
         self.timer.start()
         self.probes = [Probe(terminal) for terminal in self.terminals]
         for probe in self.probes:
-            probe.select.connect(self.on_probe_select)
+            probe.select.connect(self.stop)
+            probe.select.connect(self.select_terminal)
             probe.ready.connect(self.ready.emit)
             probe.error.connect(self.error.emit)
             probe.start()
 
-    @Slot(Message)
-    def on_terminal_error(self, error):
+    @Slot()
+    def stop(self):
         self.timer.stop()
         self.probes = []
+
+    @Slot(Message)
+    def on_terminal_error(self, error):
         self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
         self.error.emit(error)
 
     @Slot(Terminal)
-    def on_probe_select(self, terminal: Terminal):
-        self.timer.stop()
-        self.probes = []
-
+    def select_terminal(self, terminal):
         logger.info(f"select {terminal.port_name}")
 
         for t in self.terminals:
@@ -173,7 +178,6 @@ class Discovery(QObject):
 
     @Slot()
     def on_timeout(self):
-        self.probes = []
         logger.info("timeout")
         self.error.emit(NoFirmware())
 

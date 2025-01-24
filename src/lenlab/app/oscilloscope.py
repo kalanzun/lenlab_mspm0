@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from lenlab.app.status import FirmwareStatus
+from lenlab.app.poster import FirmwareStatus
 from lenlab.device.lenlab import Lenlab
 from lenlab.device.oscilloscope import Oscilloscope
 
@@ -14,7 +14,8 @@ class OscilloscopeWidget(QWidget):
         self.oscilloscope = Oscilloscope(lenlab)
 
         self.chart = QWidget()
-        self.status = FirmwareStatus(self.oscilloscope)
+        status = FirmwareStatus()
+        status.attach(lenlab.discovery)
 
         start = QPushButton("Start")
         stop = QPushButton("Stop")
@@ -24,7 +25,7 @@ class OscilloscopeWidget(QWidget):
         button_box.addWidget(stop)
 
         tool_box = QVBoxLayout()
-        tool_box.addWidget(self.status)
+        tool_box.addWidget(status)
         tool_box.addLayout(button_box)
         tool_box.addStretch(1)
 

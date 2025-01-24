@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
-from lenlab.app.status import FirmwareStatus
+from lenlab.app.poster import FirmwareStatus
 from lenlab.device.device import Device
 from lenlab.device.lenlab import Lenlab
 
@@ -14,10 +14,11 @@ class LaunchpadWidget(QWidget):
         self.device = Device(lenlab)
 
         self.chart = QWidget()
-        self.status = FirmwareStatus(self.device)
+        status = FirmwareStatus()
+        status.attach(lenlab.discovery)
 
         tool_box = QVBoxLayout()
-        tool_box.addWidget(self.status)
+        tool_box.addWidget(status)
         tool_box.addStretch(1)
 
         layout = QHBoxLayout()
