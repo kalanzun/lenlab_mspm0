@@ -1,12 +1,6 @@
 import pytest
 
-from lenlab.launchpad.launchpad import (
-    find_launchpad,
-    find_tiva_launchpad,
-    lp_pid,
-    ti_vid,
-    tiva_pid,
-)
+from lenlab.launchpad import launchpad
 from lenlab.launchpad.port_info import PortInfo
 
 examples = [
@@ -339,7 +333,7 @@ def available_ports(example):
 
 
 def test_find_launchpad(example, available_ports):
-    port_infos = find_launchpad(available_ports)
+    port_infos = launchpad.find_launchpad(available_ports)
     assert len(port_infos) == 2
 
     names = [pi.name for pi in port_infos]
@@ -347,8 +341,11 @@ def test_find_launchpad(example, available_ports):
 
 
 def test_find_tiva_launchpad():
-    available_ports = [PortInfo("COM0", ti_vid, tiva_pid), PortInfo("COM1", ti_vid, lp_pid)]
-    port_infos = find_tiva_launchpad(available_ports)
+    available_ports = [
+        PortInfo("COM0", launchpad.ti_vid, launchpad.tiva_pid),
+        PortInfo("COM1", launchpad.ti_vid, launchpad.lp_pid),
+    ]
+    port_infos = launchpad.find_tiva_launchpad(available_ports)
 
     names = [pi.name for pi in port_infos]
     assert names == ["COM0"]

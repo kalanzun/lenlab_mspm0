@@ -4,14 +4,10 @@ from PySide6.QtTest import QSignalSpy
 
 
 class Spy(QSignalSpy):
-    def __init__(self, signal):
-        super().__init__(signal)
-
-        self._signal = signal
-
     def get_single_arg(self) -> Any:
-        if self.count() == 1:
-            return self.at(0)[0]
+        assert self.count() == 1
+        return self.at(0)[0]
 
-    def is_single_message(self, cls) -> bool:
-        return isinstance(self.get_single_arg(), cls)
+    def check_single_message(self, message_class: Any) -> None:
+        message = self.get_single_arg()
+        assert isinstance(message, message_class)

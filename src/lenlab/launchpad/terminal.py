@@ -13,28 +13,24 @@ class Terminal(QObject):
     ack = Signal()
     error = Signal(Exception)
     reply = Signal(bytes)
-    closed = Signal()
 
     port: QSerialPort
 
-    def __init__(self):
+    def __init__(self, port_name: str = ""):
         super().__init__()
 
         self.ack_mode = False
+        self.port_name = port_name
 
     @classmethod
     def from_port_info(cls, port_info: PortInfo) -> Self:
-        terminal = cls()
-        terminal.port = port_info.create_port()
+        terminal = cls(port_info.name)
+        terminal.port = QSerialPort(port_info.q_port_info)
         return terminal
 
     @property
     def bytes_available(self) -> int:
         return self.port.bytesAvailable()
-
-    @property
-    def port_name(self) -> str:
-        return self.port.portName()
 
     @property
     def is_open(self) -> bool:
@@ -53,7 +49,6 @@ class Terminal(QObject):
         # on_error_occurred handles the error case
         logger.debug(f"{self.port_name}: open")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
-            logger.debug(f"{self.port_name}: open successful")
             self.port.clear()  # windows might have leftovers
             return True
 
@@ -63,7 +58,6 @@ class Terminal(QObject):
         if self.port.isOpen():
             logger.debug(f"{self.port_name}: close")
             self.port.close()
-            self.closed.emit()
 
     def set_baud_rate(self, baud_rate: int) -> None:
         self.port.setBaudRate(baud_rate)
@@ -81,17 +75,13 @@ class Terminal(QObject):
     def on_error_occurred(self, error):
         if error is QSerialPort.SerialPortError.NoError:
             pass
-        elif error is QSerialPort.SerialPortError.DeviceNotFoundError:
-            self.error.emit(TerminalNotFoundError(self.port_name))
         elif error is QSerialPort.SerialPortError.PermissionError:
-            self.error.emit(TerminalPermissionError(self.port_name))
+            self.error.emit(NoPermission(self.port_name))
         elif error is QSerialPort.SerialPortError.ResourceError:
-            self.error.emit(TerminalResourceError(self.port_name))
-            self.close()
+            self.error.emit(ResourceError(self.port_name))
         else:
             logger.debug(f"{self.port_name}: {self.port.errorString()}")
-            self.error.emit(TerminalError(self.port_name, self.port.errorString()))
-            self.close()
+            self.error.emit(PortError(self.port_name, self.port.errorString()))
 
     @Slot()
     def on_ready_read(self):
@@ -118,25 +108,25 @@ class Terminal(QObject):
             self.error.emit(InvalidPacket(n, packet[:12]))
 
 
+class PortError(Exception):
+    pass
+
+
+class NoPermission(PortError):
+    pass
+
+
+class ResourceError(PortError):
+    pass
+
+
 class TerminalError(Exception):
     pass
 
 
-class TerminalNotFoundError(Exception):
+class OverlongPacket(TerminalError):
     pass
 
 
-class TerminalPermissionError(Exception):
-    pass
-
-
-class TerminalResourceError(Exception):
-    pass
-
-
-class OverlongPacket(Exception):
-    pass
-
-
-class InvalidPacket(Exception):
+class InvalidPacket(TerminalError):
     pass

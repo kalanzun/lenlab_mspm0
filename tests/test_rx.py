@@ -6,7 +6,7 @@ from lenlab.spy import Spy
 
 class StaticReplyTerminal(Terminal):
     def __init__(self, packet: bytes):
-        super().__init__()
+        super().__init__("COM0")
         self.packet = packet
 
     @property
