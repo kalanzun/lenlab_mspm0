@@ -1,11 +1,18 @@
 #include "interpreter.h"
 
 #include "memory.h"
+#include "signal.h"
 #include "terminal.h"
 #include "version.h"
 #include "voltmeter.h"
 
 #include "ti_msp_dl_config.h"
+
+static void interpreter_initSinus(void)
+{
+    signal_createSinus(2000, 1024, 10, 1024);
+    terminal_sendReply('m', ARG_STR("isin"));
+}
 
 static void interpreter_init28K(void)
 {
@@ -67,6 +74,10 @@ void interpreter_handleCommand(void)
             if (cmd->arg == ARG_STR("i28K")) { // init 28K
                 interpreter_init28K();
             } else if (cmd->arg == ARG_STR("g28K")) { // get 28K
+                terminal_transmitPacket(&memory.packet);
+            } else if (cmd->arg == ARG_STR("isin")) { // init sinus
+                interpreter_initSinus();
+            } else if (cmd->arg == ARG_STR("gsin")) { // get sinus
                 terminal_transmitPacket(&memory.packet);
             }
             break;
