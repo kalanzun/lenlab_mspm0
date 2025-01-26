@@ -25,11 +25,19 @@ def receive(port):
 
 
 def test_sinus(firmware, send, receive):
-    send(packet := pack(b"misin"))  # init sinus
+    send(packet := pack(b"ssinu"))  # create sinus
     reply = receive(8)
     assert reply == packet
 
-    send(pack(b"mgsin"))  # get sinus
+    send(packet := pack(b"sharm"))  # add harmonic
+    reply = receive(8)
+    assert reply == packet
+
+    send(packet := pack(b"sstar"))  # start
+    reply = receive(8)
+    assert reply == packet
+
+    send(pack(b"sget?"))  # get data
     reply = receive(2 * 2000 + 8)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 

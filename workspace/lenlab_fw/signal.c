@@ -1,7 +1,5 @@
 #include "signal.h"
 
-#include "memory.h"
-
 #include "ti_msp_dl_config.h"
 
 static uint32_t q31_sin(uint32_t angle)
@@ -49,36 +47,66 @@ static uint32_t uq0_div(uint32_t dividend, uint32_t divisor)
     return DL_MathACL_getResultOne(MATHACL);
 }
 
-void signal_createSinus(uint16_t length, uint16_t amplitude, uint16_t harmonic_multiplier, uint16_t harmonic_amplitude)
-{
-    struct Packet* const packet = &memory.packet;
-    uint16_t* const restrict payload = (uint16_t*)&memory.payload;
+struct Signal signal = {
+    .packet = {
+        .label = 'L',
+        .code = 's',
+        .length = sizeof(((struct Signal *)0)->payload),
+    },
+};
 
-    packet->label = 'L';
-    packet->code = 'm';
-    packet->length = sizeof(*payload) * length;
-    packet->arg = ARG_STR("gsin");
+void signal_createSinus(uint16_t length, uint16_t amplitude)
+{
+    struct Signal* const self = &signal;
+
+    self->length = length;
+    self->packet.arg = length;
 
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1 << 31, length >> 1);
+    uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1);
 
-    for (uint32_t i = 0; i < length; i++) {
-        payload[i] = q31_mul(q31_sin(angle), amplitude);
+    for (uint32_t i = 0; i < self->length; i++) {
+        self->payload[i] = q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
     }
+}
 
-    if (harmonic_amplitude > 0) {
-        uint32_t harmonic_angle = 0;
-        uint32_t harmonic_angle_inc = angle_inc * harmonic_multiplier;
+void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
+{
+    struct Signal* const self = &signal;
 
-        for (uint32_t i = 0; i < length; i++) {
-            payload[i] += q31_mul(q31_sin(harmonic_angle), harmonic_amplitude);
-            harmonic_angle += harmonic_angle_inc;
-            if (harmonic_angle < harmonic_angle_inc) {
-                // round on overflow
-                harmonic_angle = harmonic_angle_inc;
-            }
+    // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
+    uint32_t angle = 0;
+    uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1) * multiplier;
+
+    for (uint32_t i = 0; i < self->length; i++) {
+        self->payload[i] += q31_mul(q31_sin(angle), amplitude);
+        angle += angle_inc;
+        if (angle < angle_inc) {
+            // round on overflow
+            angle = angle_inc;
         }
     }
+}
+
+void signal_start(uint16_t sample_rate)
+{
+    struct Signal* const self = &signal;
+
+    self->sample_rate = sample_rate;
+
+    // TODO sample_rate setting
+    // TODO addHarmonic
+
+    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) self->payload);
+    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) &(DAC0->DATA0));
+    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, self->length);
+
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
+}
+
+void signal_stop(void)
+{
+    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
 }

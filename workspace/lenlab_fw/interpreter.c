@@ -1,37 +1,11 @@
 #include "interpreter.h"
 
-#include "memory.h"
 #include "signal.h"
 #include "terminal.h"
 #include "version.h"
 #include "voltmeter.h"
 
 #include "ti_msp_dl_config.h"
-
-static void interpreter_initSinus(void)
-{
-    signal_createSinus(2000, 1024, 10, 1024);
-    terminal_sendReply('m', ARG_STR("isin"));
-}
-
-static void interpreter_init28K(void)
-{
-    struct Packet* const packet = &memory.packet;
-    uint32_t* const restrict payload = (uint32_t*)&memory.payload;
-
-    packet->label = 'L';
-    packet->code = 'm';
-    packet->length = sizeof(memory.payload);
-    packet->arg = ARG_STR("g28K");
-
-    DL_CRC_setSeed32(CRC, CRC_SEED);
-    for (uint32_t i = 0; i < sizeof(memory.payload) / sizeof(*payload); i++) {
-        DL_CRC_feedData32(CRC, 0);
-        payload[i] = DL_CRC_getResult32(CRC);
-    }
-
-    terminal_sendReply('m', ARG_STR("i28K"));
-}
 
 static void interpreter_getVersion(void)
 {
@@ -70,15 +44,21 @@ void interpreter_handleCommand(void)
                 interpreter_getVersion();
             }
             break;
-        case 'm': // memory
-            if (cmd->arg == ARG_STR("i28K")) { // init 28K
-                interpreter_init28K();
-            } else if (cmd->arg == ARG_STR("g28K")) { // get 28K
-                terminal_transmitPacket(&memory.packet);
-            } else if (cmd->arg == ARG_STR("isin")) { // init sinus
-                interpreter_initSinus();
-            } else if (cmd->arg == ARG_STR("gsin")) { // get sinus
-                terminal_transmitPacket(&memory.packet);
+        case 's': // signal generator
+            if (cmd->arg == ARG_STR("star")) { // start
+                signal_start(0);
+                terminal_sendReply('s', ARG_STR("star"));
+            } else if (cmd->arg == ARG_STR("stop")) { // stop
+                signal_stop();
+                terminal_sendReply('s', ARG_STR("stop"));
+            } else if (cmd->arg == ARG_STR("sinu")) { // create sinus
+                signal_createSinus(2000, 1024);
+                terminal_sendReply('s', ARG_STR("sinu"));
+            } else if (cmd->arg == ARG_STR("harm")) { // add harmonic
+                signal_addHarmonic(20, 1024);
+                terminal_sendReply('s', ARG_STR("harm"));
+            } else if (cmd->arg == ARG_STR("get?")) { // get data
+                terminal_transmitPacket(&signal.packet);
             }
             break;
         case 'v': // voltmeter
