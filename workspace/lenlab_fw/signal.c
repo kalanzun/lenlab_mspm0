@@ -99,6 +99,9 @@ static void signal_start(uint16_t sample_rate)
 
     // TODO sample_rate setting
 
+    // disable channel for safe reconfiguration
+    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
+
     DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)self->payload);
     DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) & (DAC0->DATA0));
     DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, self->length);
