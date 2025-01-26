@@ -1,5 +1,6 @@
 #include "interpreter.h"
 
+#include "osci.h"
 #include "signal.h"
 #include "terminal.h"
 #include "version.h"
@@ -58,7 +59,15 @@ void interpreter_handleCommand(void)
                 signal_addHarmonic(20, 1024);
                 terminal_sendReply('s', ARG_STR("harm"));
             } else if (cmd->arg == ARG_STR("get?")) { // get data
-                terminal_transmitPacket(&signal.packet);
+                terminal_transmitPacket(&signal.reply.packet);
+            }
+            break;
+        case 'o': // oscilloscope
+            if (cmd->arg == ARG_STR("run!")) { // run
+                osci_run();
+                terminal_sendReply('o', ARG_STR("run!"));
+            } else if (cmd->arg == ARG_STR("ch1?")) { // get channel 1
+                terminal_transmitPacket(&osci.channel[0].packet);
             }
             break;
         case 'v': // voltmeter

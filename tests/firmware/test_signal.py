@@ -33,12 +33,29 @@ def test_sinus(firmware, send, receive):
     reply = receive(8)
     assert reply == packet
 
+    # DAC output PA15
     send(packet := pack(b"sstar"))  # start
     reply = receive(8)
     assert reply == packet
 
     send(pack(b"sget?"))  # get data
     reply = receive(2 * 2000 + 8)
+    payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+
+    fig, ax = plt.subplots()
+    ax.plot(payload)
+    ax.grid()
+    fig.show()
+
+
+def test_osci(firmware, send, receive):
+    send(packet := pack(b"orun!"))  # run
+    reply = receive(8)
+    assert reply == packet
+
+    # ch1 input AP24
+    send(pack(b"och1?"))  # get data
+    reply = receive(8 + 4 * 3 * 1024)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
     fig, ax = plt.subplots()

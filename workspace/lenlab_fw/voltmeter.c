@@ -84,10 +84,13 @@ void voltmeter_stop(void)
 
 void voltmeter_init(void)
 {
+    /*
     NVIC_EnableIRQ(ADC12_0_INST_INT_IRQN);
     NVIC_EnableIRQ(ADC12_1_INST_INT_IRQN);
+    */
 }
 
+/*
 static void voltmeter_handleADCResult(void)
 {
     struct Voltmeter* const self = &voltmeter;
@@ -142,3 +145,4 @@ void ADC12_1_INST_IRQHandler(void)
         break;
     }
 }
+*/

@@ -48,10 +48,12 @@ static uint32_t uq0_div(uint32_t dividend, uint32_t divisor)
 }
 
 struct Signal signal = {
-    .packet = {
-        .label = 'L',
-        .code = 's',
-        .length = sizeof(((struct Signal *)0)->payload),
+    .reply = {
+        .packet = {
+            .label = 'L',
+            .code = 's',
+            .length = sizeof(((struct SignalReply*)0)->payload),
+        },
     },
 };
 
@@ -60,14 +62,14 @@ void signal_createSinus(uint16_t length, uint16_t amplitude)
     struct Signal* const self = &signal;
 
     self->length = length;
-    self->packet.arg = length;
+    self->reply.packet.arg = length;
 
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
     uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1);
 
     for (uint32_t i = 0; i < self->length; i++) {
-        self->payload[i] = q31_mul(q31_sin(angle), amplitude);
+        self->reply.payload[i] = q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
     }
 }
@@ -81,7 +83,7 @@ void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
     uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1) * multiplier;
 
     for (uint32_t i = 0; i < self->length; i++) {
-        self->payload[i] += q31_mul(q31_sin(angle), amplitude);
+        self->reply.payload[i] += q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
         if (angle < angle_inc) {
             // round on overflow
@@ -97,10 +99,9 @@ void signal_start(uint16_t sample_rate)
     self->sample_rate = sample_rate;
 
     // TODO sample_rate setting
-    // TODO addHarmonic
 
-    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) self->payload);
-    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) &(DAC0->DATA0));
+    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)self->reply.payload);
+    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) & (DAC0->DATA0));
     DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, self->length);
 
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);

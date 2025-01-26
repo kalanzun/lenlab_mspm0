@@ -1,3 +1,4 @@
+#include "osci.h"
 #include "terminal.h"
 #include "voltmeter.h"
 
@@ -7,6 +8,7 @@ int main(void)
 {
     SYSCFG_DL_init();
 
+    osci_init();
     terminal_init();
     voltmeter_init();
 

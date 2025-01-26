@@ -3,9 +3,14 @@
 
 #include "packet.h"
 
-struct Signal {
+struct SignalReply {
     struct Packet packet;
     uint16_t payload[2000];
+};
+
+struct Signal {
+    struct SignalReply reply;
+
     uint16_t sample_rate;
     uint16_t length;
 };
