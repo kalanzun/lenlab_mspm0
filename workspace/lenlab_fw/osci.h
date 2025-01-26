@@ -10,7 +10,8 @@ struct OsciReply {
 
 struct Osci {
     struct OsciReply channel[2];
-    volatile bool done;
+    volatile bool ch1_done;
+    volatile bool ch2_done;
 };
 
 extern struct Osci osci;

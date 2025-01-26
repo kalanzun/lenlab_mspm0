@@ -45,12 +45,18 @@ def test_osci(firmware, send, receive):
     reply = receive(8)
     assert reply == pack(b"oacq!")
 
-    # ch1 input AP24
+    # ch1 input PA24
     send(command(b"och1?"))  # get data
     reply = receive(8 + 4 * 3 * 1024)
-    payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    channel1 = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+
+    # ch2 input PA17
+    send(command(b"och2?"))  # get data
+    reply = receive(8 + 4 * 3 * 1024)
+    channel2 = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
     fig, ax = plt.subplots()
-    ax.plot(payload)
+    ax.plot(channel1)
+    ax.plot(channel2)
     ax.grid()
     fig.show()

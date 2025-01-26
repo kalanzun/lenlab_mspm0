@@ -19,12 +19,14 @@ struct Osci osci = {
             },
         },
     },
-    .done = false,
+    .ch1_done = false,
+    .ch2_done = false,
 };
 
 void osci_init(void)
 {
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
+    NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 }
 
 void osci_acquire(uint16_t averages)
@@ -48,9 +50,19 @@ void osci_acquire(uint16_t averages)
 
     DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
 
-    DL_ADC12_startConversion(ADC12_CH1_INST);
+    DL_ADC12_configHwAverage(ADC12_CH2_INST, averages, averages);
 
-    while (!osci.done) {
+    DL_DMA_setSrcAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH2_INST));
+    DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)self->channel[1].payload);
+    /* When FIFO is enabled 2 samples are compacted in a single word */
+    DL_DMA_setTransferSize(DMA, DMA_CH2_CHAN_ID, LENGTH(self->channel[1].payload));
+
+    DL_DMA_enableChannel(DMA, DMA_CH2_CHAN_ID);
+
+    DL_ADC12_startConversion(ADC12_CH1_INST);
+    DL_ADC12_startConversion(ADC12_CH2_INST);
+
+    while (!(osci.ch1_done && osci.ch2_done)) {
         __WFE();
     }
 }
@@ -59,7 +71,18 @@ void ADC12_CH1_INST_IRQHandler(void)
 {
     switch (DL_ADC12_getPendingInterrupt(ADC12_CH1_INST)) {
     case DL_ADC12_IIDX_DMA_DONE:
-        osci.done = true;
+        osci.ch1_done = true;
+        break;
+    default:
+        break;
+    }
+}
+
+void ADC12_CH2_INST_IRQHandler(void)
+{
+    switch (DL_ADC12_getPendingInterrupt(ADC12_CH2_INST)) {
+    case DL_ADC12_IIDX_DMA_DONE:
+        osci.ch2_done = true;
         break;
     default:
         break;
