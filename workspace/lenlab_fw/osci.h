@@ -17,6 +17,6 @@ extern struct Osci osci;
 
 void osci_init(void);
 
-void osci_run(void);
+void osci_acquire(uint16_t averages);
 
 #endif

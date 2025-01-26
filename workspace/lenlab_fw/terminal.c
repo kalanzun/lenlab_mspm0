@@ -6,11 +6,16 @@
 
 #include "arm_acle.h"
 
-struct Terminal terminal = { .rpl = { .label = 'L' }, .rx_flag = false, .tx_flag = false, .rx_stalled = false };
+struct Terminal terminal = { .rpl = { .label = 'L', .length = 0 }, .rx_flag = false, .tx_flag = false, .rx_stalled = false };
+
+static const uint32_t terminal_cmd_packet_size = sizeof(terminal.cmd) + sizeof(terminal.payload);
 
 static void terminal_receive(uint32_t address, uint32_t size)
 {
-    if (terminal.rx_flag) while (true) { __nop(); }
+    if (terminal.rx_flag)
+        while (true) {
+            __nop();
+        }
     terminal.rx_flag = true;
     terminal.rx_stalled = false;
 
@@ -19,19 +24,17 @@ static void terminal_receive(uint32_t address, uint32_t size)
     DL_DMA_enableChannel(DMA, DMA_CH_RX_CHAN_ID);
 }
 
-static void terminal_receivePacket(struct Packet* packet)
-{
-    terminal_receive((uint32_t)packet, sizeof(*packet));
-}
-
 void terminal_receiveCommand(void)
 {
-    terminal_receivePacket(&terminal.cmd);
+    terminal_receive((uint32_t)&terminal.cmd, terminal_cmd_packet_size);
 }
 
 static void terminal_transmit(uint32_t address, uint32_t size)
 {
-    if (terminal.tx_flag) while (true) { __nop(); }
+    if (terminal.tx_flag)
+        while (true) {
+            __nop();
+        }
     terminal.tx_flag = true;
 
     DL_DMA_setSrcAddr(DMA, DMA_CH_TX_CHAN_ID, address);
@@ -41,7 +44,7 @@ static void terminal_transmit(uint32_t address, uint32_t size)
 
 void terminal_transmitPacket(const struct Packet* packet)
 {
-    terminal_transmit((uint32_t)packet, packet->length + 8);
+    terminal_transmit((uint32_t)packet, sizeof(*packet) + packet->length);
 }
 
 static void terminal_transmitReply(void)
@@ -52,7 +55,6 @@ static void terminal_transmitReply(void)
 void terminal_sendReply(uint8_t code, uint32_t arg)
 {
     terminal.rpl.code = code;
-    terminal.rpl.length = 0;
     terminal.rpl.arg = arg;
 
     terminal_transmitReply();
@@ -71,7 +73,7 @@ void terminal_init(void)
 void terminal_tick(void)
 {
     if (DL_DMA_isChannelEnabled(DMA, DMA_CH_RX_CHAN_ID)) { // RX active
-        if (DL_DMA_getTransferSize(DMA, DMA_CH_RX_CHAN_ID) < sizeof(struct Packet)) { // some bytes have arrived
+        if (DL_DMA_getTransferSize(DMA, DMA_CH_RX_CHAN_ID) < terminal_cmd_packet_size) { // some bytes have arrived
             if (terminal.rx_stalled) { // reset RX
                 DL_DMA_disableChannel(DMA, DMA_CH_RX_CHAN_ID);
                 terminal.rx_flag = false;

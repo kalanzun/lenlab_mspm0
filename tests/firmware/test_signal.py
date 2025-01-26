@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from matplotlib import pyplot as plt
 
-from lenlab.launchpad.protocol import pack
+from lenlab.launchpad.protocol import command, pack
 
 
 @pytest.fixture(scope="module")
@@ -25,20 +25,12 @@ def receive(port):
 
 
 def test_sinus(firmware, send, receive):
-    send(packet := pack(b"ssinu"))  # create sinus
-    reply = receive(8)
-    assert reply == packet
-
-    send(packet := pack(b"sharm"))  # add harmonic
-    reply = receive(8)
-    assert reply == packet
-
     # DAC output PA15
-    send(packet := pack(b"sstar"))  # start
+    send(command(b"ssin!", 2000, 1024, 20, 256))
     reply = receive(8)
-    assert reply == packet
+    assert reply == pack(b"ssin!")
 
-    send(pack(b"sget?"))  # get data
+    send(command(b"sdat?"))
     reply = receive(2 * 2000 + 8)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
@@ -49,12 +41,12 @@ def test_sinus(firmware, send, receive):
 
 
 def test_osci(firmware, send, receive):
-    send(packet := pack(b"orun!"))  # run
+    send(command(b"oacq!", 1))  # run
     reply = receive(8)
-    assert reply == packet
+    assert reply == pack(b"oacq!")
 
     # ch1 input AP24
-    send(pack(b"och1?"))  # get data
+    send(command(b"och1?"))  # get data
     reply = receive(8 + 4 * 3 * 1024)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 

@@ -5,6 +5,7 @@
 
 struct Terminal {
     struct Packet cmd;
+    uint16_t payload[4];
     struct Packet rpl;
     volatile bool rx_flag;
     volatile bool tx_flag;

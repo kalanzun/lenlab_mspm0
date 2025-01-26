@@ -30,9 +30,10 @@ static void interpreter_getVersion(void)
 
 void interpreter_handleCommand(void)
 {
+    const struct Terminal* const self = &terminal;
     const struct Packet* const cmd = &terminal.cmd;
 
-    if (cmd->label == 'L' && cmd->length == 0) {
+    if (cmd->label == 'L' && cmd->length == sizeof(self->payload)) {
         DL_GPIO_togglePins(GPIO_LEDS_B_PORT, GPIO_LEDS_B_LED_GREEN_PIN);
         switch (cmd->code) {
         case 'k': // knock
@@ -40,45 +41,47 @@ void interpreter_handleCommand(void)
                 terminal_sendReply('k', ARG_STR("nock"));
             }
             break;
+
         case VERSION[0]: // 8
-            if (cmd->arg == ARG_STR("ver?")) { // version
+            if (cmd->arg == ARG_STR("ver?")) { // get version
                 interpreter_getVersion();
             }
             break;
+
         case 's': // signal generator
-            if (cmd->arg == ARG_STR("star")) { // start
-                signal_start(0);
-                terminal_sendReply('s', ARG_STR("star"));
+            if (cmd->arg == ARG_STR("sin!")) { // sinus
+                signal_sinus(self->payload[0], self->payload[1], self->payload[2], self->payload[3]);
+                terminal_sendReply('s', ARG_STR("sin!"));
             } else if (cmd->arg == ARG_STR("stop")) { // stop
                 signal_stop();
                 terminal_sendReply('s', ARG_STR("stop"));
-            } else if (cmd->arg == ARG_STR("sinu")) { // create sinus
-                signal_createSinus(2000, 1024);
-                terminal_sendReply('s', ARG_STR("sinu"));
-            } else if (cmd->arg == ARG_STR("harm")) { // add harmonic
-                signal_addHarmonic(20, 1024);
-                terminal_sendReply('s', ARG_STR("harm"));
-            } else if (cmd->arg == ARG_STR("get?")) { // get data
-                terminal_transmitPacket(&signal.reply.packet);
+            } else if (cmd->arg == ARG_STR("dat?")) { // get data
+                terminal_transmitPacket(&signal.packet);
             }
             break;
+
         case 'o': // oscilloscope
-            if (cmd->arg == ARG_STR("run!")) { // run
-                osci_run();
-                terminal_sendReply('o', ARG_STR("run!"));
+            if (cmd->arg == ARG_STR("acq!")) { // acquire
+                osci_acquire(self->payload[0]);
+                terminal_sendReply('o', ARG_STR("acq!"));
             } else if (cmd->arg == ARG_STR("ch1?")) { // get channel 1
                 terminal_transmitPacket(&osci.channel[0].packet);
+            } else if (cmd->arg == ARG_STR("ch2?")) { // get channel 2
+                terminal_transmitPacket(&osci.channel[1].packet);
             }
             break;
-        case 'v': // voltmeter
-            if (cmd->arg == ARG_STR("next")) { // next
-                voltmeter_next();
-            } else if (cmd->arg == ARG_STR("stop")) { // stop
-                voltmeter_stop();
-            } else { // assume start and interval argument
-                voltmeter_start(cmd->arg);
-            }
-            break;
+
+            /*
+            case 'v': // voltmeter
+                if (cmd->arg == ARG_STR("next")) { // next
+                    voltmeter_next();
+                } else if (cmd->arg == ARG_STR("stop")) { // stop
+                    voltmeter_stop();
+                } else { // assume start and interval argument
+                    voltmeter_start(cmd->arg);
+                }
+                break;
+            */
         }
     }
     terminal_receiveCommand();

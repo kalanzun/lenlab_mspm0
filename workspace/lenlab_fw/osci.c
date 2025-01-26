@@ -27,9 +27,19 @@ void osci_init(void)
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
 }
 
-void osci_run(void)
+void osci_acquire(uint16_t averages)
 {
-    const struct Osci* self = &osci;
+    // sample rate 2 MHz
+    // averages: number of averages, valid values are powers of 2: 1, 2, 4, 8, ...
+
+    // avarages 1, sample rate 2 MHz
+    // averages 2, sample rate 1 MHz
+    // averages 4, sample rate 500 kHz
+    // averages 8, sample rate 250 kHz
+
+    const struct Osci* const self = &osci;
+
+    DL_ADC12_configHwAverage(ADC12_CH1_INST, averages, averages);
 
     DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH1_INST));
     DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)self->channel[0].payload);
