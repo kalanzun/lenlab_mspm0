@@ -7,3 +7,4 @@ dist/
 .clangd
 Debug/
 targetConfigs/
+*_LP_MSPM0G3507_nortos_ticlang/
