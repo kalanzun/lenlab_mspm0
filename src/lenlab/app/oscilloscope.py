@@ -1,5 +1,6 @@
+import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QPointF, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
@@ -9,6 +10,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from ..launchpad.discovery import Discovery
+from ..launchpad.protocol import command
+from ..launchpad.terminal import Terminal
 
 from .checkbox import BoolCheckBox
 
@@ -60,13 +65,34 @@ class OscilloscopeChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
+    @Slot(bytes)
+    def on_reply(self, reply):
+        if reply.startswith(b"La"):
+            channels = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+            mid = channels.shape[0] // 2
+            ch1 = channels[:mid]
+            ch2 = channels[mid:]
+
+            time_scale = 0.0005
+            time_offset = -mid // 2 * time_scale
+            scale = 10000
+
+            self.channels[0].replace(
+                [QPointF(time_offset + i * time_scale, y / scale) for i, y in enumerate(ch1)]
+            )
+            self.channels[1].replace(
+                [QPointF(time_offset + i * time_scale, y / scale) for i, y in enumerate(ch2)]
+            )
+
 
 class OscilloscopeWidget(QWidget):
     title = "Oscilloscope"
 
     sampling_rates = ["2 MHz", "1 MHz", "500 kHz", "250 kHz"]
 
-    def __init__(self):
+    terminal: Terminal
+
+    def __init__(self, discovery: Discovery):
         super().__init__()
 
         self.chart = OscilloscopeChart()
@@ -112,6 +138,15 @@ class OscilloscopeWidget(QWidget):
 
         self.setLayout(main_layout)
 
+        discovery.ready.connect(self.on_ready)
+
+    @Slot(Terminal)
+    def on_ready(self, terminal):
+        self.terminal = terminal
+        self.terminal.reply.connect(self.chart.on_reply)
+
     @Slot()
     def on_start_clicked(self):
         index = self.sampling_rate.currentIndex()
+        averages = 1 << index
+        self.terminal.write(command(b"a", averages))

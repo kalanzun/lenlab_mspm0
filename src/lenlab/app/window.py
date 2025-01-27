@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.status_poster)
 
         self.tabs = [
-            OscilloscopeWidget(),
+            OscilloscopeWidget(discovery),
         ]
 
         tab_widget = QTabWidget()
