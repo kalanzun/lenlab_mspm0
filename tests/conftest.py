@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -32,6 +34,12 @@ def firmware(request):
 def bsl(request):
     if not request.config.getoption("bsl"):
         pytest.skip("no BSL")
+
+
+@pytest.fixture(scope="session")
+def linux():
+    if sys.platform != "linux":
+        pytest.skip(reason="No Linux")
 
 
 @pytest.fixture(scope="session", autouse=True)
