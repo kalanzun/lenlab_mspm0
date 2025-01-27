@@ -194,7 +194,7 @@ wheels = [
 
 [[package]]
 name = "lenlab"
-version = "8.2a1"
+version = "8.2a2"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },

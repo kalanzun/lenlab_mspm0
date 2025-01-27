@@ -18,7 +18,7 @@ dependencies = [
 Home = "https://github.com/kalanzun/lenlab_mspm0"
 
 [project.scripts]
-lenlab = "lenlab.cli.cli:main"
+lenlab = "lenlab.app.main:main"
 
 [dependency-groups]
 dev = [
