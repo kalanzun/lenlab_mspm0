@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -42,10 +42,14 @@ class PosterWidget(QWidget):
 
         self.setLayout(layout)
 
+    @Slot(Message)
     def set_success(self, message: Message):
         self.symbol_widget.load(symbols.dye(symbols.check_box_48px, symbols.green))
         self.text_widget.setText("### " + message.long_form())
+        self.show()
 
+    @Slot(Message)
     def set_error(self, message: Message):
         self.symbol_widget.load(symbols.dye(symbols.error_48px, symbols.red))
         self.text_widget.setText("### " + message.long_form())
+        self.show()

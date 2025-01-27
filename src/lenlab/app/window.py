@@ -3,12 +3,12 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..controller.report import Report
-from ..message import Message
+from ..launchpad.discovery import Discovery
 from .poster import PosterWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, report: Report):
+    def __init__(self, report: Report, discovery: Discovery):
         super().__init__()
 
         self.report = report
@@ -17,7 +17,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         self.status_poster = PosterWidget()
-        self.status_poster.set_error(ExampleMessage())
+        self.status_poster.setHidden(True)
         layout.addWidget(self.status_poster)
 
         self.tabs = []
@@ -51,6 +51,10 @@ class MainWindow(QMainWindow):
         # title
         self.setWindowTitle("Lenlab")
 
+        # discovery
+        self.discovery = discovery
+        self.discovery.error.connect(self.status_poster.set_error)
+
     @Slot()
     def save_report(self):
         file_name, file_format = QFileDialog.getSaveFileName(
@@ -58,10 +62,3 @@ class MainWindow(QMainWindow):
         )
         if file_name:
             self.report.save_as(file_name)
-
-
-class ExampleMessage(Message):
-    english = """Example
-    
-    Message
-    """
