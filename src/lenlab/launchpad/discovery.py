@@ -31,7 +31,7 @@ class Probe(QObject):
 
         self.terminal.set_baud_rate(1_000_000)
         self.terminal.ack_mode = False
-        self.terminal.write(command(b"8ver?"))
+        self.terminal.write(command(b"8"))
 
     @Slot(bytes)
     def on_reply(self, reply):

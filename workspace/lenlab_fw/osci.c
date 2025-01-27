@@ -3,21 +3,10 @@
 #include "ti_msp_dl_config.h"
 
 struct Osci osci = {
-    .channel = {
-        {
-            .packet = {
-                .label = 'L',
-                .code = 'o',
-                .length = sizeof(((struct OsciReply*)0)->payload),
-            },
-        },
-        {
-            .packet = {
-                .label = 'L',
-                .code = 'o',
-                .length = sizeof(((struct OsciReply*)0)->payload),
-            },
-        },
+    .packet = {
+        .label = 'L',
+        .code = 'a',
+        .length = sizeof(osci.channel),
     },
     .ch1_done = false,
     .ch2_done = false,
@@ -29,7 +18,7 @@ void osci_init(void)
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 }
 
-void osci_acquire(uint16_t averages)
+void osci_acquire(uint32_t averages)
 {
     // sample rate 2 MHz
     // averages: number of averages, valid values are powers of 2: 1, 2, 4, 8, ...

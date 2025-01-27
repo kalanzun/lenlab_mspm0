@@ -1,23 +1,17 @@
 from importlib import metadata
 
 
-def pack(argument: bytes, length: int = 0) -> bytes:
-    assert len(argument) == 5
-    return b"L" + argument[0:1] + length.to_bytes(2, byteorder="little") + argument[1:]
+def pack(code: bytes, arg: bytes = b"\x00\x00\x00\x00", length: int = 0) -> bytes:
+    assert len(code) == 1
+    assert len(arg) == 4
+    return b"L" + code + length.to_bytes(2, byteorder="little") + arg
 
 
-def command(
-    argument: bytes, payload0: int = 0, payload1: int = 0, payload2: int = 0, payload3: int = 0
-) -> bytes:
-    return b"".join(
-        [
-            pack(argument, 8),
-            payload0.to_bytes(2, byteorder="little"),
-            payload1.to_bytes(2, byteorder="little"),
-            payload2.to_bytes(2, byteorder="little"),
-            payload3.to_bytes(2, byteorder="little"),
-        ]
-    )
+def command(code: bytes, arg: int = 0, *payload: int) -> bytes:
+    assert 0 <= len(payload) <= 4
+    payload = list(payload) + [0] * (4 - len(payload))
+    payload = b"".join(x.to_bytes(2, byteorder="little") for x in payload)
+    return pack(code, arg.to_bytes(4, byteorder="little"), 8) + payload
 
 
 def unpack_fw_version(reply: bytes) -> str | None:

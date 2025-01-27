@@ -13,8 +13,8 @@ struct Signal {
 
 extern struct Signal signal;
 
-void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic);
+void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic);
 
-void signal_stop(void);
+void signal_off(void);
 
 #endif

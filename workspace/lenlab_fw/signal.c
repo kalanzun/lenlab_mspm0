@@ -51,8 +51,8 @@ static uint32_t uq0_div(uint32_t dividend, uint32_t divisor)
 struct Signal signal = {
     .packet = {
         .label = 'L',
-        .code = 's',
-        .length = sizeof(((struct Signal*)0)->payload),
+        .code = 'g',
+        .length = sizeof(signal.payload),
     },
 };
 
@@ -91,7 +91,7 @@ static void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
     }
 }
 
-static void signal_start(uint16_t sample_rate)
+static void signal_start(uint32_t sample_rate)
 {
     struct Signal* const self = &signal;
 
@@ -109,7 +109,7 @@ static void signal_start(uint16_t sample_rate)
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
 }
 
-void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic)
+void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic)
 {
     signal_createSinus(length, amplitude);
     if (harmonic)
@@ -119,7 +119,7 @@ void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint
     signal_start(0);
 }
 
-void signal_stop(void)
+void signal_off(void)
 {
     DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
 }

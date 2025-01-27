@@ -26,11 +26,11 @@ def receive(port):
 
 def test_sinus(firmware, send, receive):
     # DAC output PA15
-    send(command(b"ssin!", 2000, 1024, 20, 256))
+    send(command(b"s", 0, 2000, 1024, 20, 256))
     reply = receive(8)
-    assert reply == pack(b"ssin!")
+    assert reply == pack(b"s")
 
-    send(command(b"sdat?"))
+    send(command(b"g"))
     reply = receive(2 * 2000 + 8)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
@@ -41,22 +41,17 @@ def test_sinus(firmware, send, receive):
 
 
 def test_osci(firmware, send, receive):
-    send(command(b"oacq!", 1))  # run
-    reply = receive(8)
-    assert reply == pack(b"oacq!")
-
     # ch1 input PA24
-    send(command(b"och1?"))  # get data
-    reply = receive(8 + 4 * 3 * 1024)
-    channel1 = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-
     # ch2 input PA17
-    send(command(b"och2?"))  # get data
-    reply = receive(8 + 4 * 3 * 1024)
-    channel2 = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    send(command(b"a", 1))  # run
+    reply = receive(8 + 2 * 4 * 3 * 1024)
+    channels = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    mid = channels.shape[0] // 2
+    ch1 = channels[:mid]
+    ch2 = channels[mid:]
 
     fig, ax = plt.subplots()
-    ax.plot(channel1)
-    ax.plot(channel2)
+    ax.plot(ch1)
+    ax.plot(ch2)
     ax.grid()
     fig.show()

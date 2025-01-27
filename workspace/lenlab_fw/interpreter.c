@@ -36,38 +36,30 @@ void interpreter_handleCommand(void)
         DL_GPIO_togglePins(GPIO_LEDS_B_PORT, GPIO_LEDS_B_LED_GREEN_PIN);
         switch (cmd->code) {
         case 'k': // knock
-            if (cmd->arg == ARG_STR("nock")) {
-                terminal_sendReply('k', ARG_STR("nock"));
-            }
+            terminal_sendReply('k', ARG_STR("nock"));
             break;
 
         case VERSION[0]: // 8
-            if (cmd->arg == ARG_STR("ver?")) { // get version
-                interpreter_getVersion();
-            }
+            interpreter_getVersion();
             break;
 
-        case 's': // signal generator
-            if (cmd->arg == ARG_STR("sin!")) { // sinus
-                signal_sinus(self->payload[0], self->payload[1], self->payload[2], self->payload[3]);
-                terminal_sendReply('s', ARG_STR("sin!"));
-            } else if (cmd->arg == ARG_STR("stop")) { // stop
-                signal_stop();
-                terminal_sendReply('s', ARG_STR("stop"));
-            } else if (cmd->arg == ARG_STR("dat?")) { // get data
-                terminal_transmitPacket(&signal.packet);
-            }
+        case 's': // sinus
+            signal_sinus(cmd->arg, self->payload[0], self->payload[1], self->payload[2], self->payload[3]);
+            terminal_sendReply('s', 0);
             break;
 
-        case 'o': // oscilloscope
-            if (cmd->arg == ARG_STR("acq!")) { // acquire
-                osci_acquire(self->payload[0]);
-                terminal_sendReply('o', ARG_STR("acq!"));
-            } else if (cmd->arg == ARG_STR("ch1?")) { // get channel 1
-                terminal_transmitPacket(&osci.channel[0].packet);
-            } else if (cmd->arg == ARG_STR("ch2?")) { // get channel 2
-                terminal_transmitPacket(&osci.channel[1].packet);
-            }
+        case 'o': // off
+            signal_off();
+            terminal_sendReply('o', 0);
+            break;
+
+        case 'g': // get signal
+            terminal_transmitPacket(&signal.packet);
+            break;
+
+        case 'a': // acquire
+            osci_acquire(cmd->arg);
+            terminal_transmitPacket(&osci.packet);
             break;
         }
     }
