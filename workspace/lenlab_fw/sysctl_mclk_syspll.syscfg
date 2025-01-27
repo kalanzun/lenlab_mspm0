@@ -12,7 +12,6 @@
 const ADC12   = scripting.addModule("/ti/driverlib/ADC12", {}, false);
 const ADC121  = ADC12.addInstance();
 const ADC122  = ADC12.addInstance();
-const CRC     = scripting.addModule("/ti/driverlib/CRC");
 const DAC12   = scripting.addModule("/ti/driverlib/DAC12");
 const GPIO    = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1   = GPIO.addInstance();
@@ -20,8 +19,6 @@ const GPIO2   = GPIO.addInstance();
 const MATHACL = scripting.addModule("/ti/driverlib/MATHACL");
 const SYSCTL  = scripting.addModule("/ti/driverlib/SYSCTL");
 const SYSTICK = scripting.addModule("/ti/driverlib/SYSTICK");
-const TIMER   = scripting.addModule("/ti/driverlib/TIMER", {}, false);
-const TIMER1  = TIMER.addInstance();
 const UART    = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1   = UART.addInstance();
 
@@ -101,9 +98,6 @@ ADC122.DMA_CHANNEL.addressMode           = "f2b";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
-CRC.seed       = 0xFFFFFFFF;
-CRC.bitReverse = "REVERSED";
-
 DAC12.dacFIFOEn                = true;
 DAC12.dacConfigureDMA          = true;
 DAC12.dacFIFOThresh            = "TWO_QTRS_EMPTY";
@@ -153,17 +147,6 @@ SYSTICK.interruptEnable   = true;
 SYSTICK.systickEnable     = true;
 SYSTICK.interruptPriority = "1";
 
-TIMER1.timerClkDiv                 = 8;
-TIMER1.timerMode                   = "PERIODIC";
-TIMER1.timerClkPrescale            = 200;
-TIMER1.event1PublisherChannel      = 1;
-TIMER1.event2PublisherChannel      = 2;
-TIMER1.$name                       = "VOLT_TIMER";
-TIMER1.timerPeriod                 = "1 s";
-TIMER1.event1ControllerInterruptEn = ["LOAD_EVENT"];
-TIMER1.event2ControllerInterruptEn = ["LOAD_EVENT"];
-TIMER1.peripheral.$assign          = "TIMA0";
-
 UART1.$name                             = "TERMINAL_UART";
 UART1.targetBaudRate                    = 1000000;
 UART1.enableFIFO                        = true;
@@ -205,15 +188,15 @@ UART1.DMA_CHANNEL_TX.peripheral.$assign = "DMA_CH4";
  */
 pinFunction1.peripheral.$suggestSolution       = "SYSCTL";
 ADC121.peripheral.adcPin3.$suggestSolution     = "PA24";
-ADC121.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH1";
+ADC121.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH2";
 ADC122.peripheral.adcPin2.$suggestSolution     = "PA17";
-ADC122.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH0";
+ADC122.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH1";
 Board.peripheral.$suggestSolution              = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution     = "PA20";
 Board.peripheral.swdioPin.$suggestSolution     = "PA19";
 DAC12.peripheral.$suggestSolution              = "DAC0";
 DAC12.peripheral.OutPin.$suggestSolution       = "PA15";
-DAC12.DMA_CHANNEL.peripheral.$suggestSolution  = "DMA_CH2";
+DAC12.DMA_CHANNEL.peripheral.$suggestSolution  = "DMA_CH0";
 GPIO1.associatedPins[0].pin.$suggestSolution   = "PA0";
 GPIO2.associatedPins[0].pin.$suggestSolution   = "PB26";
 GPIO2.associatedPins[1].pin.$suggestSolution   = "PB27";

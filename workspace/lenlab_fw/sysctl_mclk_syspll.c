@@ -1,6 +1,5 @@
 #include "osci.h"
 #include "terminal.h"
-#include "voltmeter.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -10,7 +9,6 @@ int main(void)
 
     osci_init();
     terminal_init();
-    voltmeter_init();
 
     while (1) {
         __WFI();
