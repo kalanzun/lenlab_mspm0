@@ -26,7 +26,7 @@ def receive(port):
 
 def test_sinus(firmware, send, receive):
     # DAC output PA15
-    send(command(b"s", 0, 2000, 1024, 20, 256))
+    send(command(b"s", 1000, 2000, 1024, 20, 256))
     reply = receive(8)
     assert reply == pack(b"s")
 
