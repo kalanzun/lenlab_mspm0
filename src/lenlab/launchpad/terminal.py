@@ -4,6 +4,8 @@ from typing import Self
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
+from lenlab.message import Message
+
 from .port_info import PortInfo
 
 logger = logging.getLogger(__name__)
@@ -11,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Terminal(QObject):
     ack = Signal()
-    error = Signal(Exception)
+    error = Signal(Message)
     reply = Signal(bytes)
 
     port: QSerialPort
@@ -47,7 +49,7 @@ class Terminal(QObject):
         # port.open emits a NoError on errorOccurred in any case
         # in case of an error, it emits errorOccurred a second time with the error
         # on_error_occurred handles the error case
-        logger.debug(f"{self.port_name}: open")
+        logger.debug(f"open {self.port_name}")
         if self.port.open(QIODeviceBase.OpenModeFlag.ReadWrite):
             self.port.clear()  # windows might have leftovers
             return True
@@ -56,7 +58,7 @@ class Terminal(QObject):
 
     def close(self) -> None:
         if self.port.isOpen():
-            logger.debug(f"{self.port_name}: close")
+            logger.debug(f"close {self.port_name}")
             self.port.close()
 
     def set_baud_rate(self, baud_rate: int) -> None:
@@ -108,16 +110,42 @@ class Terminal(QObject):
             self.error.emit(InvalidPacket(n, packet[:12]))
 
 
-class PortError(Exception):
-    pass
+class PortError(Message):
+    english = """Error on port {0}
+
+    {1}
+    """
+    german = """Fehler auf Port {0}
+
+    {1}
+    """
 
 
 class NoPermission(PortError):
-    pass
+    english = """Permission denied on port {0}
+
+    Lenlab was not allowed to access the Launchpad port.
+
+    Maybe another instance of Lenlab is running and blocking the port?
+    """
+    german = """Zugriff verweigert auf Port {0}
+
+    Lenlab erhielt keinen Zugriff auf den Launchpad-Port.
+
+    Vielleicht läuft noch eine andere Instanz von Lenlab und blockiert den Port?
+    """
 
 
 class ResourceError(PortError):
-    pass
+    english = """The Launchpad vanished
+
+    Connect the Launchpad again via USB to your computer.
+    """
+    german = """
+    Das Launchpad ist verschwunden
+
+    Verbinden Sie das Launchpad wieder über USB mit Ihrem Computer.
+    """
 
 
 class TerminalError(Exception):
