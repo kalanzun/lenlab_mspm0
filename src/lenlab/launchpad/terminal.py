@@ -71,6 +71,7 @@ class Terminal(QObject):
         return self.port.read(n).data()
 
     def write(self, packet: bytes) -> int:
+        logger.debug(f"write {packet}")
         return self.port.write(packet)
 
     @Slot(QSerialPort.SerialPortError)
@@ -94,6 +95,7 @@ class Terminal(QObject):
                 length = int.from_bytes(head[2:4], "little") + 8
                 if n == length:
                     reply = self.read(n)
+                    logger.debug(f"reply {reply[:8]}")
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)

@@ -48,11 +48,6 @@ void interpreter_handleCommand(void)
             terminal_sendReply('s', 0);
             break;
 
-        case 'o': // off
-            signal_off();
-            terminal_sendReply('o', 0);
-            break;
-
         case 'g': // get signal
             terminal_transmitPacket(&signal.packet);
             break;

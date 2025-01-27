@@ -91,13 +91,31 @@ static void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
     }
 }
 
-static void signal_start(uint32_t sample_rate)
+void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic)
 {
     struct Signal* const self = &signal;
 
-    self->sample_rate = sample_rate;
+    DL_DAC12_disableSampleTimeGenerator(DAC0);
 
-    // TODO sample_rate setting
+    if (sample_rate == 200)
+        DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_200K);
+    else if (sample_rate == 500)
+        DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_500K);
+    else if (sample_rate == 1000)
+        DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_1M);
+    else
+        return;
+
+    if (length < 100 || length > 2000)
+        return;
+
+    if (amplitude == 0 || amplitude >= 2048)
+        return;
+
+    signal_createSinus(length, amplitude);
+
+    if (multiplier > 0 && harmonic > 0)
+        signal_addHarmonic(multiplier, harmonic);
 
     // disable channel for safe reconfiguration
     DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
@@ -107,19 +125,6 @@ static void signal_start(uint32_t sample_rate)
     DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, self->length);
 
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
-}
 
-void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uint16_t multiplier, uint16_t harmonic)
-{
-    signal_createSinus(length, amplitude);
-    if (harmonic)
-        signal_addHarmonic(multiplier, harmonic);
-
-    // TODO sample_rate
-    signal_start(0);
-}
-
-void signal_off(void)
-{
-    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
+    DL_DAC12_enableSampleTimeGenerator(DAC0);
 }

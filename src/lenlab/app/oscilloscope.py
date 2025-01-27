@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
 from ..launchpad.discovery import Discovery
 from ..launchpad.protocol import command
 from ..launchpad.terminal import Terminal
-
 from .checkbox import BoolCheckBox
+from .signal import SignalWidget
 
 
 class OscilloscopeChart(QWidget):
@@ -95,7 +95,13 @@ class OscilloscopeWidget(QWidget):
     def __init__(self, discovery: Discovery):
         super().__init__()
 
+        chart_layout = QVBoxLayout()
+
         self.chart = OscilloscopeChart()
+        chart_layout.addWidget(self.chart, 1)
+
+        self.signal = SignalWidget(discovery)
+        chart_layout.addWidget(self.signal)
 
         sidebar_layout = QVBoxLayout()
 
@@ -133,7 +139,7 @@ class OscilloscopeWidget(QWidget):
         sidebar_layout.addStretch(1)
 
         main_layout = QHBoxLayout()
-        main_layout.addWidget(self.chart, stretch=1)
+        main_layout.addLayout(chart_layout, stretch=1)
         main_layout.addLayout(sidebar_layout)
 
         self.setLayout(main_layout)
