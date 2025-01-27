@@ -2,6 +2,8 @@ from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
+from lenlab.app.oscilloscope import OscilloscopeWidget
+
 from ..controller.report import Report
 from ..launchpad.discovery import Discovery
 from .poster import PosterWidget
@@ -20,7 +22,9 @@ class MainWindow(QMainWindow):
         self.status_poster.setHidden(True)
         layout.addWidget(self.status_poster)
 
-        self.tabs = []
+        self.tabs = [
+            OscilloscopeWidget(),
+        ]
 
         tab_widget = QTabWidget()
         for tab in self.tabs:
