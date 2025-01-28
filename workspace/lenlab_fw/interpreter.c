@@ -54,7 +54,6 @@ void interpreter_handleCommand(void)
 
         case 'a': // acquire
             osci_acquire(cmd->arg);
-            terminal_transmitPacket(&osci.packet);
             break;
         }
     }

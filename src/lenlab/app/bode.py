@@ -84,13 +84,13 @@ class BodeChart(QWidget):
         self.terminal = terminal
         self.terminal.reply.connect(self.on_reply)
 
-    def averages_by_sample_rate(self, sample_rate: int):
+    def interval_by_sample_rate(self, sample_rate: int):
         if sample_rate == 200:
-            return 4
+            return 20
         if sample_rate == 500:
-            return 2
+            return 10
         else:
-            return 1
+            return 5
 
     def measure(self, index=0):
         self.index = index
@@ -108,12 +108,13 @@ class BodeChart(QWidget):
     def on_reply(self, reply):
         if reply.startswith(b"Ls"):
             freq, sample_rate, length = sine_table[self.index]
-            averages = self.averages_by_sample_rate(sample_rate)
-            self.terminal.write(command(b"a", averages))
+            interval = self.interval_by_sample_rate(sample_rate)
+            self.terminal.write(command(b"a", interval))
 
         elif reply.startswith(b"La"):
             payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-            averages = int.from_bytes(reply[4:8], byteorder="little")
+            interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
+            interval = interval_100ns * 100e-9
 
             # 12 bit signed binary (2s complement), left aligned
             payload = payload >> 4
@@ -127,7 +128,7 @@ class BodeChart(QWidget):
             f = sine_table[self.index][0]
             o = length / 2
 
-            x = 2 * np.pi * f * np.linspace(-o, o, length, endpoint=False) * averages / 2e6
+            x = 2 * np.pi * f * np.linspace(-o, o, length, endpoint=False) * interval
             y = np.sin(x) + 1j * np.cos(x)
             transfer = np.sum(y * ch2) / np.sum(y * ch1)
 

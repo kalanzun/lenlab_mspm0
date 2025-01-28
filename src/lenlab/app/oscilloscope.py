@@ -71,7 +71,8 @@ class OscilloscopeChart(QWidget):
     def on_reply(self, reply):
         if reply.startswith(b"La"):
             payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-            averages = int.from_bytes(reply[4:8], byteorder="little")
+            interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
+            interval_ms = interval_100ns * 1e-4
 
             # 12 bit signed binary (2s complement), left aligned
             payload = payload >> 4
@@ -80,22 +81,22 @@ class OscilloscopeChart(QWidget):
             data = data * 3.3 / 4096  # 12 bit signed ADC
 
             length = data.shape[0] // 2  # 2 channels
+            half = length / 2
 
             # ms
-            time = (
-                np.linspace(-length / 2, length / 2, length, endpoint=False) * 1e3 * averages / 2e6
-            )
+            time = np.linspace(-half, half, length, endpoint=False) * interval_ms
 
             for channel, values in zip(self.channels, batched(data, length), strict=False):
                 channel.replace(list(map(QPointF, time, values)))
 
-            self.x_axis.setRange(-1.5 * averages, 1.5 * averages)
+            self.x_axis.setRange(-3e3 * interval_ms, 3e3 * interval_ms)
 
 
 class OscilloscopeWidget(QWidget):
     title = "Oscilloscope"
 
-    sampling_rates = ["2 MHz", "1 MHz", "500 kHz", "250 kHz"]
+    sample_rates = ["2 MHz", "1 MHz", "500 kHz", "250 kHz"]
+    intervals_100ns = [5, 10, 20, 40]
 
     terminal: Terminal
 
@@ -118,18 +119,18 @@ class OscilloscopeWidget(QWidget):
         label = QLabel("Sample rate")
         layout.addWidget(label)
 
-        self.sampling_rate = QComboBox()
-        for sampling_rate in self.sampling_rates:
-            self.sampling_rate.addItem(sampling_rate)
+        self.sample_rate = QComboBox()
+        for sample_rate in self.sample_rates:
+            self.sample_rate.addItem(sample_rate)
 
-        layout.addWidget(self.sampling_rate)
+        layout.addWidget(self.sample_rate)
 
         sidebar_layout.addLayout(layout)
 
         # start
         layout = QHBoxLayout()
 
-        button = QPushButton("Start")
+        button = QPushButton("Single")
         button.clicked.connect(self.on_start_clicked)
         layout.addWidget(button)
 
@@ -160,6 +161,6 @@ class OscilloscopeWidget(QWidget):
 
     @Slot()
     def on_start_clicked(self):
-        index = self.sampling_rate.currentIndex()
-        averages = 1 << index
-        self.terminal.write(command(b"a", averages))
+        index = self.sample_rate.currentIndex()
+        interval = self.intervals_100ns[index]
+        self.terminal.write(command(b"a", interval))
