@@ -157,6 +157,9 @@ class Discovery(QObject):
     @Slot()
     def stop(self):
         self.timer.stop()
+        for probe in self.probes:
+            probe.deleteLater()
+
         self.probes = []
 
     @Slot(Message)
