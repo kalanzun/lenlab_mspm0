@@ -1,5 +1,9 @@
+from importlib import resources
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
@@ -8,6 +12,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+import lenlab
 
 from ..controller.programmer import Programmer
 from ..launchpad.discovery import Discovery
@@ -49,9 +55,9 @@ class ProgrammerWidget(QWidget):
         self.poster.setHidden(True)
         program_layout.addWidget(self.poster)
 
-        # button = QPushButton("Export Firmware")
-        # button.clicked.connect(self.on_export_clicked)
-        # program_layout.addWidget(button)
+        button = QPushButton("Export Firmware")
+        button.clicked.connect(self.on_export_clicked)
+        program_layout.addWidget(button)
 
         tool_box = QVBoxLayout()
 
@@ -92,6 +98,23 @@ class ProgrammerWidget(QWidget):
         self.program_button.setEnabled(True)
         self.poster.set_error(error)
 
+    @Slot()
+    def on_export_clicked(self):
+        file_name, file_format = QFileDialog.getSaveFileName(
+            self,
+            "Export Firmware",
+            "lenlab_fw.bin",
+            "Binary (*.bin)",
+        )
+        if not file_name:  # cancelled
+            return
+
+        try:
+            firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
+            Path(file_name).write_bytes(firmware)
+        except Exception as error:
+            self.poster.set_error(ExportError(error))
+
 
 class Introduction(Message):
     english = """Please start the "Bootstrap Loader" on the Launchpad first:
@@ -109,3 +132,8 @@ class Introduction(Message):
 
     Die Tasten klicken hörbar. Die rote LED an der Unterkante ist aus.
     Sie haben jetzt 10 Sekunden, um hier in der App auf Programmieren zu klicken."""
+
+
+class ExportError(Message):
+    english = """Error exporting the firmware\n\n{0}"""
+    german = """Fehler beim Exportieren der Firmware\n\n{0}"""
