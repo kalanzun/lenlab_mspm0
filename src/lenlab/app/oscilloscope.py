@@ -71,6 +71,7 @@ class OscilloscopeChart(QWidget):
     def on_reply(self, reply):
         if reply.startswith(b"La"):
             payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+            averages = int.from_bytes(reply[4:8], byteorder="little")
 
             # 12 bit signed binary (2s complement), left aligned
             payload = payload >> 4
@@ -80,10 +81,15 @@ class OscilloscopeChart(QWidget):
 
             length = data.shape[0] // 2  # 2 channels
 
-            time = np.linspace(-length / 2, length / 2, length, endpoint=False) * 1e3 / 2e6
+            # ms
+            time = (
+                np.linspace(-length / 2, length / 2, length, endpoint=False) * 1e3 * averages / 2e6
+            )
 
             for channel, values in zip(self.channels, batched(data, length), strict=False):
                 channel.replace(list(map(QPointF, time, values)))
+
+            self.x_axis.setRange(-1.5 * averages, 1.5 * averages)
 
 
 class OscilloscopeWidget(QWidget):
@@ -109,7 +115,7 @@ class OscilloscopeWidget(QWidget):
         # sampling rate
         layout = QHBoxLayout()
 
-        label = QLabel("Sampling rate")
+        label = QLabel("Sample rate")
         layout.addWidget(label)
 
         self.sampling_rate = QComboBox()

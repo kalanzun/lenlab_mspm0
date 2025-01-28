@@ -18,7 +18,7 @@ void osci_init(void)
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 }
 
-void osci_acquire(uint32_t averages)
+static void osci_configADC(ADC12_Regs* adc12, uint32_t averages)
 {
     // sample rate 2 MHz
     // averages: number of averages, valid values are powers of 2: 1, 2, 4, 8, ...
@@ -28,25 +28,45 @@ void osci_acquire(uint32_t averages)
     // averages 4, sample rate 500 kHz
     // averages 8, sample rate 250 kHz
 
-    const struct Osci* const self = &osci;
+    DL_ADC12_disableConversions(adc12);
 
-    DL_ADC12_configHwAverage(ADC12_CH1_INST, averages, averages);
+    if (averages == 2)
+        DL_ADC12_configHwAverage(adc12, DL_ADC12_HW_AVG_NUM_ACC_2, DL_ADC12_HW_AVG_DEN_DIV_BY_2);
+    else if (averages == 4)
+        DL_ADC12_configHwAverage(adc12, DL_ADC12_HW_AVG_NUM_ACC_4, DL_ADC12_HW_AVG_DEN_DIV_BY_4);
+    else if (averages == 8)
+        DL_ADC12_configHwAverage(adc12, DL_ADC12_HW_AVG_NUM_ACC_8, DL_ADC12_HW_AVG_DEN_DIV_BY_8);
+    else if (averages == 16)
+        DL_ADC12_configHwAverage(adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
+    else
+        DL_ADC12_configHwAverage(adc12, DL_ADC12_HW_AVG_NUM_ACC_DISABLED, DL_ADC12_HW_AVG_DEN_DIV_BY_1);
 
-    DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH1_INST));
-    DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)self->channel[0].payload);
+    // DL_ADC12_setSampleTime0(adc12, 12);
+
+    DL_ADC12_enableConversions(adc12);
+}
+
+static void osci_configDMAChannel(uint8_t channel, uint32_t src_addr, uint32_t dest_addr, uint16_t size)
+{
+    DL_DMA_setSrcAddr(DMA, channel, src_addr);
+    DL_DMA_setDestAddr(DMA, channel, dest_addr);
     /* When FIFO is enabled 2 samples are compacted in a single word */
-    DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, LENGTH(self->channel[0].payload));
+    DL_DMA_setTransferSize(DMA, channel, size);
 
-    DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
+    DL_DMA_enableChannel(DMA, channel);
+}
 
-    DL_ADC12_configHwAverage(ADC12_CH2_INST, averages, averages);
+void osci_acquire(uint32_t averages)
+{
+    struct Osci* const self = &osci;
 
-    DL_DMA_setSrcAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH2_INST));
-    DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)self->channel[1].payload);
-    /* When FIFO is enabled 2 samples are compacted in a single word */
-    DL_DMA_setTransferSize(DMA, DMA_CH2_CHAN_ID, LENGTH(self->channel[1].payload));
+    self->packet.arg = averages;
 
-    DL_DMA_enableChannel(DMA, DMA_CH2_CHAN_ID);
+    osci_configADC(ADC12_CH1_INST, averages);
+    osci_configADC(ADC12_CH2_INST, averages);
+
+    osci_configDMAChannel(DMA_CH1_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH1_INST), (uint32_t)self->channel[0].payload, LENGTH(self->channel[0].payload));
+    osci_configDMAChannel(DMA_CH2_CHAN_ID, (uint32_t)DL_ADC12_getFIFOAddress(ADC12_CH2_INST), (uint32_t)self->channel[1].payload, LENGTH(self->channel[1].payload));
 
     DL_ADC12_startConversion(ADC12_CH1_INST);
     DL_ADC12_startConversion(ADC12_CH2_INST);
