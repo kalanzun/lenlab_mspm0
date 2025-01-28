@@ -1,3 +1,4 @@
+from importlib import metadata
 from itertools import batched
 
 import numpy as np
@@ -8,7 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QVBoxLayout,
-    QWidget,
+    QWidget, QFileDialog,
 )
 
 from ..controller.signal import sine_table
@@ -31,6 +32,8 @@ class BodeChart(QWidget):
 
     def __init__(self, discovery: Discovery):
         super().__init__()
+
+        self.index = 0
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -84,7 +87,8 @@ class BodeChart(QWidget):
         self.terminal = terminal
         self.terminal.reply.connect(self.on_reply)
 
-    def interval_by_sample_rate(self, sample_rate: int):
+    @staticmethod
+    def interval_by_sample_rate(sample_rate: int):
         if sample_rate == 200:
             return 20
         if sample_rate == 500:
@@ -92,8 +96,15 @@ class BodeChart(QWidget):
         else:
             return 5
 
-    def measure(self, index=0):
-        self.index = index
+    @Slot()
+    def start(self):
+        for channel in self.channels:
+            channel.clear()
+
+        self.index = 0
+        self.measure()
+
+    def measure(self):
         freq, sample_rate, length = sine_table[self.index]
         self.terminal.write(
             command(
@@ -138,9 +149,17 @@ class BodeChart(QWidget):
             self.channels[0].append(f, magnitude)
             self.channels[1].append(f, phase)
 
-            index = self.index + 2
-            if index < len(sine_table):
-                self.measure(self.index + 1)
+            self.index += 2
+            if self.index < len(sine_table):
+                self.measure()
+
+    def save_as(self, file_name: str):
+        with open(file_name, "w") as file:
+            version = metadata.version("lenlab")
+            file.write(f"Lenlab MSPM0 {version} Bode-Plot\n")
+            file.write("Frequenz; Betrag; Phase\n")
+            for m, p in zip(*[series.points() for series in self.channels], strict=False):
+                file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
 
 
 class BodeWidget(QWidget):
@@ -151,6 +170,11 @@ class BodeWidget(QWidget):
     def __init__(self, discovery: Discovery):
         super().__init__()
 
+        main_layout = QHBoxLayout()
+
+        self.chart = BodeChart(discovery)
+        main_layout.addWidget(self.chart, stretch=1)
+
         sidebar_layout = QVBoxLayout()
 
         # sampling rate
@@ -160,21 +184,35 @@ class BodeWidget(QWidget):
         layout = QHBoxLayout()
 
         button = QPushButton("Start")
-        button.clicked.connect(self.on_start_clicked)
+        button.clicked.connect(self.chart.start)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
+
+        # save as
+        layout = QHBoxLayout()
+
+        button = QPushButton("Save as")
+        button.clicked.connect(self.on_save_as_clicked)
+        layout.addWidget(button)
+
+        sidebar_layout.addLayout(layout)
+
         sidebar_layout.addStretch(1)
-
-        main_layout = QHBoxLayout()
-
-        self.chart = BodeChart(discovery)
-        main_layout.addWidget(self.chart, stretch=1)
 
         main_layout.addLayout(sidebar_layout)
 
         self.setLayout(main_layout)
 
     @Slot()
-    def on_start_clicked(self):
-        self.chart.measure()
+    def on_save_as_clicked(self):
+        file_name, file_format = QFileDialog.getSaveFileName(
+            self,
+            "Save Bode Plot",
+            "lenlab_bode.csv",
+            "CSV (*.csv)",
+        )
+        if not file_name:  # cancelled
+            return
+
+        self.chart.save_as(file_name)
