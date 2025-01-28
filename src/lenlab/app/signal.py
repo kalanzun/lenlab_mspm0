@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject, Qt, Signal, Slot
-from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget
+from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget, QVBoxLayout
 
 from ..controller.signal import sine_table
 from ..launchpad.discovery import Discovery
@@ -10,42 +10,73 @@ from ..launchpad.terminal import Terminal
 class Parameter(QObject):
     changed = Signal()
 
-    value: int
-
-    def __init__(self):
+    def __init__(self, label: str):
         super().__init__()
+
+        self.label = QLabel(label)
+
+    def widgets(self):
+        yield self.label
+
+
+class Function(Parameter):
+    def __init__(self):
+        super().__init__("Signal generator")
+
+        self.field = QLineEdit()
+        self.field.setReadOnly(True)
+        self.field.setText("Sinus")
+
+    def widgets(self):
+        yield from super().widgets()
+        yield self.field
+
+
+class Slider(Parameter):
+    def __init__(self, label: str):
+        super().__init__(label)
 
         self.value = 0
 
-        self.label = QLabel()
         self.field = QLineEdit()
-        self.slider = QSlider(Qt.Orientation.Horizontal)
-
         self.field.setText(self.format_value(0))
+        self.field.setReadOnly(True)
 
+        self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setMinimum(0)
         self.slider.valueChanged.connect(self.on_slider_value_changed)
 
     def widgets(self):
-        yield self.label
+        yield from super().widgets()
         yield self.field
         yield self.slider
 
-    def format_value(self, value: int) -> str:
+    @staticmethod
+    def format_value(value: int) -> str:
         return str(value)
 
     @Slot(int)
     def on_slider_value_changed(self, value):
         self.field.setText(self.format_value(value))
+
         self.value = value
         self.changed.emit()
 
 
-class Frequency(Parameter):
-    def __init__(self):
-        super().__init__()
+class Amplitude(Slider):
+    def __init__(self, label: str = "Amplitude"):
+        super().__init__(label)
 
-        self.label.setText("Frequency")
+        self.slider.setMaximum(2048)
+
+    def format_value(self, value: int) -> str:
+        amplitude = value / 2048 * 1.65
+        return f"{amplitude:1.3f} V"
+
+
+class Frequency(Slider):
+    def __init__(self):
+        super().__init__("Frequency")
 
         self.slider.setMaximum(len(sine_table) - 1)
 
@@ -63,27 +94,14 @@ class Frequency(Parameter):
         return f"{value / 1e3:2.1f} kHz"
 
     def format_value(self, value: int) -> str:
-        f = sine_table[value][0]
-        return self.format_number(f)
+        freq, sample_rate, points = sine_table[value]
+        return self.format_number(freq)
 
 
-class Amplitude(Parameter):
-    def __init__(self, label: str = "Amplitude"):
-        super().__init__()
-
-        self.label.setText(label)
-        self.slider.setMaximum(2048)
-
-    def format_value(self, value: int) -> str:
-        amplitude = value / 2048 * 1.65
-        return f"{amplitude:1.3f} V"
-
-
-class Multiplier(Parameter):
+class Multiplier(Slider):
     def __init__(self):
-        super().__init__()
+        super().__init__("Frequency multiplier")
 
-        self.label.setText("Harmonic\nMultiplier")
         self.slider.setMaximum(20)
 
 
@@ -95,28 +113,29 @@ class SignalWidget(QWidget):
 
         self.busy = True
 
-        layout = QGridLayout()
+        parameter_layout = QGridLayout()
 
-        self.frequency = Frequency()
+        self.function = Function()
         self.amplitude = Amplitude()
+        self.frequency = Frequency()
         self.harmonic = Multiplier()
-        self.harmonic_amplitude = Amplitude("Harmonic\nAmplitude")
 
         parameters: list[Parameter] = [
-            self.frequency,
+            self.function,
             self.amplitude,
+            self.frequency,
+            Parameter("Second signal"),
             self.harmonic,
-            self.harmonic_amplitude,
         ]
 
         for row, parameter in enumerate(parameters):
             parameter.changed.connect(self.on_parameter_changed)
             for col, widget in enumerate(parameter.widgets()):
-                layout.addWidget(widget, row, col)
+                parameter_layout.addWidget(widget, row, col)
 
-        layout.setColumnStretch(2, 1)
+        parameter_layout.setColumnStretch(2, 1)
 
-        self.setLayout(layout)
+        self.setLayout(parameter_layout)
 
         discovery.ready.connect(self.on_ready)
 
@@ -136,15 +155,23 @@ class SignalWidget(QWidget):
         if not self.busy:
             self.busy = True
 
-            sample_rate = sine_table[self.frequency.value][1]
-            length = sine_table[self.frequency.value][2]
+            frequency, sample_rate, length = sine_table[self.frequency.value]
+
+            harmonic = self.harmonic.value
+            if harmonic:
+                amplitude = self.amplitude.value // 2
+                harmonic_amplitude = amplitude
+            else:
+                amplitude = self.amplitude.value
+                harmonic_amplitude = 0
+
             self.terminal.write(
                 command(
                     b"s",
                     sample_rate,
                     length,
-                    self.amplitude.value,
-                    self.harmonic.value,
-                    self.harmonic_amplitude.value,
+                    amplitude,
+                    harmonic,
+                    harmonic_amplitude,
                 )
             )
