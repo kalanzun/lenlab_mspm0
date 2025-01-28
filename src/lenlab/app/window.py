@@ -6,6 +6,7 @@ from lenlab.app.oscilloscope import OscilloscopeWidget
 
 from ..controller.report import Report
 from ..launchpad.discovery import Discovery
+from .bode import BodeWidget
 from .figure import LaunchpadWidget
 from .poster import PosterWidget
 from .programmer import ProgrammerWidget
@@ -28,6 +29,7 @@ class MainWindow(QMainWindow):
             LaunchpadWidget(),
             ProgrammerWidget(discovery),
             OscilloscopeWidget(discovery),
+            BodeWidget(discovery),
         ]
 
         tab_widget = QTabWidget()
