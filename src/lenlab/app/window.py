@@ -24,6 +24,8 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         self.status_poster = PosterWidget()
+        self.status_poster.button.setHidden(False)
+        self.status_poster.button.clicked.connect(discovery.retry)
         self.status_poster.setHidden(True)
         layout.addWidget(self.status_poster)
 
@@ -71,6 +73,7 @@ class MainWindow(QMainWindow):
         # discovery
         self.discovery = discovery
         self.discovery.error.connect(self.status_poster.set_error)
+        self.discovery.ready.connect(self.status_poster.hide)
 
     @Slot()
     def save_report(self):

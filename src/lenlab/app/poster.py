@@ -27,7 +27,7 @@ class PosterWidget(QWidget):
         self.text_widget.setTextFormat(Qt.TextFormat.MarkdownText)
         self.text_widget.setWordWrap(True)
 
-        self.button = QPushButton()
+        self.button = QPushButton("Retry")
         self.button.setHidden(True)
 
         right = QVBoxLayout()
