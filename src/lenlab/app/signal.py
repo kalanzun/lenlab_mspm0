@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject, Qt, Signal, Slot
-from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget
 
 from ..controller.signal import sine_table
 from ..launchpad.discovery import Discovery
@@ -36,8 +36,6 @@ class Slider(Parameter):
     def __init__(self, label: str):
         super().__init__(label)
 
-        self.value = 0
-
         self.field = QLineEdit()
         self.field.setText(self.format_value(0))
         self.field.setReadOnly(True)
@@ -51,6 +49,9 @@ class Slider(Parameter):
         yield self.field
         yield self.slider
 
+    def get_value(self):
+        return self.slider.value()
+
     @staticmethod
     def format_value(value: int) -> str:
         return str(value)
@@ -58,8 +59,6 @@ class Slider(Parameter):
     @Slot(int)
     def on_slider_value_changed(self, value):
         self.field.setText(self.format_value(value))
-
-        self.value = value
         self.changed.emit()
 
 
@@ -67,10 +66,15 @@ class Amplitude(Slider):
     def __init__(self, label: str = "Amplitude"):
         super().__init__(label)
 
-        self.slider.setMaximum(2048)
+        self.slider.setMaximum(255)
 
-    def format_value(self, value: int) -> str:
-        amplitude = value / 2048 * 1.65
+    def get_value(self):
+        # 0 ... 2040
+        return self.slider.value() * 8
+
+    @staticmethod
+    def format_value(value: int) -> str:
+        amplitude = value / 255 * 1.65
         return f"{amplitude:1.3f} V"
 
 
@@ -155,14 +159,13 @@ class SignalWidget(QWidget):
         if not self.busy:
             self.busy = True
 
-            frequency, sample_rate, length = sine_table[self.frequency.value]
+            frequency, sample_rate, length = sine_table[self.frequency.get_value()]
 
-            harmonic = self.harmonic.value
+            harmonic = self.harmonic.get_value()
             if harmonic:
-                amplitude = self.amplitude.value // 2
-                harmonic_amplitude = amplitude
+                harmonic_amplitude = amplitude = self.amplitude.get_value() // 2
             else:
-                amplitude = self.amplitude.value
+                amplitude = self.amplitude.get_value()
                 harmonic_amplitude = 0
 
             self.terminal.write(
