@@ -1,4 +1,4 @@
-from itertools import batched
+from importlib import metadata
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
@@ -6,6 +6,7 @@ from PySide6.QtCore import QPointF, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -29,8 +30,16 @@ class OscilloscopeChart(QWidget):
     x_label = "time [ms]"
     y_label = "voltage [V]"
 
+    time: np.ndarray
+    ch1: np.ndarray
+    ch2: np.ndarray
+
     def __init__(self):
         super().__init__()
+
+        self.time = np.ndarray((0,))
+        self.ch1 = np.ndarray((0,))
+        self.ch2 = np.ndarray((0,))
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -84,12 +93,22 @@ class OscilloscopeChart(QWidget):
             half = length / 2
 
             # ms
-            time = np.linspace(-half, half, length, endpoint=False) * interval_ms
+            self.time = time = np.linspace(-half, half, length, endpoint=False) * interval_ms
+            self.ch1 = ch1 = data[:length]
+            self.ch2 = ch2 = data[length:]
 
-            for channel, values in zip(self.channels, batched(data, length), strict=False):
+            for channel, values in zip(self.channels, [ch1, ch2], strict=False):
                 channel.replace(list(map(QPointF, time, values)))
 
             self.x_axis.setRange(-3e3 * interval_ms, 3e3 * interval_ms)
+
+    def save_as(self, file_name: str):
+        with open(file_name, "w") as file:
+            version = metadata.version("lenlab")
+            file.write(f"Lenlab MSPM0 {version} Oscilloscope\n")
+            file.write("Zeit; Kanal_1; Kanal_2\n")
+            for t, ch1, ch2 in zip(self.time, self.ch1, self.ch2, strict=False):
+                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
 
 
 class OscilloscopeWidget(QWidget):
@@ -144,6 +163,15 @@ class OscilloscopeWidget(QWidget):
             checkbox.check_changed.connect(channel.setVisible)
             sidebar_layout.addWidget(checkbox)
 
+        # save as
+        layout = QHBoxLayout()
+
+        button = QPushButton("Save as")
+        button.clicked.connect(self.on_save_as_clicked)
+        layout.addWidget(button)
+
+        sidebar_layout.addLayout(layout)
+
         sidebar_layout.addStretch(1)
 
         main_layout = QHBoxLayout()
@@ -164,3 +192,16 @@ class OscilloscopeWidget(QWidget):
         index = self.sample_rate.currentIndex()
         interval = self.intervals_100ns[index]
         self.terminal.write(command(b"a", interval))
+
+    @Slot()
+    def on_save_as_clicked(self):
+        file_name, file_format = QFileDialog.getSaveFileName(
+            self,
+            "Save Oscilloscope Data",
+            "lenlab_osci.csv",
+            "CSV (*.csv)",
+        )
+        if not file_name:  # cancelled
+            return
+
+        self.chart.save_as(file_name)
