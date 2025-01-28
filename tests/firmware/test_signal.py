@@ -26,7 +26,9 @@ def receive(port):
 
 def test_sinus(firmware, send, receive):
     # DAC output PA15
-    send(command(b"s", 1000, 2000, 1024, 20, 256))
+    length = 1024  # my board produces a calculation error
+    length = 512  # my board produces a calculation error
+    send(command(b"s", 1000, length, 1024, 0, 256))
     reply = receive(8)
     assert reply == pack(b"s")
 
@@ -35,7 +37,7 @@ def test_sinus(firmware, send, receive):
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
     fig, ax = plt.subplots()
-    ax.plot(payload)
+    ax.plot(payload[:length])
     ax.grid()
     fig.show()
 
@@ -43,7 +45,7 @@ def test_sinus(firmware, send, receive):
 def test_osci(firmware, send, receive):
     # ch1 input PA24
     # ch2 input PA17
-    send(command(b"a", 1))  # run
+    send(command(b"a", 5))  # run
     reply = receive(8 + 2 * 4 * 3 * 1024)
     channels = np.frombuffer(reply, np.dtype("<i2"), offset=8)
     mid = channels.shape[0] // 2

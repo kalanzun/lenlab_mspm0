@@ -65,9 +65,12 @@ static void signal_createSinus(uint16_t length, uint16_t amplitude)
 
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1);
+    uint32_t angle_inc = uq0_div(1 << 31, length >> 1);
 
-    for (uint32_t i = 0; i < self->length; i++) {
+    // my board produces a calculation error for length = 1024 or length = 512
+    // it's a single wrong value near i = 800
+
+    for (uint32_t i = 0; i < length; i++) {
         self->payload[i] = q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
     }
@@ -77,11 +80,13 @@ static void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
 {
     struct Signal* const self = &signal;
 
+    uint16_t length = self->length;
+
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1 << 31, self->length >> 1) * multiplier;
+    uint32_t angle_inc = uq0_div(1 << 31, length >> 1) * multiplier;
 
-    for (uint32_t i = 0; i < self->length; i++) {
+    for (uint32_t i = 0; i < length; i++) {
         self->payload[i] += q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
         if (angle < angle_inc) {
@@ -97,6 +102,9 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
 
     DL_DAC12_disableSampleTimeGenerator(DAC0);
 
+    // disable channel for safe reconfiguration
+    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
+
     if (sample_rate == 200)
         DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_200K);
     else if (sample_rate == 500)
@@ -109,7 +117,7 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
     if (length < 100 || length > 2000)
         return;
 
-    if (amplitude == 0 || amplitude >= 2048)
+    if (amplitude == 0 || amplitude >= 2048 || amplitude & 1u)
         return;
 
     signal_createSinus(length, amplitude);
@@ -117,12 +125,9 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
     if (multiplier > 0 && harmonic > 0)
         signal_addHarmonic(multiplier, harmonic);
 
-    // disable channel for safe reconfiguration
-    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
-
     DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)self->payload);
     DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) & (DAC0->DATA0));
-    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, self->length);
+    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, length);
 
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
 
