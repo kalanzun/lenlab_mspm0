@@ -1,3 +1,5 @@
+from itertools import batched
+
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Slot
@@ -68,21 +70,20 @@ class OscilloscopeChart(QWidget):
     @Slot(bytes)
     def on_reply(self, reply):
         if reply.startswith(b"La"):
-            channels = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-            mid = channels.shape[0] // 2
-            ch1 = channels[:mid]
-            ch2 = channels[mid:]
+            payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
 
-            time_scale = 0.0005
-            time_offset = -mid // 2 * time_scale
-            scale = 10000
+            # 12 bit signed binary (2s complement), left aligned
+            payload = payload >> 4
 
-            self.channels[0].replace(
-                [QPointF(time_offset + i * time_scale, y / scale) for i, y in enumerate(ch1)]
-            )
-            self.channels[1].replace(
-                [QPointF(time_offset + i * time_scale, y / scale) for i, y in enumerate(ch2)]
-            )
+            data = payload.astype(np.float64)
+            data = data * 3.3 / 4096  # 12 bit signed ADC
+
+            length = data.shape[0] // 2  # 2 channels
+
+            time = np.linspace(-length / 2, length / 2, length, endpoint=False) * 1e3 / 2e6
+
+            for channel, values in zip(self.channels, batched(data, length), strict=False):
+                channel.replace(list(map(QPointF, time, values)))
 
 
 class OscilloscopeWidget(QWidget):
