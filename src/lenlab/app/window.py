@@ -7,6 +7,7 @@ from lenlab.app.oscilloscope import OscilloscopeWidget
 from ..controller.report import Report
 from ..launchpad.discovery import Discovery
 from .poster import PosterWidget
+from .programmer import ProgrammerWidget
 
 
 class MainWindow(QMainWindow):
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.status_poster)
 
         self.tabs = [
+            ProgrammerWidget(discovery),
             OscilloscopeWidget(discovery),
         ]
 
