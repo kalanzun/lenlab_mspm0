@@ -1,3 +1,5 @@
+import sys
+
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
@@ -52,6 +54,11 @@ class MainWindow(QMainWindow):
         action.triggered.connect(self.save_report)
         menu.addAction(action)
 
+        if sys.platform == "linux":
+            action = QAction("Install rules", self)
+            action.triggered.connect(self.install_rules)
+            menu.addAction(action)
+
         menu.addSeparator()
 
         action = QAction("Quit", self)
@@ -72,3 +79,9 @@ class MainWindow(QMainWindow):
         )
         if file_name:
             self.report.save_as(file_name)
+
+    @Slot()
+    def install_rules(self):
+        from ..launchpad import rules
+
+        rules.install_rules()

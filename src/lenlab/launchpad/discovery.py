@@ -226,16 +226,17 @@ class NoRules(NoLaunchpad):
     The Launchpad rules prevent a program called ModemManager
     to connect to and block the Launchpad.
 
-    Disconnect the Launchpad from the computer and install the Launchpad rules.
-    This action asks for super user access.
+    Disconnect the Launchpad from the computer and click on "Install rules" in the Lenlab menu.
+    This action requests super user access.
     """
     german = """Keine Launchpad-Regeln installiert
 
     Die Launchpad-Regeln verbieten einem Programms namens ModemManager
     den Verbindungsaufbau und die Blockade des Launchpads.
 
-    Trennen Sie das Launchpad vom Computer und installieren Sie die Launchpad-Regeln.
-    Diese Aktion fragt nach Administratorzugriff. 
+    Trennen Sie das Launchpad vom Computer
+    und klicken Sie auf "Regeln installieren" im Lenlab-Menü.
+    Diese Aktion fordert Zugriffsberechtigung als Administrator an. 
     """
 
 
