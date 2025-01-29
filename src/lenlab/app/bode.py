@@ -5,8 +5,10 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QVa
 from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -90,14 +92,30 @@ class BodeWidget(QWidget):
 
         sidebar_layout = QVBoxLayout()
 
-        # sampling rate
+        # samples
         layout = QHBoxLayout()
 
-        # start
+        label = QLabel("Samples")
+        layout.addWidget(label)
+
+        self.samples = QComboBox()
+        for choice in [200, 100, 50, 25]:
+            self.samples.addItem(str(choice))
+
+        self.samples.setCurrentIndex(1)
+        layout.addWidget(self.samples)
+
+        sidebar_layout.addLayout(layout)
+
+        # start / stop
         layout = QHBoxLayout()
 
         button = QPushButton("Start")
-        button.clicked.connect(self.bode.start)
+        button.clicked.connect(self.on_start_clicked)
+        layout.addWidget(button)
+
+        button = QPushButton("Stop")
+        button.clicked.connect(self.bode.stop)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -118,6 +136,10 @@ class BodeWidget(QWidget):
         self.setLayout(main_layout)
 
     @Slot()
+    def on_start_clicked(self):
+        self.bode.start(step=1 << self.samples.currentIndex())
+
+    @Slot()
     def on_save_as_clicked(self):
         file_name, file_format = QFileDialog.getSaveFileName(
             self,
@@ -136,7 +158,9 @@ class BodePlotter(QObject):
         super().__init__()
         self.lenlab = lenlab
 
+        self.active = False
         self.index = 0
+        self.step = 1
         self.magnitude = QLineSeries()
         self.phase = QLineSeries()
 
@@ -149,13 +173,20 @@ class BodePlotter(QObject):
         else:
             return 5
 
-    @Slot()
-    def start(self):
-        self.index = 0
+    def start(self, step: int):
+        self.active = True
+
         self.magnitude.clear()
         self.phase.clear()
 
+        self.index = 0
+        self.step = step
+
         self.measure()
+
+    @Slot()
+    def stop(self):
+        self.active = False
 
     def measure(self):
         freq, sample_rate, length = sine_table[self.index]
@@ -186,8 +217,8 @@ class BodePlotter(QObject):
         self.magnitude.append(f, magnitude)
         self.phase.append(f, phase)
 
-        self.index += 2
-        if self.index < len(sine_table):
+        self.index += self.step
+        if self.index < len(sine_table) and self.active:
             self.measure()
 
     def save_as(self, file_name: str):

@@ -100,7 +100,7 @@ class OscilloscopeWidget(QWidget):
 
         sidebar_layout = QVBoxLayout()
 
-        # sampling rate
+        # sample rate
         layout = QHBoxLayout()
 
         label = QLabel("Sample rate")
