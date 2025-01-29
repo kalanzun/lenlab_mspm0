@@ -4,7 +4,6 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
-from ..launchpad.terminal import Terminal
 
 
 class Parameter(QObject):
@@ -110,8 +109,6 @@ class Multiplier(Slider):
 
 
 class SignalWidget(QWidget):
-    terminal: Terminal
-
     def __init__(self, lenlab: Lenlab):
         super().__init__()
         self.lenlab = lenlab

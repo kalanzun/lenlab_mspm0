@@ -32,9 +32,11 @@ class MainWindow(QMainWindow):
         self.tabs = [
             LaunchpadWidget(),
             ProgrammerWidget(lenlab.discovery),
-            OscilloscopeWidget(lenlab),
-            BodeWidget(lenlab),
+            osci := OscilloscopeWidget(lenlab),
+            bode := BodeWidget(lenlab),
         ]
+
+        osci.bode.connect(bode.bode.on_bode)
 
         tab_widget = QTabWidget()
         for tab in self.tabs:

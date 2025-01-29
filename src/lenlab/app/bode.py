@@ -1,5 +1,4 @@
 from importlib import metadata
-from itertools import batched
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
@@ -16,7 +15,6 @@ from PySide6.QtWidgets import (
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
-from ..launchpad.terminal import Terminal
 
 
 class BodeChart(QWidget):
@@ -81,8 +79,6 @@ class BodeChart(QWidget):
 class BodeWidget(QWidget):
     title = "Bode Plotter"
 
-    terminal: Terminal
-
     def __init__(self, lenlab: Lenlab):
         super().__init__()
         self.bode = BodePlotter(lenlab)
@@ -144,8 +140,6 @@ class BodePlotter(QObject):
         self.magnitude = QLineSeries()
         self.phase = QLineSeries()
 
-        self.lenlab.reply.connect(self.on_reply)
-
     @staticmethod
     def interval_by_sample_rate(sample_rate: int):
         if sample_rate == 200:
@@ -176,26 +170,15 @@ class BodePlotter(QObject):
             )
         )
 
-    def parse_bode_reply(self, reply):
-        payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-        interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
+    @Slot(int, object, object)
+    def on_bode(self, interval_100ns, channel_1, channel_2):
         interval = interval_100ns * 100e-9
-
-        # 12 bit signed binary (2s complement), left aligned
-        payload = payload >> 4
-
-        data = payload.astype(np.float64)
-        data = data * 3.3 / 4096  # 12 bit signed ADC
-
-        length = data.shape[0] // 2  # 2 channels
-        ch1, ch2 = batched(data, length)
-
         f = sine_table[self.index][0]
-        o = length / 2
+        length = channel_1.shape[0]
 
-        x = 2 * np.pi * f * np.linspace(-o, o, length, endpoint=False) * interval
+        x = 2 * np.pi * f * np.linspace(0, interval * length, length, endpoint=False)
         y = np.sin(x) + 1j * np.cos(x)
-        transfer = np.sum(y * ch2) / np.sum(y * ch1)
+        transfer = np.sum(y * channel_2) / np.sum(y * channel_1)
 
         magnitude = 20 * np.log10(np.absolute(transfer))
         phase = np.angle(transfer)
@@ -203,14 +186,9 @@ class BodePlotter(QObject):
         self.magnitude.append(f, magnitude)
         self.phase.append(f, phase)
 
-    @Slot(bytes)
-    def on_reply(self, reply):
-        if reply.startswith(b"Lb"):
-            self.parse_bode_reply(reply)
-
-            self.index += 2
-            if self.index < len(sine_table):
-                self.measure()
+        self.index += 2
+        if self.index < len(sine_table):
+            self.measure()
 
     def save_as(self, file_name: str):
         with open(file_name, "w") as file:
