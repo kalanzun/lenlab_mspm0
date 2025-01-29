@@ -98,7 +98,7 @@ class Terminal(QObject):
                     self.reply.emit(reply)
                 elif n > length:
                     packet = self.read(n)
-                    self.error.emit(OverlongPacket(n, packet[:12]))
+                    self.error.emit(OverlongPacket(n, packet[:12].hex()))
 
         # a single zero is valid in both modes
         elif n == 1 and head[0:1] == b"\x00":
@@ -108,7 +108,7 @@ class Terminal(QObject):
 
         else:
             packet = self.read(n)
-            self.error.emit(InvalidPacket(n, packet[:12]))
+            self.error.emit(InvalidPacket(n, packet[:12].hex()))
 
 
 class PortError(Message):
@@ -154,8 +154,18 @@ class TerminalError(Message):
 
 
 class OverlongPacket(TerminalError):
-    pass
+    english = """
+    Overlong packet received: length = {0}, packet = {1}
+    """
+    german = """
+    Überlanges Paket empfangen: Länge = {0}, Paket = {1}
+    """
 
 
 class InvalidPacket(TerminalError):
-    pass
+    english = """
+    Invalid packet received: length = {0}, packet = {1}
+    """
+    german = """
+    Ungültiges Paket empfangen: Länge = {0}, Paket = {1}
+    """

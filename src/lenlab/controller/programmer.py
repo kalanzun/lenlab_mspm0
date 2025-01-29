@@ -24,12 +24,16 @@ class Programmer(QObject):
 
         self.discovery = discovery
 
-    @Slot()
     def start(self):
+        if not self.discovery.terminals:
+            self.message.emit(NoTerminalAvailable())
+            self.error.emit(ProgrammingFailed())
+
+        firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
+
         self.bootstrap_loaders = [
             BootstrapLoader(terminal) for terminal in self.discovery.terminals
         ]
-        firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
 
         for bsl in self.bootstrap_loaders:
             bsl.message.connect(self.message)
@@ -81,7 +85,7 @@ class ProgrammingFailed(Message):
     The red LED at the bottom edge shall be off.
 
     If programming still does not work, you can try to power off the launchpad
-    (unplug USB connection and plug it back in) and to restart the computer.
+    (unplug USB connection and plug it back in) and click retry on the Launchpad error message.
     Otherwise, you can try TI UniFlash (Manual {link})"""
 
     german = f"""Programmieren fehlgeschlagen
@@ -91,5 +95,11 @@ class ProgrammingFailed(Message):
     Die rote LED an der Unterkante soll aus sein.
 
     Wenn das Programmieren trotzdem nicht funktioniert können Sie das Launchpad stromlos schalten
-    (USB-Verbindung ausstecken und wieder anstecken) und den Computer neustarten.
+    (USB-Verbindung ausstecken und wieder anstecken)
+    und auf neuen Versuch in der Launchpad-Fehlermeldung klicken.
     Ansonsten können Sie TI UniFlash ausprobieren (Anleitung {link})"""
+
+
+class NoTerminalAvailable(Message):
+    english = "No Launchpad connected"
+    german = "Kein Launchpad verbunden"
