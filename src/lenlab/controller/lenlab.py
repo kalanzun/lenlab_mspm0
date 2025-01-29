@@ -27,6 +27,7 @@ class Lock(QObject):
 
 
 class Lenlab(QObject):
+    ready = Signal(bool)
     reply = Signal(bytes)
     write = Signal(bytes)
 
@@ -51,12 +52,14 @@ class Lenlab(QObject):
         self.lock.release()
         self.dac_lock.release()
         self.adc_lock.release()
+        self.ready.emit(True)
 
     @Slot(Message)
     def on_terminal_error(self, error):
         self.lock.acquire()
         self.dac_lock.acquire()
         self.adc_lock.acquire()
+        self.ready.emit(False)
 
     def send_command(self, command: bytes):
         if self.lock.acquire():

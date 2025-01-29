@@ -86,6 +86,7 @@ class BodeWidget(QWidget):
         self.lenlab = lenlab
 
         self.bode = BodePlotter(lenlab)
+        self.lenlab.ready.connect(self.bode.on_ready)
 
         main_layout = QHBoxLayout()
 
@@ -176,6 +177,10 @@ class BodePlotter(QObject):
             return 10
         else:
             return 5
+
+    @Slot(bool)
+    def on_ready(self, ready):
+        self.active = False
 
     def start(self, step: int):
         if self.active:
