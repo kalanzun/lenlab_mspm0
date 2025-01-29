@@ -83,6 +83,8 @@ class BodeWidget(QWidget):
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
+        self.lenlab = lenlab
+
         self.bode = BodePlotter(lenlab)
 
         main_layout = QHBoxLayout()
@@ -112,6 +114,7 @@ class BodeWidget(QWidget):
 
         button = QPushButton("Start")
         button.clicked.connect(self.on_start_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
 
         button = QPushButton("Stop")
@@ -174,6 +177,16 @@ class BodePlotter(QObject):
             return 5
 
     def start(self, step: int):
+        if self.active:
+            return
+
+        if not self.lenlab.dac_lock.acquire():
+            return
+
+        if not self.lenlab.adc_lock.acquire():
+            self.lenlab.dac_lock.release()
+            return
+
         self.active = True
 
         self.magnitude.clear()
@@ -218,8 +231,13 @@ class BodePlotter(QObject):
         self.phase.append(f, phase)
 
         self.index += self.step
-        if self.index < len(sine_table) and self.active:
+        if self.active and self.index < len(sine_table):
             self.measure()
+        else:
+            self.active = False
+
+            self.lenlab.dac_lock.release()
+            self.lenlab.adc_lock.release()
 
     def save_as(self, file_name: str):
         with open(file_name, "w") as file:

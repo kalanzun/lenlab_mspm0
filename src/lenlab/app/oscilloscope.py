@@ -119,6 +119,7 @@ class OscilloscopeWidget(QWidget):
 
         button = QPushButton("Single")
         button.clicked.connect(self.on_start_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -152,14 +153,18 @@ class OscilloscopeWidget(QWidget):
 
     @Slot()
     def on_start_clicked(self):
-        index = self.sample_rate.currentIndex()
-        interval = self.intervals_100ns[index]
-        self.lenlab.send_command(command(b"a", interval))
+        if self.lenlab.adc_lock.acquire():
+            index = self.sample_rate.currentIndex()
+            interval = self.intervals_100ns[index]
+            self.lenlab.send_command(command(b"a", interval))
 
     @Slot(bytes)
     def on_reply(self, reply):
         if not (reply.startswith(b"La") or reply.startswith(b"Lb")):
             return
+
+        if reply.startswith(b"La"):
+            self.lenlab.adc_lock.release()
 
         payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
         interval_100ns = int.from_bytes(reply[4:8], byteorder="little")

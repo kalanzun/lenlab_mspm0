@@ -48,6 +48,12 @@ class Slider(Parameter):
         yield self.field
         yield self.slider
 
+    @Slot(bool)
+    def set_disabled(self, disabled):
+        self.slider.setDisabled(disabled)
+        if disabled:
+            self.slider.setValue(0)
+
     def get_value(self):
         return self.slider.value()
 
@@ -119,8 +125,11 @@ class SignalWidget(QWidget):
 
         self.function = Function()
         self.amplitude = Amplitude()
+        self.lenlab.dac_lock.locked.connect(self.amplitude.set_disabled)
         self.frequency = Frequency()
+        self.lenlab.dac_lock.locked.connect(self.frequency.set_disabled)
         self.harmonic = Multiplier()
+        self.lenlab.dac_lock.locked.connect(self.harmonic.set_disabled)
 
         parameters: list[Parameter] = [
             self.function,
@@ -162,11 +171,15 @@ class SignalWidget(QWidget):
 
     @Slot()
     def on_parameter_changed(self):
+        # ignore calls due to reset to zero
+        if self.lenlab.dac_lock.is_locked:
+            return
+
         self.changed = True
         self.attempt_to_send()
 
     @Slot()
     def attempt_to_send(self):
-        if self.changed and self.lenlab.is_idle:
+        if self.changed and self.lenlab.is_idle and not self.lenlab.dac_lock.is_locked:
             self.lenlab.send_command(self.create_command())
             self.changed = False

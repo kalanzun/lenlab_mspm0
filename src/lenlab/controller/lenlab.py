@@ -5,6 +5,26 @@ from lenlab.launchpad.terminal import Terminal
 from lenlab.queued import QueuedCall
 
 
+class Lock(QObject):
+    locked = Signal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.is_locked = False
+
+    def acquire(self) -> bool:
+        if self.is_locked:
+            return False
+
+        self.is_locked = True
+        self.locked.emit(True)
+        return True
+
+    def release(self):
+        self.is_locked = False
+        self.locked.emit(False)
+
+
 class Lenlab(QObject):
     idle = Signal()
     is_idle: bool
@@ -18,6 +38,9 @@ class Lenlab(QObject):
 
         self.discovery = Discovery()
         self.discovery.ready.connect(self.on_terminal_ready)
+
+        self.dac_lock = Lock()
+        self.adc_lock = Lock()
 
         QueuedCall(self.discovery, self.discovery.find)
 
