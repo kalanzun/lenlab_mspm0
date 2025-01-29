@@ -148,7 +148,7 @@ class SignalWidget(QWidget):
 
         self.setLayout(parameter_layout)
 
-        self.lenlab.idle.connect(self.attempt_to_send)
+        self.lenlab.lock.locked.connect(self.attempt_to_send)
 
     def create_command(self):
         frequency, sample_rate, length = sine_table[self.frequency.get_value()]
@@ -180,6 +180,6 @@ class SignalWidget(QWidget):
 
     @Slot()
     def attempt_to_send(self):
-        if self.changed and self.lenlab.is_idle and not self.lenlab.dac_lock.is_locked:
+        if self.changed and not self.lenlab.lock.is_locked and not self.lenlab.dac_lock.is_locked:
             self.lenlab.send_command(self.create_command())
             self.changed = False

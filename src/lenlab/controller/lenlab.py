@@ -2,6 +2,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.terminal import Terminal
+from lenlab.message import Message
 from lenlab.queued import QueuedCall
 
 
@@ -10,7 +11,7 @@ class Lock(QObject):
 
     def __init__(self):
         super().__init__()
-        self.is_locked = False
+        self.is_locked = True
 
     def acquire(self) -> bool:
         if self.is_locked:
@@ -26,19 +27,15 @@ class Lock(QObject):
 
 
 class Lenlab(QObject):
-    idle = Signal()
-    is_idle: bool
-
     reply = Signal(bytes)
     write = Signal(bytes)
 
     def __init__(self):
         super().__init__()
-        self.is_idle = True
-
         self.discovery = Discovery()
         self.discovery.ready.connect(self.on_terminal_ready)
 
+        self.lock = Lock()
         self.dac_lock = Lock()
         self.adc_lock = Lock()
 
@@ -47,17 +44,26 @@ class Lenlab(QObject):
     @Slot(Terminal)
     def on_terminal_ready(self, terminal):
         # do not take ownership
-        terminal.reply.connect(self.reply)
         terminal.reply.connect(self.on_reply)
+        terminal.error.connect(self.on_terminal_error)
         self.write.connect(terminal.write)
 
-    def send_command(self, command: bytes):
-        self.is_idle = False
+        self.lock.release()
+        self.dac_lock.release()
+        self.adc_lock.release()
 
-        self.write.emit(command)
+    @Slot(Message)
+    def on_terminal_error(self, error):
+        self.lock.acquire()
+        self.dac_lock.acquire()
+        self.adc_lock.acquire()
+
+    def send_command(self, command: bytes):
+        if self.lock.acquire():
+            self.write.emit(command)
 
     def on_reply(self, reply: bytes):
         # ignore BSL replies
         if reply.startswith(b"L"):
-            self.is_idle = True
-            self.idle.emit()
+            self.lock.release()
+            self.reply.emit(reply)

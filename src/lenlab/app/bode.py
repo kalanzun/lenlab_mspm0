@@ -113,6 +113,7 @@ class BodeWidget(QWidget):
         layout = QHBoxLayout()
 
         button = QPushButton("Start")
+        button.setEnabled(False)
         button.clicked.connect(self.on_start_clicked)
         self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
