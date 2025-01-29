@@ -1,5 +1,6 @@
 #include "interpreter.h"
 
+#include "bode.h"
 #include "osci.h"
 #include "signal.h"
 #include "terminal.h"
@@ -57,8 +58,7 @@ void interpreter_handleCommand(void)
             break;
 
         case 'b': // bode
-            signal_sinus(cmd->arg, self->payload[0], self->payload[1], 0, 0);
-            osci_acquire('b', self->payload[2]);
+            bode_start(cmd->arg, self->payload[0], self->payload[1], self->payload[2]);
             break;
         }
     }
