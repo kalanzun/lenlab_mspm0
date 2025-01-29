@@ -321,10 +321,12 @@ class LaunchpadWidget(QWidget):
 class MaximumPinVoltage(Message):
     english = """Maximum pin voltage: 3.3 V
 
-    Never directly connect a pin to the 5 V pin or the solar cell.
+    Never directly connect a pin to 5 V or the solar cell.
+    The voltage might damage the microcontroller.
     Use a voltage divider circuit."""
 
     german = """Maximalspannung an den Pins: 3.3 V
 
-    Verbinden Sie einen Pin niemals direkt mit dem 5-V-Pin oder der Solarzelle.
+    Verbinden Sie einen Pin niemals direkt mit 5 V oder der Solarzelle.
+    Die Spannung könnte den Mikrocontroller beschädigen.
     Verwenden Sie eine Spannungsteiler-Schaltung."""
