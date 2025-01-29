@@ -20,7 +20,6 @@ class Terminal(QObject):
 
     def __init__(self, port_name: str = ""):
         super().__init__()
-
         self.ack_mode = False
         self.port_name = port_name
 
@@ -150,7 +149,7 @@ class ResourceError(PortError):
     """
 
 
-class TerminalError(Exception):
+class TerminalError(Message):
     pass
 
 

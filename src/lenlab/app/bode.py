@@ -3,17 +3,18 @@ from itertools import batched
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QPushButton,
     QVBoxLayout,
-    QWidget, QFileDialog,
+    QWidget,
 )
 
+from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
-from ..launchpad.discovery import Discovery
 from ..launchpad.protocol import command
 from ..launchpad.terminal import Terminal
 
@@ -28,12 +29,9 @@ class BodeChart(QWidget):
     m_label = "magnitude [dB]"
     p_label = "phase [π]"
 
-    terminal: Terminal
-
-    def __init__(self, discovery: Discovery):
+    def __init__(self, channels: list[QLineSeries]):
         super().__init__()
-
-        self.index = 0
+        self.channels = channels
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -68,7 +66,6 @@ class BodeChart(QWidget):
         self.p_axis.setTitleText(self.p_label)
         self.chart.addAxis(self.p_axis, Qt.AlignmentFlag.AlignRight)
 
-        self.channels = [QLineSeries() for _ in self.labels]
         axes = [self.m_axis, self.p_axis]
         for channel, label, axis in zip(self.channels, self.labels, axes, strict=True):
             channel.setName(str(label))
@@ -80,99 +77,19 @@ class BodeChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
-        discovery.ready.connect(self.on_ready)
-
-    @Slot(Terminal)
-    def on_ready(self, terminal):
-        self.terminal = terminal
-        self.terminal.reply.connect(self.on_reply)
-
-    @staticmethod
-    def interval_by_sample_rate(sample_rate: int):
-        if sample_rate == 200:
-            return 20
-        if sample_rate == 500:
-            return 10
-        else:
-            return 5
-
-    @Slot()
-    def start(self):
-        for channel in self.channels:
-            channel.clear()
-
-        self.index = 0
-        self.measure()
-
-    def measure(self):
-        freq, sample_rate, length = sine_table[self.index]
-        self.terminal.write(
-            command(
-                b"s",
-                sample_rate,
-                length,
-                1862,  # 1.5 V
-            )
-        )
-
-    @Slot(bytes)
-    def on_reply(self, reply):
-        if reply.startswith(b"Ls"):
-            freq, sample_rate, length = sine_table[self.index]
-            interval = self.interval_by_sample_rate(sample_rate)
-            self.terminal.write(command(b"a", interval))
-
-        elif reply.startswith(b"La"):
-            payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-            interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
-            interval = interval_100ns * 100e-9
-
-            # 12 bit signed binary (2s complement), left aligned
-            payload = payload >> 4
-
-            data = payload.astype(np.float64)
-            data = data * 3.3 / 4096  # 12 bit signed ADC
-
-            length = data.shape[0] // 2  # 2 channels
-            ch1, ch2 = batched(data, length)
-
-            f = sine_table[self.index][0]
-            o = length / 2
-
-            x = 2 * np.pi * f * np.linspace(-o, o, length, endpoint=False) * interval
-            y = np.sin(x) + 1j * np.cos(x)
-            transfer = np.sum(y * ch2) / np.sum(y * ch1)
-
-            magnitude = 20 * np.log10(np.absolute(transfer))
-            phase = np.angle(transfer)
-
-            self.channels[0].append(f, magnitude)
-            self.channels[1].append(f, phase)
-
-            self.index += 2
-            if self.index < len(sine_table):
-                self.measure()
-
-    def save_as(self, file_name: str):
-        with open(file_name, "w") as file:
-            version = metadata.version("lenlab")
-            file.write(f"Lenlab MSPM0 {version} Bode-Plot\n")
-            file.write("Frequenz; Betrag; Phase\n")
-            for m, p in zip(*[series.points() for series in self.channels], strict=False):
-                file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
-
 
 class BodeWidget(QWidget):
     title = "Bode Plotter"
 
     terminal: Terminal
 
-    def __init__(self, discovery: Discovery):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+        self.bode = BodePlotter(lenlab)
 
         main_layout = QHBoxLayout()
 
-        self.chart = BodeChart(discovery)
+        self.chart = BodeChart([self.bode.magnitude, self.bode.phase])
         main_layout.addWidget(self.chart, stretch=1)
 
         sidebar_layout = QVBoxLayout()
@@ -184,7 +101,7 @@ class BodeWidget(QWidget):
         layout = QHBoxLayout()
 
         button = QPushButton("Start")
-        button.clicked.connect(self.chart.start)
+        button.clicked.connect(self.bode.start)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -215,4 +132,90 @@ class BodeWidget(QWidget):
         if not file_name:  # cancelled
             return
 
-        self.chart.save_as(file_name)
+        self.bode.save_as(file_name)
+
+
+class BodePlotter(QObject):
+    def __init__(self, lenlab: Lenlab):
+        super().__init__()
+        self.lenlab = lenlab
+
+        self.index = 0
+        self.magnitude = QLineSeries()
+        self.phase = QLineSeries()
+
+        self.lenlab.reply.connect(self.on_reply)
+
+    @staticmethod
+    def interval_by_sample_rate(sample_rate: int):
+        if sample_rate == 200:
+            return 20
+        if sample_rate == 500:
+            return 10
+        else:
+            return 5
+
+    @Slot()
+    def start(self):
+        self.index = 0
+        self.magnitude.clear()
+        self.phase.clear()
+
+        self.measure()
+
+    def measure(self):
+        freq, sample_rate, length = sine_table[self.index]
+        interval = self.interval_by_sample_rate(sample_rate)
+        self.lenlab.send_command(
+            command(
+                b"b",
+                sample_rate,
+                length,
+                1862,  # 1.5 V
+                interval,
+            )
+        )
+
+    def parse_bode_reply(self, reply):
+        payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+        interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
+        interval = interval_100ns * 100e-9
+
+        # 12 bit signed binary (2s complement), left aligned
+        payload = payload >> 4
+
+        data = payload.astype(np.float64)
+        data = data * 3.3 / 4096  # 12 bit signed ADC
+
+        length = data.shape[0] // 2  # 2 channels
+        ch1, ch2 = batched(data, length)
+
+        f = sine_table[self.index][0]
+        o = length / 2
+
+        x = 2 * np.pi * f * np.linspace(-o, o, length, endpoint=False) * interval
+        y = np.sin(x) + 1j * np.cos(x)
+        transfer = np.sum(y * ch2) / np.sum(y * ch1)
+
+        magnitude = 20 * np.log10(np.absolute(transfer))
+        phase = np.angle(transfer)
+
+        self.magnitude.append(f, magnitude)
+        self.phase.append(f, phase)
+
+    @Slot(bytes)
+    def on_reply(self, reply):
+        if reply.startswith(b"Lb"):
+            self.parse_bode_reply(reply)
+
+            self.index += 2
+            if self.index < len(sine_table):
+                self.measure()
+
+    def save_as(self, file_name: str):
+        with open(file_name, "w") as file:
+            version = metadata.version("lenlab")
+            file.write(f"Lenlab MSPM0 {version} Bode\n")
+            file.write("Frequenz; Betrag; Phase\n")
+            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=False):
+                file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")

@@ -26,7 +26,6 @@ class ProgrammerWidget(QWidget):
 
     def __init__(self, discovery: Discovery):
         super().__init__()
-
         self.programmer = Programmer(discovery)
         self.programmer.message.connect(self.on_message)
         self.programmer.success.connect(self.on_success)

@@ -1,10 +1,8 @@
 import logging
 from importlib import metadata
 
-from lenlab.queued import QueuedCall
-
+from ..controller.lenlab import Lenlab
 from ..controller.report import Report
-from ..launchpad.discovery import Discovery
 from .app import App
 from .window import MainWindow
 
@@ -15,15 +13,13 @@ def main():
     app = App()
     logging.basicConfig(level=logging.NOTSET)
 
+    lenlab = Lenlab()
     report = Report()
-
-    discovery = Discovery()
-    QueuedCall(discovery, discovery.find)
 
     version = metadata.version("lenlab")
     logger.info(f"Lenlab {version}")
 
-    window = MainWindow(report, discovery)
+    window = MainWindow(lenlab, report)
     window.show()
 
     app.exec()

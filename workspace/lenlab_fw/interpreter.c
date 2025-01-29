@@ -53,9 +53,15 @@ void interpreter_handleCommand(void)
             break;
 
         case 'a': // acquire
-            osci_acquire(cmd->arg);
+            osci_acquire('a', cmd->arg);
+            break;
+
+        case 'b': // bode
+            signal_sinus(cmd->arg, self->payload[0], self->payload[1], 0, 0);
+            osci_acquire('b', self->payload[2]);
             break;
         }
     }
+
     terminal_receiveCommand();
 }

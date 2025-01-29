@@ -18,6 +18,6 @@ extern struct Osci osci;
 
 void osci_init(void);
 
-void osci_acquire(uint32_t averages);
+void osci_acquire(uint8_t code, uint32_t averages);
 
 #endif

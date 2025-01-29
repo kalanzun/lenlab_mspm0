@@ -7,7 +7,6 @@
 struct Osci osci = {
     .packet = {
         .label = 'L',
-        .code = 'a',
         .length = sizeof(osci.channel),
     },
     .ch1_done = false,
@@ -20,9 +19,11 @@ void osci_init(void)
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 }
 
-void osci_acquire(uint32_t interval)
+void osci_acquire(uint8_t code, uint32_t interval)
 {
     struct Osci* const self = &osci;
+
+    self->packet.code = code;
 
     self->ch1_done = false;
     self->ch2_done = false;

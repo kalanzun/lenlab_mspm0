@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import cast
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
@@ -54,7 +55,7 @@ class Probe(QObject):
 
 class Discovery(QObject):
     available = Signal()  # terminals available for programming or probing
-    ready = Signal(Terminal)  # firmware (correct version) connection established
+    ready = Signal(Terminal)  # firmware connection established
     error = Signal(Message)
 
     port_name: str
@@ -65,7 +66,6 @@ class Discovery(QObject):
 
     def __init__(self, port_name: str = ""):
         super().__init__()
-
         self.port_name = port_name
         self.terminals = []
         self.probes = []
@@ -164,7 +164,13 @@ class Discovery(QObject):
 
     @Slot(Message)
     def on_terminal_error(self, error):
-        self.terminals = [terminal for terminal in self.terminals if terminal.is_open]
+        terminal = cast(Terminal, self.sender())
+
+        logger.info(f"close on error {terminal.port_name}")
+        terminal.close()
+        terminal.deleteLater()
+
+        self.terminals = [t for t in self.terminals if t is not terminal]
         self.error.emit(error)
 
     @Slot(Terminal)
@@ -174,6 +180,7 @@ class Discovery(QObject):
         for t in self.terminals:
             if t is not terminal:
                 t.close()
+                t.deleteLater()
 
         self.terminals = [terminal]
 

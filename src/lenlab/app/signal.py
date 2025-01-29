@@ -1,8 +1,8 @@
 from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget
 
+from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
-from ..launchpad.discovery import Discovery
 from ..launchpad.protocol import command
 from ..launchpad.terminal import Terminal
 
@@ -112,10 +112,11 @@ class Multiplier(Slider):
 class SignalWidget(QWidget):
     terminal: Terminal
 
-    def __init__(self, discovery: Discovery):
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+        self.lenlab = lenlab
 
-        self.busy = True
+        self.changed = False
 
         parameter_layout = QGridLayout()
 
@@ -141,40 +142,34 @@ class SignalWidget(QWidget):
 
         self.setLayout(parameter_layout)
 
-        discovery.ready.connect(self.on_ready)
+        self.lenlab.idle.connect(self.attempt_to_send)
 
-    @Slot(Terminal)
-    def on_ready(self, terminal):
-        self.terminal = terminal
-        self.terminal.reply.connect(self.on_reply)
-        self.busy = False
+    def create_command(self):
+        frequency, sample_rate, length = sine_table[self.frequency.get_value()]
 
-    @Slot(bytes)
-    def on_reply(self, reply):
-        if reply.startswith(b"Ls"):
-            self.busy = False
+        harmonic = self.harmonic.get_value()
+        if harmonic:
+            harmonic_amplitude = amplitude = self.amplitude.get_value() // 2
+        else:
+            amplitude = self.amplitude.get_value()
+            harmonic_amplitude = 0
+
+        return command(
+            b"s",
+            sample_rate,
+            length,
+            amplitude,
+            harmonic,
+            harmonic_amplitude,
+        )
 
     @Slot()
     def on_parameter_changed(self):
-        if not self.busy:
-            self.busy = True
+        self.changed = True
+        self.attempt_to_send()
 
-            frequency, sample_rate, length = sine_table[self.frequency.get_value()]
-
-            harmonic = self.harmonic.get_value()
-            if harmonic:
-                harmonic_amplitude = amplitude = self.amplitude.get_value() // 2
-            else:
-                amplitude = self.amplitude.get_value()
-                harmonic_amplitude = 0
-
-            self.terminal.write(
-                command(
-                    b"s",
-                    sample_rate,
-                    length,
-                    amplitude,
-                    harmonic,
-                    harmonic_amplitude,
-                )
-            )
+    @Slot()
+    def attempt_to_send(self):
+        if self.changed and self.lenlab.is_idle:
+            self.lenlab.send_command(self.create_command())
+            self.changed = False

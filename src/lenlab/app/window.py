@@ -6,8 +6,8 @@ from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout,
 
 from lenlab.app.oscilloscope import OscilloscopeWidget
 
+from ..controller.lenlab import Lenlab
 from ..controller.report import Report
-from ..launchpad.discovery import Discovery
 from .bode import BodeWidget
 from .figure import LaunchpadWidget
 from .poster import PosterWidget
@@ -15,9 +15,9 @@ from .programmer import ProgrammerWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, report: Report, discovery: Discovery):
+    def __init__(self, lenlab: Lenlab, report: Report):
         super().__init__()
-
+        self.lenlab = lenlab
         self.report = report
 
         # widget
@@ -25,15 +25,15 @@ class MainWindow(QMainWindow):
 
         self.status_poster = PosterWidget()
         self.status_poster.button.setHidden(False)
-        self.status_poster.button.clicked.connect(discovery.retry)
+        self.status_poster.button.clicked.connect(self.lenlab.discovery.retry)
         self.status_poster.setHidden(True)
         layout.addWidget(self.status_poster)
 
         self.tabs = [
             LaunchpadWidget(),
-            ProgrammerWidget(discovery),
-            OscilloscopeWidget(discovery),
-            BodeWidget(discovery),
+            ProgrammerWidget(lenlab.discovery),
+            OscilloscopeWidget(lenlab),
+            BodeWidget(lenlab),
         ]
 
         tab_widget = QTabWidget()
@@ -71,9 +71,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Lenlab")
 
         # discovery
-        self.discovery = discovery
-        self.discovery.error.connect(self.status_poster.set_error)
-        self.discovery.ready.connect(self.status_poster.hide)
+        self.lenlab.discovery.error.connect(self.status_poster.set_error)
+        self.lenlab.discovery.ready.connect(self.status_poster.hide)
 
     @Slot()
     def save_report(self):

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..launchpad.discovery import Discovery
+from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
 from ..launchpad.terminal import Terminal
 from .checkbox import BoolCheckBox
@@ -30,16 +30,8 @@ class OscilloscopeChart(QWidget):
     x_label = "time [ms]"
     y_label = "voltage [V]"
 
-    time: np.ndarray
-    ch1: np.ndarray
-    ch2: np.ndarray
-
     def __init__(self):
         super().__init__()
-
-        self.time = np.ndarray((0,))
-        self.ch1 = np.ndarray((0,))
-        self.ch2 = np.ndarray((0,))
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -76,39 +68,11 @@ class OscilloscopeChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
-    @Slot(bytes)
-    def on_reply(self, reply):
-        if reply.startswith(b"La"):
-            payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-            interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
-            interval_ms = interval_100ns * 1e-4
+    def replace(self, interval_ms, time, channel_1, channel_2):
+        for channel, values in zip(self.channels, [channel_1, channel_2], strict=False):
+            channel.replace(list(map(QPointF, time, values)))
 
-            # 12 bit signed binary (2s complement), left aligned
-            payload = payload >> 4
-
-            data = payload.astype(np.float64)
-            data = data * 3.3 / 4096  # 12 bit signed ADC
-
-            length = data.shape[0] // 2  # 2 channels
-            half = length / 2
-
-            # ms
-            self.time = time = np.linspace(-half, half, length, endpoint=False) * interval_ms
-            self.ch1 = ch1 = data[:length]
-            self.ch2 = ch2 = data[length:]
-
-            for channel, values in zip(self.channels, [ch1, ch2], strict=False):
-                channel.replace(list(map(QPointF, time, values)))
-
-            self.x_axis.setRange(-3e3 * interval_ms, 3e3 * interval_ms)
-
-    def save_as(self, file_name: str):
-        with open(file_name, "w") as file:
-            version = metadata.version("lenlab")
-            file.write(f"Lenlab MSPM0 {version} Oscilloscope\n")
-            file.write("Zeit; Kanal_1; Kanal_2\n")
-            for t, ch1, ch2 in zip(self.time, self.ch1, self.ch2, strict=False):
-                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
+        self.x_axis.setRange(-3e3 * interval_ms, 3e3 * interval_ms)
 
 
 class OscilloscopeWidget(QWidget):
@@ -119,15 +83,24 @@ class OscilloscopeWidget(QWidget):
 
     terminal: Terminal
 
-    def __init__(self, discovery: Discovery):
+    time: np.ndarray
+    ch1: np.ndarray
+    ch2: np.ndarray
+
+    def __init__(self, lenlab: Lenlab):
         super().__init__()
+        self.lenlab = lenlab
+
+        self.time = np.ndarray((0,))
+        self.ch1 = np.ndarray((0,))
+        self.ch2 = np.ndarray((0,))
 
         chart_layout = QVBoxLayout()
 
         self.chart = OscilloscopeChart()
         chart_layout.addWidget(self.chart, 1)
 
-        self.signal = SignalWidget(discovery)
+        self.signal = SignalWidget(lenlab)
         chart_layout.addWidget(self.signal)
 
         sidebar_layout = QVBoxLayout()
@@ -180,18 +153,36 @@ class OscilloscopeWidget(QWidget):
 
         self.setLayout(main_layout)
 
-        discovery.ready.connect(self.on_ready)
-
-    @Slot(Terminal)
-    def on_ready(self, terminal):
-        self.terminal = terminal
-        self.terminal.reply.connect(self.chart.on_reply)
+        self.lenlab.reply.connect(self.on_reply)
 
     @Slot()
     def on_start_clicked(self):
         index = self.sample_rate.currentIndex()
         interval = self.intervals_100ns[index]
-        self.terminal.write(command(b"a", interval))
+        self.lenlab.send_command(command(b"a", interval))
+
+    @Slot(bytes)
+    def on_reply(self, reply):
+        if reply.startswith(b"La") or reply.startswith(b"Lb"):
+            payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+            interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
+            interval_ms = interval_100ns * 1e-4
+
+            # 12 bit signed binary (2s complement), left aligned
+            payload = payload >> 4
+
+            data = payload.astype(np.float64)
+            data = data * 3.3 / 4096  # 12 bit signed ADC
+
+            length = data.shape[0] // 2  # 2 channels
+            half = length / 2
+
+            # ms
+            self.time = np.linspace(-half, half, length, endpoint=False) * interval_ms
+            self.ch1 = data[:length]
+            self.ch2 = data[length:]
+
+            self.chart.replace(interval_ms, self.time, self.ch1, self.ch2)
 
     @Slot()
     def on_save_as_clicked(self):
@@ -204,4 +195,12 @@ class OscilloscopeWidget(QWidget):
         if not file_name:  # cancelled
             return
 
-        self.chart.save_as(file_name)
+        self.save_as(file_name)
+
+    def save_as(self, file_name: str):
+        with open(file_name, "w") as file:
+            version = metadata.version("lenlab")
+            file.write(f"Lenlab MSPM0 {version} Oscilloscope\n")
+            file.write("Zeit; Kanal_1; Kanal_2\n")
+            for t, ch1, ch2 in zip(self.time, self.ch1, self.ch2, strict=False):
+                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
