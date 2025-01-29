@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.terminal import Terminal
@@ -29,12 +29,17 @@ class Lock(QObject):
 class Lenlab(QObject):
     ready = Signal(bool)
     reply = Signal(bytes)
-    write = Signal(bytes)
+    terminal_write = Signal(bytes)
+    terminal_error = Signal(Message)
 
     def __init__(self):
         super().__init__()
         self.discovery = Discovery()
         self.discovery.ready.connect(self.on_terminal_ready)
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.on_timeout)
 
         self.lock = Lock()
         self.dac_lock = Lock()
@@ -47,26 +52,49 @@ class Lenlab(QObject):
         # do not take ownership
         terminal.reply.connect(self.on_reply)
         terminal.error.connect(self.on_terminal_error)
-        self.write.connect(terminal.write)
+        self.terminal_write.connect(terminal.write)
+        self.terminal_error.connect(terminal.error)
 
         self.lock.release()
         self.dac_lock.release()
         self.adc_lock.release()
         self.ready.emit(True)
 
-    @Slot(Message)
-    def on_terminal_error(self, error):
+    @Slot()
+    def on_terminal_error(self):
+        self.timer.stop()
         self.lock.acquire()
         self.dac_lock.acquire()
         self.adc_lock.acquire()
         self.ready.emit(False)
 
-    def send_command(self, command: bytes):
+    def send_command(self, command: bytes, interval: int = 400):
         if self.lock.acquire():
-            self.write.emit(command)
+            self.timer.start(interval)
+            self.terminal_write.emit(command)
 
-    def on_reply(self, reply: bytes):
+    @Slot(bytes)
+    def on_reply(self, reply):
         # ignore BSL replies
         if reply.startswith(b"L"):
+            self.timer.stop()
             self.lock.release()
             self.reply.emit(reply)
+
+    @Slot()
+    def on_timeout(self):
+        # a timeout may mean a broken connection and stuck buffers
+        self.terminal_error.emit(NoReply())
+
+
+class NoReply(Message):
+    english = """No reply received from the Firmware
+
+    The firmware may have crashed.
+    Reset the firmware with the reset button on the Launchpad.
+    """
+    german = """Keine Antwort von der Firmware erhalten
+
+    Die Firmware könnte abgestürzt sein.
+    Resetten Sie das Launchpad mit dem Reset-Knopf.
+    """
