@@ -52,8 +52,8 @@ class BodeChart(QWidget):
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.m_axis = QValueAxis()
-        self.m_axis.setRange(-40.0, 10.0)
-        self.m_axis.setTickCount(6)
+        self.m_axis.setRange(-50.0, 10.0)
+        self.m_axis.setTickCount(7)
         self.m_axis.setLabelFormat("%g")
         self.m_axis.setTitleText(self.m_label)
         self.chart.addAxis(self.m_axis, Qt.AlignmentFlag.AlignLeft)
