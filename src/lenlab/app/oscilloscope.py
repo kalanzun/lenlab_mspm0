@@ -178,12 +178,18 @@ class OscilloscopeWidget(QWidget):
         data = data * 3.3 / 4096  # 12 bit signed ADC
 
         length = data.shape[0] // 2  # 2 channels
-        half = length / 2
 
-        # ms
+        # the ADC delivers some broken values at the start of the buffer
+        # select the center 6 k points
+        assert length == 6 * 1024
+        offset = (length - 6000) // 2
+        self.channel_1 = data[offset : length - offset]
+        self.channel_2 = data[length + offset : -offset]
+
+        # time in milliseconds
+        length = self.channel_1.shape[0]
+        half = length / 2
         self.time = np.linspace(-half, half, length, endpoint=False) * interval_ms
-        self.channel_1 = data[:length]
-        self.channel_2 = data[length:]
 
         self.chart.replace(interval_ms, self.time, self.channel_1, self.channel_2)
 
