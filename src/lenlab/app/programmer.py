@@ -18,6 +18,7 @@ import lenlab
 from ..controller.programmer import Programmer
 from ..launchpad.discovery import Discovery
 from ..message import Message
+from .figure import LaunchpadFigure
 from .poster import PosterWidget
 
 
@@ -60,8 +61,8 @@ class ProgrammerWidget(QWidget):
 
         tool_box = QVBoxLayout()
 
-        # figure = LaunchpadFigure()
-        # tool_box.addWidget(figure)
+        figure = LaunchpadFigure()
+        tool_box.addWidget(figure)
 
         tool_box.addStretch(1)
 
