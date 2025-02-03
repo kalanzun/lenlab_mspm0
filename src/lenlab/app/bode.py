@@ -27,7 +27,7 @@ class BodeChart(QWidget):
 
     x_label = "frequency [Hz]"
     m_label = "magnitude [dB]"
-    p_label = "phase [π]"
+    p_label = "phase [deg]"
 
     def __init__(self, channels: list[QLineSeries]):
         super().__init__()
@@ -59,7 +59,7 @@ class BodeChart(QWidget):
         self.chart.addAxis(self.m_axis, Qt.AlignmentFlag.AlignLeft)
 
         self.p_axis = QValueAxis()
-        self.p_axis.setRange(-2.0, 1.0)
+        self.p_axis.setRange(-360.0, 180.0)
         self.p_axis.setTickCount(7)  # 6 intervals
         self.p_axis.setMinorTickCount(4)  # 5 intervals
         self.p_axis.setLabelFormat("%g")
@@ -222,8 +222,8 @@ class BodePlotter(QObject):
 
     @Slot(int, object, object)
     def on_bode(self, interval_100ns, channel_1, channel_2):
-        interval = interval_100ns * 100e-9
-        f = sine_table[self.index][0]
+        interval = interval_100ns * 100e-9  # seconds
+        f = sine_table[self.index][0]  # hertz
         length = channel_1.shape[0]
 
         x = 2 * np.pi * f * np.linspace(0, interval * length, length, endpoint=False)
@@ -231,10 +231,13 @@ class BodePlotter(QObject):
         transfer = np.sum(y * channel_2) / np.sum(y * channel_1)
 
         magnitude = 20 * np.log10(np.absolute(transfer))
-        phase = np.angle(transfer)
+        angle = np.angle(transfer) / np.pi * 180.0
 
-        self.magnitude.append(f, magnitude)
-        self.phase.append(f, phase)
+        prev = self.phase.at(self.phase.count() - 1).y() if self.phase.count() else 0
+        phase = np.unwrap((prev, angle), period=360.0)[1]  # remove jumps by 2 pi
+
+        self.magnitude.append(float(f), float(magnitude))
+        self.phase.append(float(f), float(phase))
 
         self.index += self.step
         if self.active and self.index < len(sine_table):
