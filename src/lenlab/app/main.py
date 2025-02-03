@@ -1,3 +1,4 @@
+import argparse
 import logging
 from importlib import metadata
 
@@ -9,11 +10,32 @@ from .window import MainWindow
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main(argv: list[str] | None = None) -> None:
     app = App()
     logging.basicConfig(level=logging.NOTSET)
 
-    lenlab = Lenlab()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--port",
+        help="Launchpad port to connect to (skips discovery)",
+    )
+    parser.add_argument(
+        "--probe-timeout",
+        default=600,
+        type=int,
+        help="timeout for probing in milliseconds, default %(default)s",
+    )
+    parser.add_argument(
+        "--reply-timeout",
+        default=600,
+        type=int,
+        help="timeout for firmware replies in milliseconds, default %(default)s",
+    )
+
+    args = parser.parse_args(argv)
+
+    lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
     report = Report()
 
     version = metadata.version("lenlab")

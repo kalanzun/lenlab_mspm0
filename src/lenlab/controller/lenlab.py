@@ -32,9 +32,11 @@ class Lenlab(QObject):
     terminal_write = Signal(bytes)
     terminal_error = Signal(Message)
 
-    def __init__(self):
+    def __init__(self, port: str, probe_timeout: int, reply_timeout: int):
         super().__init__()
-        self.discovery = Discovery()
+        self.reply_timeout = reply_timeout
+
+        self.discovery = Discovery(port, probe_timeout)
         self.discovery.ready.connect(self.on_terminal_ready)
 
         self.timer = QTimer()
@@ -68,9 +70,9 @@ class Lenlab(QObject):
         self.adc_lock.acquire()
         self.ready.emit(False)
 
-    def send_command(self, command: bytes, interval: int = 400):
+    def send_command(self, command: bytes):
         if self.lock.acquire():
-            self.timer.start(interval)
+            self.timer.start(self.reply_timeout)
             self.terminal_write.emit(command)
 
     @Slot(bytes)

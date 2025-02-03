@@ -58,21 +58,20 @@ class Discovery(QObject):
     ready = Signal(Terminal)  # firmware connection established
     error = Signal(Message)
 
-    port_name: str
-    interval: int = 600
-
     terminals: list[Terminal]
     probes: list[Probe]
 
-    def __init__(self, port_name: str = ""):
+    def __init__(self, port_name: str = "", probe_timeout: int = 600):
         super().__init__()
         self.port_name = port_name
+        self.probe_timeout = probe_timeout
+
         self.terminals = []
         self.probes = []
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
-        self.timer.setInterval(self.interval)
+        self.timer.setInterval(self.probe_timeout)
         self.timer.timeout.connect(self.stop)
         self.timer.timeout.connect(self.on_timeout)
 
