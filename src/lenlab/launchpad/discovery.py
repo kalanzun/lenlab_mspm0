@@ -65,6 +65,7 @@ class Discovery(QObject):
         super().__init__()
         self.port_name = port_name
         self.probe_timeout = probe_timeout
+        logger.info(f"set probe timeout to {probe_timeout} ms")
 
         self.terminals = []
         self.probes = []

@@ -1,9 +1,13 @@
+import logging
+
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from lenlab.launchpad.discovery import Discovery
 from lenlab.launchpad.terminal import Terminal
 from lenlab.message import Message
 from lenlab.queued import QueuedCall
+
+logger = logging.getLogger(__name__)
 
 
 class Lock(QObject):
@@ -32,11 +36,12 @@ class Lenlab(QObject):
     terminal_write = Signal(bytes)
     terminal_error = Signal(Message)
 
-    def __init__(self, port: str, probe_timeout: int, reply_timeout: int):
+    def __init__(self, port_name: str, probe_timeout: int, reply_timeout: int):
         super().__init__()
         self.reply_timeout = reply_timeout
+        logger.info(f"set reply timeout to {self.reply_timeout} ms")
 
-        self.discovery = Discovery(port, probe_timeout)
+        self.discovery = Discovery(port_name, probe_timeout)
         self.discovery.ready.connect(self.on_terminal_ready)
 
         self.timer = QTimer()

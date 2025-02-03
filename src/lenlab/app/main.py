@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def main(argv: list[str] | None = None) -> None:
     app = App()
-    logging.basicConfig(level=logging.NOTSET)
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
 
@@ -35,11 +35,11 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
-    lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
-    report = Report()
-
     version = metadata.version("lenlab")
     logger.info(f"Lenlab {version}")
+
+    lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
+    report = Report()
 
     window = MainWindow(lenlab, report)
     window.show()
