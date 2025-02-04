@@ -155,17 +155,17 @@ class TerminalError(Message):
 
 class OverlongPacket(TerminalError):
     english = """
-    Overlong packet received: length = {0}, packet = {1}
+    Overlong packet received: length = {0}, packet = 0x{1} ...
     """
     german = """
-    Überlanges Paket empfangen: Länge = {0}, Paket = {1}
+    Überlanges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
     """
 
 
 class InvalidPacket(TerminalError):
     english = """
-    Invalid packet received: length = {0}, packet = {1}
+    Invalid packet received: length = {0}, packet = 0x{1} ...
     """
     german = """
-    Ungültiges Paket empfangen: Länge = {0}, Paket = {1}
+    Ungültiges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
     """
