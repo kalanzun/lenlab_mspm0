@@ -172,15 +172,11 @@ class BodePlotter(QObject):
     @staticmethod
     def interval_25ns_by_frequency(frequency: int):
         if frequency < 250:
-            return 160
+            return 200
         if frequency < 500:
             return 80
-        if frequency < 1000:
-            return 40
-        if frequency < 2000:
-            return 20
-        else:
-            return 10
+
+        return 40
 
     @Slot(bool)
     def on_ready(self, ready):

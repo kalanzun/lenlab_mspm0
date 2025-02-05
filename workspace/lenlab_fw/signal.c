@@ -100,11 +100,12 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
 {
     struct Signal* const self = &signal;
 
-    DL_DAC12_disableSampleTimeGenerator(DAC0);
+    // DL_DAC12_disableSampleTimeGenerator(DAC0);
 
     // disable channel for safe reconfiguration
     DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
 
+    /*
     if (sample_rate == 200)
         DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_200K);
     else if (sample_rate == 500)
@@ -113,6 +114,7 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
         DL_DAC12_setSampleRate(DAC0, DL_DAC12_SAMPLES_PER_SECOND_1M);
     else
         return;
+    */
 
     if (length < 100 || length > 2000)
         return;
@@ -131,5 +133,5 @@ void signal_sinus(uint32_t sample_rate, uint16_t length, uint16_t amplitude, uin
 
     DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
 
-    DL_DAC12_enableSampleTimeGenerator(DAC0);
+    // DL_DAC12_enableSampleTimeGenerator(DAC0);
 }
