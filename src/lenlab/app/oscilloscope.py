@@ -167,24 +167,26 @@ class OscilloscopeWidget(QWidget):
         if reply.startswith(b"La"):
             self.lenlab.adc_lock.release()
 
-        payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+        payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
         interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
         interval_ms = interval_100ns * 1e-4
 
         # 12 bit signed binary (2s complement), left aligned
-        payload = payload >> 4
+        # payload = payload >> 4
 
         data = payload.astype(np.float64)
-        data = data * 3.3 / 4096  # 12 bit signed ADC
+        data = data * 3.3 / 4096 - 1.65 # 12 bit ADC
 
         length = data.shape[0] // 2  # 2 channels
 
         # the ADC delivers some broken values at the start of the buffer
         # select the center 6 k points
         assert length == 6 * 1024
-        offset = (length - 6000) // 2
-        self.channel_1 = data[offset : length - offset]
-        self.channel_2 = data[length + offset : -offset]
+        # offset = (length - 6000) // 2
+        # self.channel_1 = data[offset : length - offset]
+        # self.channel_2 = data[length + offset : -offset]
+        self.channel_1 = data[:length]
+        self.channel_2 = data[length:]
 
         # time in milliseconds
         length = self.channel_1.shape[0]
