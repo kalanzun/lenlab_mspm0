@@ -110,8 +110,8 @@ void osci_acquire(uint8_t code, uint32_t interval)
     self->channel[1].block_count = self->channel[1].block_count - 1;
     self->channel[1].block_write = (self->channel[1].block_write + 1) & 0x7;
 
-    // interval in 100 ns
-    // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 10 MHz) - 1
+    // interval in 25 ns
+    // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
     DL_Timer_setLoadValue(OSCI_TIMER_INST, interval - 1);
     
     self->packet.arg = interval;

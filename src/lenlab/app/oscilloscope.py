@@ -77,8 +77,8 @@ class OscilloscopeChart(QWidget):
 class OscilloscopeWidget(QWidget):
     title = "Oscilloscope"
 
-    sample_rates = ["2 MHz", "1 MHz", "500 kHz", "250 kHz"]
-    intervals_100ns = [5, 10, 20, 40]
+    sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
+    intervals_25ns = [10, 20, 40, 80, 160]
 
     bode = Signal(int, object, object)
 
@@ -156,7 +156,7 @@ class OscilloscopeWidget(QWidget):
     def on_start_clicked(self):
         if self.lenlab.adc_lock.acquire():
             index = self.sample_rate.currentIndex()
-            interval = self.intervals_100ns[index]
+            interval = self.intervals_25ns[index]
             self.lenlab.send_command(command(b"a", interval))
 
     @Slot(bytes)
@@ -168,8 +168,8 @@ class OscilloscopeWidget(QWidget):
             self.lenlab.adc_lock.release()
 
         payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
-        interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
-        interval_ms = interval_100ns * 1e-4
+        interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
+        interval_ms = interval_25ns * 25e-6
 
         # 12 bit signed binary (2s complement), left aligned
         # payload = payload >> 4
@@ -196,7 +196,7 @@ class OscilloscopeWidget(QWidget):
         self.chart.replace(interval_ms, self.time, self.channel_1, self.channel_2)
 
         if reply.startswith(b"Lb"):
-            self.bode.emit(interval_100ns, self.channel_1, self.channel_2)
+            self.bode.emit(interval_25ns, self.channel_1, self.channel_2)
 
     @Slot()
     def on_save_as_clicked(self):
