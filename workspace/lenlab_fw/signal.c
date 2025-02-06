@@ -56,6 +56,11 @@ struct Signal signal = {
     },
 };
 
+void signal_init(void)
+{
+    DL_DAC12_performSelfCalibrationBlocking(DAC0);
+}
+
 static void signal_createSinus(uint16_t length, uint16_t amplitude)
 {
     struct Signal* const self = &signal;
