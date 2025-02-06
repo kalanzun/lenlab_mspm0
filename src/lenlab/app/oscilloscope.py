@@ -77,8 +77,8 @@ class OscilloscopeChart(QWidget):
 class OscilloscopeWidget(QWidget):
     title = "Oscilloscope"
 
-    sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
-    intervals_25ns = [10, 20, 40, 80, 160]
+    # sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
+    # intervals_25ns = [10, 20, 40, 80, 160]
 
     bode = Signal(int, object, object)
 
@@ -101,18 +101,18 @@ class OscilloscopeWidget(QWidget):
         sidebar_layout = QVBoxLayout()
 
         # sample rate
-        layout = QHBoxLayout()
+        # layout = QHBoxLayout()
 
-        label = QLabel("Sample rate")
-        layout.addWidget(label)
+        # label = QLabel("Sample rate")
+        # layout.addWidget(label)
 
-        self.sample_rate = QComboBox()
-        for sample_rate in self.sample_rates:
-            self.sample_rate.addItem(sample_rate)
+        # self.sample_rate = QComboBox()
+        # for sample_rate in self.sample_rates:
+        #     self.sample_rate.addItem(sample_rate)
 
-        layout.addWidget(self.sample_rate)
+        # layout.addWidget(self.sample_rate)
 
-        sidebar_layout.addLayout(layout)
+        # sidebar_layout.addLayout(layout)
 
         # start
         layout = QHBoxLayout()
@@ -155,9 +155,7 @@ class OscilloscopeWidget(QWidget):
     @Slot()
     def on_start_clicked(self):
         if self.lenlab.adc_lock.acquire():
-            index = self.sample_rate.currentIndex()
-            interval = self.intervals_25ns[index]
-            self.lenlab.send_command(command(b"a", interval))
+            self.lenlab.send_command(self.signal.create_command(b"a"))
 
     @Slot(bytes)
     def on_reply(self, reply):

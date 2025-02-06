@@ -169,15 +169,6 @@ class BodePlotter(QObject):
         self.magnitude = QLineSeries()
         self.phase = QLineSeries()
 
-    @staticmethod
-    def interval_25ns_by_frequency(frequency: int):
-        if frequency < 250:
-            return 200
-        if frequency < 500:
-            return 80
-
-        return 40
-
     @Slot(bool)
     def on_ready(self, ready):
         self.active = False
@@ -209,14 +200,13 @@ class BodePlotter(QObject):
 
     def measure(self):
         freq, sample_rate, length = sine_table[self.index]
-        interval_25ns = self.interval_25ns_by_frequency(freq)
+        interval_25ns = 40000 // sample_rate
         self.lenlab.send_command(
             command(
                 b"b",
-                sample_rate,
+                interval_25ns,
                 length,
                 1862,  # 1.5 V
-                interval_25ns,
             )
         )
 
