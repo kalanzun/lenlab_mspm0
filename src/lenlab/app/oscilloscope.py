@@ -5,29 +5,27 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
-    QComboBox,
     QFileDialog,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from ..controller.lenlab import Lenlab
-from ..launchpad.protocol import command
+from ..translate import Translate, tr
 from .checkbox import BoolCheckBox
 from .signal import SignalWidget
 
 
 class OscilloscopeChart(QWidget):
     labels = (
-        "Channel 1 (PA 24)",
-        "Channel 2 (PA 17)",
+        Translate("Channel 1 (PA 24)", "Kanal 1 (PA 24)"),
+        Translate("Channel 2 (PA 17)", "Kanal 2 (PA 17)"),
     )
 
-    x_label = "time [ms]"
-    y_label = "voltage [V]"
+    x_label = Translate("time [ms]", "Zeit [ms]")
+    y_label = Translate("voltage [V]", "Spannung [V]")
 
     def __init__(self):
         super().__init__()
@@ -46,14 +44,14 @@ class OscilloscopeChart(QWidget):
         self.x_axis.setRange(-1.5, 1.5)
         self.x_axis.setTickCount(7)
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(self.x_label)
+        self.x_axis.setTitleText(str(self.x_label))
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
         self.y_axis.setRange(-2.0, 2.0)
         self.y_axis.setTickCount(5)
         self.y_axis.setLabelFormat("%g")
-        self.y_axis.setTitleText(self.y_label)
+        self.y_axis.setTitleText(str(self.y_label))
         self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
         self.channels = [QLineSeries() for _ in self.labels]
@@ -75,7 +73,7 @@ class OscilloscopeChart(QWidget):
 
 
 class OscilloscopeWidget(QWidget):
-    title = "Oscilloscope"
+    title = Translate("Oscilloscope", "Oszilloskop")
 
     # sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
     # intervals_25ns = [10, 20, 40, 80, 160]
@@ -136,7 +134,7 @@ class OscilloscopeWidget(QWidget):
         # save as
         layout = QHBoxLayout()
 
-        button = QPushButton("Save as")
+        button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
         layout.addWidget(button)
 
@@ -173,7 +171,7 @@ class OscilloscopeWidget(QWidget):
         # payload = payload >> 4
 
         data = payload.astype(np.float64)
-        data = data * 3.3 / 4096 - 1.65 # 12 bit ADC
+        data = data * 3.3 / 4096 - 1.65  # 12 bit ADC
 
         length = data.shape[0] // 2  # 2 channels
 
@@ -200,7 +198,7 @@ class OscilloscopeWidget(QWidget):
     def on_save_as_clicked(self):
         file_name, file_format = QFileDialog.getSaveFileName(
             self,
-            "Save Oscilloscope Data",
+            tr("Save Oscilloscope Data", "Oszilloskop-Daten speichern"),
             "lenlab_osci.csv",
             "CSV (*.csv)",
         )

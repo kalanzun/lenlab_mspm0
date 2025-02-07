@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..message import Message
+from ..translate import tr
 from . import symbols
 
 
@@ -27,7 +28,7 @@ class PosterWidget(QWidget):
         self.text_widget.setTextFormat(Qt.TextFormat.MarkdownText)
         self.text_widget.setWordWrap(True)
 
-        self.button = QPushButton("Retry")
+        self.button = QPushButton(tr("Retry", "Neuer Versuch"))
         self.button.setHidden(True)
 
         right = QVBoxLayout()

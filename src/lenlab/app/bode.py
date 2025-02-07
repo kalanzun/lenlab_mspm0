@@ -17,17 +17,18 @@ from PySide6.QtWidgets import (
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
+from ..translate import Translate, tr
 
 
 class BodeChart(QWidget):
     labels = (
-        "Magnitude",
-        "Phase",
+        Translate("Magnitude", "Betrag"),
+        Translate("Phase", "Phase"),
     )
 
-    x_label = "frequency [Hz]"
-    m_label = "magnitude [dB]"
-    p_label = "phase [deg]"
+    x_label = Translate("frequency [Hz]", "Frequenz [Hz]")
+    m_label = Translate("magnitude [dB]", "Betrag [dB]")
+    p_label = Translate("phase [deg]", "Phase [Grad]")
 
     def __init__(self, channels: list[QLineSeries]):
         super().__init__()
@@ -48,14 +49,14 @@ class BodeChart(QWidget):
         self.x_axis.setRange(1e2, 1e4)
         self.x_axis.setMinorTickCount(-1)  # automatic
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(self.x_label)
+        self.x_axis.setTitleText(str(self.x_label))
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.m_axis = QValueAxis()
         self.m_axis.setRange(-50.0, 10.0)
         self.m_axis.setTickCount(7)
         self.m_axis.setLabelFormat("%g")
-        self.m_axis.setTitleText(self.m_label)
+        self.m_axis.setTitleText(str(self.m_label))
         self.chart.addAxis(self.m_axis, Qt.AlignmentFlag.AlignLeft)
 
         self.p_axis = QValueAxis()
@@ -63,7 +64,7 @@ class BodeChart(QWidget):
         self.p_axis.setTickCount(7)  # 6 intervals
         self.p_axis.setMinorTickCount(4)  # 5 intervals
         self.p_axis.setLabelFormat("%g")
-        self.p_axis.setTitleText(self.p_label)
+        self.p_axis.setTitleText(str(self.p_label))
         self.chart.addAxis(self.p_axis, Qt.AlignmentFlag.AlignRight)
 
         axes = [self.m_axis, self.p_axis]
@@ -79,7 +80,7 @@ class BodeChart(QWidget):
 
 
 class BodeWidget(QWidget):
-    title = "Bode Plotter"
+    title = Translate("Bode Plotter", "Bode-Plotter")
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -128,7 +129,7 @@ class BodeWidget(QWidget):
         # save as
         layout = QHBoxLayout()
 
-        button = QPushButton("Save as")
+        button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
         layout.addWidget(button)
 
@@ -148,7 +149,7 @@ class BodeWidget(QWidget):
     def on_save_as_clicked(self):
         file_name, file_format = QFileDialog.getSaveFileName(
             self,
-            "Save Bode Plot",
+            tr("Save Bode Plot", "Bode-Plot speichern"),
             "lenlab_bode.csv",
             "CSV (*.csv)",
         )

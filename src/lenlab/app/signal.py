@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSlider, QWidget
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
+from ..translate import tr
 
 
 class Parameter(QObject):
@@ -20,7 +21,7 @@ class Parameter(QObject):
 
 class Function(Parameter):
     def __init__(self):
-        super().__init__("Signal generator")
+        super().__init__(tr("Signal generator", "Signalgenerator"))
 
         self.field = QLineEdit()
         self.field.setReadOnly(True)
@@ -85,7 +86,7 @@ class Amplitude(Slider):
 
 class Frequency(Slider):
     def __init__(self):
-        super().__init__("Frequency")
+        super().__init__(tr("Frequency", "Frequenz"))
 
         self.slider.setMaximum(len(sine_table) - 1)
 
@@ -109,7 +110,7 @@ class Frequency(Slider):
 
 class Multiplier(Slider):
     def __init__(self):
-        super().__init__("Frequency multiplier")
+        super().__init__(tr("Frequency multiplier", "Frequenzmultiplikator"))
 
         self.slider.setMaximum(20)
 
@@ -135,7 +136,7 @@ class SignalWidget(QWidget):
             self.function,
             self.amplitude,
             self.frequency,
-            Parameter("Second signal"),
+            Parameter(tr("Second signal", "Zweites Signal")),
             self.harmonic,
         ]
 

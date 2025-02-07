@@ -8,6 +8,7 @@ from lenlab.app.oscilloscope import OscilloscopeWidget
 
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
+from ..translate import tr
 from .bode import BodeWidget
 from .figure import LaunchpadWidget
 from .poster import PosterWidget
@@ -40,7 +41,7 @@ class MainWindow(QMainWindow):
 
         tab_widget = QTabWidget()
         for tab in self.tabs:
-            tab_widget.addTab(tab, tab.title)
+            tab_widget.addTab(tab, str(tab.title))
 
         layout.addWidget(tab_widget, 1)
 
@@ -54,18 +55,18 @@ class MainWindow(QMainWindow):
 
         menu = menu_bar.addMenu("&Lenlab")
 
-        action = QAction("Save error report", self)
+        action = QAction(tr("Save Error Report", "Fehlerbericht speichern"), self)
         action.triggered.connect(self.save_report)
         menu.addAction(action)
 
         if sys.platform == "linux":
-            action = QAction("Install rules", self)
+            action = QAction(tr("Install rules", "Regeln installieren"), self)
             action.triggered.connect(self.install_rules)
             menu.addAction(action)
 
         menu.addSeparator()
 
-        action = QAction("Quit", self)
+        action = QAction(tr("Close", "Beenden"), self)
         action.triggered.connect(self.close)
         menu.addAction(action)
 
@@ -79,7 +80,10 @@ class MainWindow(QMainWindow):
     @Slot()
     def save_report(self):
         file_name, file_format = QFileDialog.getSaveFileName(
-            self, "Save error report", self.report.file_name, self.report.file_format
+            self,
+            tr("Save Error Report", "Fehlerbericht speichern"),
+            self.report.file_name,
+            self.report.file_format,
         )
         if file_name:
             self.report.save_as(file_name)

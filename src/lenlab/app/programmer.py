@@ -18,12 +18,13 @@ import lenlab
 from ..controller.programmer import Programmer
 from ..launchpad.discovery import Discovery
 from ..message import Message
+from ..translate import Translate, tr
 from .figure import LaunchpadFigure
 from .poster import PosterWidget
 
 
 class ProgrammerWidget(QWidget):
-    title = "Programmer"
+    title = Translate("Programmer", "Programmierer")
 
     def __init__(self, discovery: Discovery):
         super().__init__()
@@ -40,7 +41,7 @@ class ProgrammerWidget(QWidget):
         introduction.setText("### " + Introduction().long_form())
         program_layout.addWidget(introduction)
 
-        self.program_button = QPushButton("Program")
+        self.program_button = QPushButton(tr("Program", "Programmieren"))
         self.program_button.clicked.connect(self.on_program_clicked)
         program_layout.addWidget(self.program_button)
 
@@ -55,7 +56,7 @@ class ProgrammerWidget(QWidget):
         self.poster.setHidden(True)
         program_layout.addWidget(self.poster)
 
-        button = QPushButton("Export Firmware")
+        button = QPushButton(tr("Export Firmware", "Firmware exportieren"))
         button.clicked.connect(self.on_export_clicked)
         program_layout.addWidget(button)
 
@@ -102,7 +103,7 @@ class ProgrammerWidget(QWidget):
     def on_export_clicked(self):
         file_name, file_format = QFileDialog.getSaveFileName(
             self,
-            "Export Firmware",
+            tr("Export Firmware", "Firmware exportieren"),
             "lenlab_fw.bin",
             "Binary (*.bin)",
         )
