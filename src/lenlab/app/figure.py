@@ -323,10 +323,11 @@ class MaximumPinVoltage(Message):
 
     Never directly connect a pin to 5 V or the solar cell.
     The voltage might damage the microcontroller.
-    Use a voltage divider circuit."""
-
+    Use a voltage divider circuit.
+    """
     german = """Maximalspannung an den Pins: 3.3 V
 
     Verbinden Sie einen Pin niemals direkt mit 5 V oder der Solarzelle.
     Die Spannung könnte den Mikrocontroller beschädigen.
-    Verwenden Sie eine Spannungsteiler-Schaltung."""
+    Verwenden Sie eine Spannungsteiler-Schaltung.
+    """

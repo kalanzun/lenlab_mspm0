@@ -142,8 +142,7 @@ class ResourceError(PortError):
 
     Connect the Launchpad again via USB to your computer.
     """
-    german = """
-    Das Launchpad ist verschwunden
+    german = """Das Launchpad ist verschwunden
 
     Verbinden Sie das Launchpad wieder über USB mit Ihrem Computer.
     """
@@ -154,18 +153,14 @@ class TerminalError(Message):
 
 
 class OverlongPacket(TerminalError):
-    english = """
-    Overlong packet received: length = {0}, packet = 0x{1} ...
+    english = """Overlong packet received: length = {0}, packet = 0x{1} ...
     """
-    german = """
-    Überlanges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
+    german = """Überlanges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
     """
 
 
 class InvalidPacket(TerminalError):
-    english = """
-    Invalid packet received: length = {0}, packet = 0x{1} ...
+    english = """Invalid packet received: length = {0}, packet = 0x{1} ...
     """
-    german = """
-    Ungültiges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
+    german = """Ungültiges Paket empfangen: Länge = {0}, Paket = 0x{1} ...
     """

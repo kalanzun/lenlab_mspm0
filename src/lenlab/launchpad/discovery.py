@@ -43,14 +43,11 @@ class Probe(QObject):
         # which would be inconvenient to test
 
         app_version = get_app_version()
-        if fw_version := unpack_fw_version(reply):
-            if fw_version == app_version:
-                self.ready.emit(self.terminal)
-            else:
-                self.error.emit(InvalidVersion(fw_version, app_version))
-
+        fw_version = unpack_fw_version(reply)
+        if fw_version == app_version:
+            self.ready.emit(self.terminal)
         else:
-            self.error.emit(InvalidReply(app_version))
+            self.error.emit(InvalidVersion(fw_version, app_version))
 
 
 class Discovery(QObject):
@@ -204,11 +201,11 @@ class NoLaunchpad(Message):
 class NotFound(NoLaunchpad):
     english = """Port {0} not found
 
-    The system does not know about a port "{0}".
+    The system does not know about a port with this name.
     """
     german = """Port {0} nicht gefunden
 
-    Das System kennt keinen Port "{0}".
+    Das System kennt keinen Port mit diesem Namen.
     """
 
 
@@ -239,11 +236,11 @@ class NoRules(NoLaunchpad):
     german = """Keine Launchpad-Regeln installiert
 
     Die Launchpad-Regeln verbieten einem Programms namens ModemManager
-    den Verbindungsaufbau und die Blockade des Launchpads.
+    den Verbindungsaufbau zu und die Blockade des Launchpads.
 
     Trennen Sie das Launchpad vom Computer
     und klicken Sie auf "Regeln installieren" im Lenlab-Menü.
-    Diese Aktion fordert Zugriffsberechtigung als Administrator an. 
+    Diese Aktion fordert die Zugriffsberechtigung als Administrator an. 
     """
 
 
@@ -269,18 +266,5 @@ class InvalidVersion(NoFirmware):
     german = """Ungültige Firmware-Version: {0}
 
     Dieses Lenlab benötigt Version {1}.
-    Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
-    """
-
-
-class InvalidReply(NoFirmware):
-    english = """Invalid firmware version
-
-    This Lenlab requires version {0}.
-    Write the current version to the Launchpad with the Programmer.
-    """
-    german = """Ungültige Firmware-Version
-
-    Dieses Lenlab benötigt Version {0}.
     Schreiben Sie die aktuelle Version mit dem Programmierer auf das Launchpad.
     """
