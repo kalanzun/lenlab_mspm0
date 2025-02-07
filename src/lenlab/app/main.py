@@ -38,6 +38,8 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
+    report = Report()
+
     logger.info(f"Lenlab {metadata.version('lenlab')}")
     logger.info(f"Python {sys.version}")
     logger.info(f"Python Virtual Environment {sys.prefix}")
@@ -47,7 +49,6 @@ def main(argv: list[str] | None = None) -> None:
     logger.info(f"Kernel {QSysInfo.prettyProductName()}")
 
     lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
-    report = Report()
 
     window = MainWindow(lenlab, report)
     window.show()

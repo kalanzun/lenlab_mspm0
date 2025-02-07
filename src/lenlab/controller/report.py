@@ -11,6 +11,7 @@ class Report:
 
         self.log = StringIO()
         handler = logging.StreamHandler(self.log)
+        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
         logging.getLogger().addHandler(handler)
 
     def save_as(self, file_name: str):
