@@ -190,7 +190,7 @@ def test_invalid_reply(discovery, terminal, error):
     reply = b"\x00\x00\x00\x00\x00\x00\x00\x00"
     terminal.reply.emit(reply)
 
-    error.check_single_message(discovery_messages.InvalidReply)
+    error.check_single_message(discovery_messages.InvalidVersion)
 
 
 def test_terminal_error(discovery, terminal, error):
