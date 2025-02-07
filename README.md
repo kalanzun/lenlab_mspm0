@@ -7,7 +7,7 @@ Lenlab ab der Version 8.2 funktioniert für den LEN Workshop B.
 Starten Sie Lenlab, nachdem `uv` installiert ist und wenn Sie Internet haben, mit 
 
 ```shell
-uvx --refresh lenlab
+uvx --refresh lenlab@latest
 ```
 
 Dann lädt `uvx` automatisch Updates herunter.
@@ -40,12 +40,12 @@ Schließen Sie das Terminal und starten Sie es neu, dann findet es die eben inst
 ## Lenlab Starten
 
 ```shell
-uvx --refresh lenlab
+uvx --refresh lenlab@latest
 ```
 
 `uvx` lädt Lenlab in der neuesten Version herunter und führt es aus.
 
-Wenn Sie keine Internetverbindung haben starten Sie Lenlab ohne `--refresh`
+Wenn Sie keine Internetverbindung haben oder Lenlab nur neu starten möchten, starten Sie Lenlab ohne `--refresh` und ohne `@latest`
 
 ```shell
 uvx lenlab
@@ -59,7 +59,7 @@ Auf manchen Mac fehlt das Kommando `realpath`. Lenlab startet dann nicht mit der
 "realpath: command not found". Bitte verwenden Sie in diesem Fall den Befehl
 
 ```shell
-uvx --refresh --from lenlab python -m lenlab
+uvx --from lenlab python -m lenlab
 ```
 
 ### TI UniFlash, Programmieren funktioniert nicht
