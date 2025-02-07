@@ -140,7 +140,7 @@ class SignalWidget(QWidget):
         ]
 
         for row, parameter in enumerate(parameters):
-            parameter.changed.connect(self.on_parameter_changed)
+            # parameter.changed.connect(self.on_parameter_changed)
             for col, widget in enumerate(parameter.widgets()):
                 parameter_layout.addWidget(widget, row, col)
 
@@ -148,10 +148,9 @@ class SignalWidget(QWidget):
 
         self.setLayout(parameter_layout)
 
-        self.lenlab.lock.locked.connect(self.attempt_to_send)
-
-    def create_command(self):
+    def create_command(self, code: bytes):
         frequency, sample_rate, length = sine_table[self.frequency.get_value()]
+        interval_25ns = 40000 // sample_rate
 
         harmonic = self.harmonic.get_value()
         if harmonic:
@@ -161,25 +160,10 @@ class SignalWidget(QWidget):
             harmonic_amplitude = 0
 
         return command(
-            b"s",
-            sample_rate,
+            code,
+            interval_25ns,
             length,
             amplitude,
             harmonic,
             harmonic_amplitude,
         )
-
-    @Slot()
-    def on_parameter_changed(self):
-        # ignore calls due to reset to zero
-        if self.lenlab.dac_lock.is_locked:
-            return
-
-        self.changed = True
-        self.attempt_to_send()
-
-    @Slot()
-    def attempt_to_send(self):
-        if self.changed and not self.lenlab.lock.is_locked and not self.lenlab.dac_lock.is_locked:
-            self.lenlab.send_command(self.create_command())
-            self.changed = False

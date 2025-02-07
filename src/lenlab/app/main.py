@@ -1,6 +1,9 @@
 import argparse
 import logging
+import sys
 from importlib import metadata
+
+from PySide6.QtCore import QLibraryInfo, QSysInfo
 
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
@@ -35,8 +38,13 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
-    version = metadata.version("lenlab")
-    logger.info(f"Lenlab {version}")
+    logger.info(f"Lenlab {metadata.version('lenlab')}")
+    logger.info(f"Python {sys.version}")
+    logger.info(f"Python Virtual Environment {sys.prefix}")
+    logger.info(f"PySide6 {metadata.version('PySide6')}")
+    logger.info(f"Qt {QLibraryInfo.version().toString()}")
+    logger.info(f"Architecture {QSysInfo.currentCpuArchitecture()}")
+    logger.info(f"Kernel {QSysInfo.prettyProductName()}")
 
     lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
     report = Report()

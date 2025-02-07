@@ -77,8 +77,8 @@ class OscilloscopeChart(QWidget):
 class OscilloscopeWidget(QWidget):
     title = "Oscilloscope"
 
-    sample_rates = ["2 MHz", "1 MHz", "500 kHz", "250 kHz"]
-    intervals_100ns = [5, 10, 20, 40]
+    # sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
+    # intervals_25ns = [10, 20, 40, 80, 160]
 
     bode = Signal(int, object, object)
 
@@ -101,18 +101,18 @@ class OscilloscopeWidget(QWidget):
         sidebar_layout = QVBoxLayout()
 
         # sample rate
-        layout = QHBoxLayout()
+        # layout = QHBoxLayout()
 
-        label = QLabel("Sample rate")
-        layout.addWidget(label)
+        # label = QLabel("Sample rate")
+        # layout.addWidget(label)
 
-        self.sample_rate = QComboBox()
-        for sample_rate in self.sample_rates:
-            self.sample_rate.addItem(sample_rate)
+        # self.sample_rate = QComboBox()
+        # for sample_rate in self.sample_rates:
+        #     self.sample_rate.addItem(sample_rate)
 
-        layout.addWidget(self.sample_rate)
+        # layout.addWidget(self.sample_rate)
 
-        sidebar_layout.addLayout(layout)
+        # sidebar_layout.addLayout(layout)
 
         # start
         layout = QHBoxLayout()
@@ -155,9 +155,7 @@ class OscilloscopeWidget(QWidget):
     @Slot()
     def on_start_clicked(self):
         if self.lenlab.adc_lock.acquire():
-            index = self.sample_rate.currentIndex()
-            interval = self.intervals_100ns[index]
-            self.lenlab.send_command(command(b"a", interval))
+            self.lenlab.send_command(self.signal.create_command(b"a"))
 
     @Slot(bytes)
     def on_reply(self, reply):
@@ -167,24 +165,26 @@ class OscilloscopeWidget(QWidget):
         if reply.startswith(b"La"):
             self.lenlab.adc_lock.release()
 
-        payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
-        interval_100ns = int.from_bytes(reply[4:8], byteorder="little")
-        interval_ms = interval_100ns * 1e-4
+        payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
+        interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
+        interval_ms = interval_25ns * 25e-6
 
         # 12 bit signed binary (2s complement), left aligned
-        payload = payload >> 4
+        # payload = payload >> 4
 
         data = payload.astype(np.float64)
-        data = data * 3.3 / 4096  # 12 bit signed ADC
+        data = data * 3.3 / 4096 - 1.65 # 12 bit ADC
 
         length = data.shape[0] // 2  # 2 channels
 
         # the ADC delivers some broken values at the start of the buffer
         # select the center 6 k points
         assert length == 6 * 1024
-        offset = (length - 6000) // 2
-        self.channel_1 = data[offset : length - offset]
-        self.channel_2 = data[length + offset : -offset]
+        # offset = (length - 6000) // 2
+        # self.channel_1 = data[offset : length - offset]
+        # self.channel_2 = data[length + offset : -offset]
+        self.channel_1 = data[:length]
+        self.channel_2 = data[length:]
 
         # time in milliseconds
         length = self.channel_1.shape[0]
@@ -194,7 +194,7 @@ class OscilloscopeWidget(QWidget):
         self.chart.replace(interval_ms, self.time, self.channel_1, self.channel_2)
 
         if reply.startswith(b"Lb"):
-            self.bode.emit(interval_100ns, self.channel_1, self.channel_2)
+            self.bode.emit(interval_25ns, self.channel_1, self.channel_2)
 
     @Slot()
     def on_save_as_clicked(self):

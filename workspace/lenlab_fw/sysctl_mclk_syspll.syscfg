@@ -1,9 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "MSPM0G350X" --part "Default" --package "LQFP-64(PM)" --product "mspm0_sdk@2.02.00.05"
- * @v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)" --product "mspm0_sdk@2.02.00.05"
- * @versions {"tool":"1.21.0+3721"}
+ * @cliArgs --device "MSPM0G350X" --part "Default" --package "LQFP-64(PM)" --product "mspm0_sdk@2.03.00.08"
+ * @v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)" --product "mspm0_sdk@2.03.00.08"
+ * @versions {"tool":"1.22.0+3893"}
  */
 
 /**
@@ -58,64 +58,71 @@ const pinFunction1                        = system.clockTree["CLKOUT"];
 pinFunction1.enable                       = true;
 pinFunction1.peripheral.clkOutPin.$assign = "PA14";
 
-ADC121.sampClkSrc                        = "DL_ADC12_CLOCK_ULPCLK";
-ADC121.repeatMode                        = true;
-ADC121.adcMem0chansel                    = "DL_ADC12_INPUT_CHAN_3";
-ADC121.dataFormat                        = "DL_ADC12_SAMP_CONV_DATA_FORMAT_SIGNED";
-ADC121.sampleTime0                       = "300 ns";
-ADC121.enableFIFO                        = true;
-ADC121.enabledInterrupts                 = ["DL_ADC12_INTERRUPT_DMA_DONE"];
-ADC121.configureDMA                      = true;
-ADC121.sampCnt                           = 6;
-ADC121.$name                             = "ADC12_CH1";
-ADC121.trigSrc                           = "DL_ADC12_TRIG_SRC_EVENT";
-ADC121.subChanID                         = 1;
-ADC121.powerDownMode                     = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
-ADC121.adcMem0trig                       = "DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT";
-ADC121.enabledDMATriggers                = ["DL_ADC12_DMA_MEM11_RESULT_LOADED"];
-ADC121.peripheral.$assign                = "ADC0";
-ADC121.adcPin3Config.hideOutputInversion = scripting.forceWrite(false);
-ADC121.adcPin3Config.$name               = "ti_driverlib_gpio_GPIOPinGeneric2";
-ADC121.DMA_CHANNEL.$name                 = "DMA_CH1";
-ADC121.DMA_CHANNEL.addressMode           = "f2b";
+ADC121.$name                       = "ADC12_CH1";
+ADC121.sampClkSrc                  = "DL_ADC12_CLOCK_ULPCLK";
+ADC121.repeatMode                  = true;
+ADC121.trigSrc                     = "DL_ADC12_TRIG_SRC_EVENT";
+ADC121.adcMem0chansel              = "DL_ADC12_INPUT_CHAN_3";
+ADC121.enabledInterrupts           = ["DL_ADC12_INTERRUPT_DMA_DONE"];
+ADC121.configureDMA                = true;
+ADC121.sampCnt                     = 6;
+ADC121.enabledDMATriggers          = ["DL_ADC12_DMA_MEM11_RESULT_LOADED"];
+ADC121.adcMem0trig                 = "DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT";
+ADC121.subChanID                   = 12;
+ADC121.enableFIFO                  = true;
+ADC121.sampleTime0                 = "500 ns";
+ADC121.powerDownMode               = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
+ADC121.peripheral.$assign          = "ADC0";
+ADC121.peripheral.adcPin3.$assign  = "PA24";
+ADC121.adcPin3Config.$name         = "ti_driverlib_gpio_GPIOPinGeneric2";
+ADC121.adcPin3Config.enableConfig  = true;
+ADC121.DMA_CHANNEL.$name           = "DMA_CH1";
+ADC121.DMA_CHANNEL.addressMode     = "f2b";
+ADC121.DMA_CHANNEL.enableInterrupt = true;
 
-ADC122.sampClkSrc                        = "DL_ADC12_CLOCK_ULPCLK";
-ADC122.repeatMode                        = true;
-ADC122.adcMem0chansel                    = "DL_ADC12_INPUT_CHAN_2";
-ADC122.dataFormat                        = "DL_ADC12_SAMP_CONV_DATA_FORMAT_SIGNED";
-ADC122.enableFIFO                        = true;
-ADC122.sampleTime0                       = "300 ns";
-ADC122.enabledInterrupts                 = ["DL_ADC12_INTERRUPT_DMA_DONE"];
-ADC122.configureDMA                      = true;
-ADC122.sampCnt                           = 6;
-ADC122.$name                             = "ADC12_CH2";
-ADC122.trigSrc                           = "DL_ADC12_TRIG_SRC_EVENT";
-ADC122.subChanID                         = 2;
-ADC122.powerDownMode                     = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
-ADC122.adcMem0trig                       = "DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT";
-ADC122.enabledDMATriggers                = ["DL_ADC12_DMA_MEM11_RESULT_LOADED"];
-ADC122.peripheral.$assign                = "ADC1";
-ADC122.adcPin2Config.hideOutputInversion = scripting.forceWrite(false);
-ADC122.adcPin2Config.$name               = "ti_driverlib_gpio_GPIOPinGeneric3";
-ADC122.DMA_CHANNEL.$name                 = "DMA_CH2";
-ADC122.DMA_CHANNEL.addressMode           = "f2b";
+ADC122.$name                       = "ADC12_CH2";
+ADC122.sampClkSrc                  = "DL_ADC12_CLOCK_ULPCLK";
+ADC122.repeatMode                  = true;
+ADC122.trigSrc                     = "DL_ADC12_TRIG_SRC_EVENT";
+ADC122.enableFIFO                  = true;
+ADC122.powerDownMode               = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
+ADC122.enabledInterrupts           = ["DL_ADC12_INTERRUPT_DMA_DONE"];
+ADC122.configureDMA                = true;
+ADC122.sampCnt                     = 6;
+ADC122.enabledDMATriggers          = ["DL_ADC12_DMA_MEM11_RESULT_LOADED"];
+ADC122.adcMem0chansel              = "DL_ADC12_INPUT_CHAN_2";
+ADC122.adcMem0trig                 = "DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT";
+ADC122.subChanID                   = 12;
+ADC122.sampleTime0                 = "500 ns";
+ADC122.peripheral.$assign          = "ADC1";
+ADC122.peripheral.adcPin2.$assign  = "PA17";
+ADC122.DMA_CHANNEL.$name           = "DMA_CH2";
+ADC122.DMA_CHANNEL.addressMode     = "f2b";
+ADC122.DMA_CHANNEL.enableInterrupt = true;
+ADC122.adcPin2Config.$name         = "ti_driverlib_gpio_GPIOPinGeneric3";
+ADC122.adcPin2Config.enableConfig  = true;
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
-DAC12.dacFIFOEn                = true;
-DAC12.dacConfigureDMA          = true;
-DAC12.dacFIFOThresh            = "TWO_QTRS_EMPTY";
-DAC12.dacSampleTimerRate       = "1M";
-DAC12.dacOutputPinEn           = true;
-DAC12.dacRepresentation        = "TWOS_COMPLEMENT";
-DAC12.dacAmplifier             = "ON";
-DAC12.dacEnabledInterrupts     = ["DMA_DONE"];
-DAC12.DMA_CHANNEL.$name        = "DMA_CH0";
-DAC12.DMA_CHANNEL.addressMode  = "b2f";
-DAC12.DMA_CHANNEL.srcLength    = "HALF_WORD";
-DAC12.DMA_CHANNEL.dstLength    = "HALF_WORD";
-DAC12.DMA_CHANNEL.transferMode = "FULL_CH_REPEAT_SINGLE";
-DAC12.OutPinConfig.$name       = "ti_driverlib_gpio_GPIOPinGeneric4";
+DAC12.dacFIFOEn                 = true;
+DAC12.dacConfigureDMA           = true;
+DAC12.dacFIFOThresh             = "TWO_QTRS_EMPTY";
+DAC12.dacSampleTimerRate        = "1M";
+DAC12.dacOutputPinEn            = true;
+DAC12.dacRepresentation         = "TWOS_COMPLEMENT";
+DAC12.dacAmplifier              = "ON";
+DAC12.dacSampleTimerEn          = false;
+DAC12.dacFIFOTrigger            = "HWTRIG0";
+DAC12.sub0ChanID                = 1;
+DAC12.peripheral.$assign        = "DAC0";
+DAC12.peripheral.OutPin.$assign = "PA15";
+DAC12.DMA_CHANNEL.$name         = "DMA_CH0";
+DAC12.DMA_CHANNEL.addressMode   = "b2f";
+DAC12.DMA_CHANNEL.srcLength     = "HALF_WORD";
+DAC12.DMA_CHANNEL.dstLength     = "HALF_WORD";
+DAC12.DMA_CHANNEL.transferMode  = "FULL_CH_REPEAT_SINGLE";
+DAC12.OutPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric4";
+DAC12.OutPinConfig.enableConfig = true;
 
 GPIO1.$name                               = "GPIO_LEDS_A";
 GPIO1.associatedPins[0].assignedPort      = "PORTA";
@@ -151,15 +158,14 @@ SYSTICK.interruptEnable   = true;
 SYSTICK.systickEnable     = true;
 SYSTICK.interruptPriority = "1";
 
-TIMER1.timerPeriod                 = "500 ns";
-TIMER1.timerMode                   = "PERIODIC";
-TIMER1.event1PublisherChannel      = 1;
+TIMER1.$name                       = "OSCI_TIMER";
 TIMER1.event1ControllerInterruptEn = ["ZERO_EVENT"];
 TIMER1.event2ControllerInterruptEn = ["ZERO_EVENT"];
-TIMER1.event2PublisherChannel      = 2;
-TIMER1.timerClkPrescale            = 4;
-TIMER1.$name                       = "OSCI_TIMER";
-TIMER1.peripheral.$assign          = "TIMG0";
+TIMER1.timerMode                   = "PERIODIC";
+TIMER1.timerClkDiv                 = 2;
+TIMER1.event1PublisherChannel      = 12;
+TIMER1.event2PublisherChannel      = 1;
+TIMER1.timerPeriod                 = "1 us";
 
 UART1.$name                             = "TERMINAL_UART";
 UART1.targetBaudRate                    = 1000000;
@@ -201,17 +207,14 @@ UART1.DMA_CHANNEL_TX.peripheral.$assign = "DMA_CH4";
  * re-solve from scratch.
  */
 pinFunction1.peripheral.$suggestSolution       = "SYSCTL";
-ADC121.peripheral.adcPin3.$suggestSolution     = "PA24";
 ADC121.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH2";
-ADC122.peripheral.adcPin2.$suggestSolution     = "PA17";
 ADC122.DMA_CHANNEL.peripheral.$suggestSolution = "DMA_CH1";
 Board.peripheral.$suggestSolution              = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution     = "PA20";
 Board.peripheral.swdioPin.$suggestSolution     = "PA19";
-DAC12.peripheral.$suggestSolution              = "DAC0";
-DAC12.peripheral.OutPin.$suggestSolution       = "PA15";
 DAC12.DMA_CHANNEL.peripheral.$suggestSolution  = "DMA_CH0";
 GPIO1.associatedPins[0].pin.$suggestSolution   = "PA0";
 GPIO2.associatedPins[0].pin.$suggestSolution   = "PB26";
 GPIO2.associatedPins[1].pin.$suggestSolution   = "PB27";
 GPIO2.associatedPins[2].pin.$suggestSolution   = "PB22";
+TIMER1.peripheral.$suggestSolution             = "TIMA0";

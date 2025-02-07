@@ -3,15 +3,16 @@
 
 #include "packet.h"
 
-struct OsciChannel {
-    uint32_t payload[3 * 1024]; // two samples per uint32_t
+struct Channel {
+    volatile bool done;
+    volatile uint16_t block_count;
+    volatile uint16_t block_write;
 };
 
 struct Osci {
     struct Packet packet;
-    struct OsciChannel channel[2];
-    volatile bool ch1_done;
-    volatile bool ch2_done;
+    uint32_t payload[2][8][384]; // two samples per uint32_t
+    volatile struct Channel channel[2];
 };
 
 extern struct Osci osci;
