@@ -27,9 +27,12 @@ class Function(Parameter):
         self.field.setReadOnly(True)
         self.field.setText("Sinus")
 
+        self.pin_assignment = QLabel("Pin: DAC, PA 15")
+
     def widgets(self):
         yield from super().widgets()
         yield self.field
+        yield self.pin_assignment
 
 
 class Slider(Parameter):

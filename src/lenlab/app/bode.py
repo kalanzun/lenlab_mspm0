@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
+from ..message import Message
 from ..translate import Translate, tr
 
 
@@ -135,6 +137,16 @@ class BodeWidget(QWidget):
 
         sidebar_layout.addLayout(layout)
 
+        # pin assignment
+
+        label = QLabel()
+        label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        label.setTextFormat(Qt.TextFormat.MarkdownText)
+        label.setWordWrap(True)
+        label.setText(PinAssignment().long_form())
+
+        sidebar_layout.addWidget(label)
+
         sidebar_layout.addStretch(1)
 
         main_layout.addLayout(sidebar_layout)
@@ -246,3 +258,28 @@ class BodePlotter(QObject):
             file.write("Frequenz; Betrag; Phase\n")
             for m, p in zip(self.magnitude.points(), self.phase.points(), strict=False):
                 file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
+
+
+class PinAssignment(Message):
+    english = """### Pin Assignment
+    
+    #### Filter input 
+
+    - ADC 0, PA 24
+    - DAC, PA 15
+    
+    #### Filter output
+    
+    - ADC 1, PA 17
+    """
+    german = """### Pin-Belegung
+    
+    #### Filtereingang:
+    
+    - ADC 0, PA 24
+    - DAC, PA 15
+    
+    #### Filterausgang:
+    
+    - ADC 1, PA 17
+    """

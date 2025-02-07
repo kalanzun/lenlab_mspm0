@@ -20,8 +20,8 @@ from .signal import SignalWidget
 
 class OscilloscopeChart(QWidget):
     labels = (
-        Translate("Channel 1 (PA 24)", "Kanal 1 (PA 24)"),
-        Translate("Channel 2 (PA 17)", "Kanal 2 (PA 17)"),
+        Translate("Channel 1 (ADC 0, PA 24)", "Kanal 1 (ADC 0, PA 24)"),
+        Translate("Channel 2 (ADC 1, PA 17)", "Kanal 2 (ADC 1, PA 17)"),
     )
 
     x_label = Translate("time [ms]", "Zeit [ms]")
