@@ -3,8 +3,13 @@
 
 #include "packet.h"
 
+#include "ti/devices/msp/peripherals/hw_adc12.h"
+
 struct Channel {
     const uint8_t index;
+    ADC12_Regs* const adc12;
+    const uint8_t chan_id;
+
     bool done;
     uint16_t block_count;
     uint16_t block_write;
