@@ -49,7 +49,7 @@ class Lenlab(QObject):
         self.timer.timeout.connect(self.on_timeout)
 
         self.lock = Lock()
-        self.dac_lock = Lock()
+        # self.dac_lock = Lock()
         self.adc_lock = Lock()
 
         QueuedCall(self.discovery, self.discovery.find)
@@ -63,7 +63,7 @@ class Lenlab(QObject):
         self.terminal_error.connect(terminal.error)
 
         self.lock.release()
-        self.dac_lock.release()
+        # self.dac_lock.release()
         self.adc_lock.release()
         self.ready.emit(True)
 
@@ -71,7 +71,7 @@ class Lenlab(QObject):
     def on_terminal_error(self):
         self.timer.stop()
         self.lock.acquire()
-        self.dac_lock.acquire()
+        # self.dac_lock.acquire()
         self.adc_lock.acquire()
         self.ready.emit(False)
 

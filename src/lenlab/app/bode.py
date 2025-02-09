@@ -133,6 +133,7 @@ class BodeWidget(QWidget):
 
         button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -190,11 +191,7 @@ class BodePlotter(QObject):
         if self.active:
             return
 
-        if not self.lenlab.dac_lock.acquire():
-            return
-
         if not self.lenlab.adc_lock.acquire():
-            self.lenlab.dac_lock.release()
             return
 
         self.active = True
@@ -248,7 +245,6 @@ class BodePlotter(QObject):
         else:
             self.active = False
 
-            self.lenlab.dac_lock.release()
             self.lenlab.adc_lock.release()
 
     def save_as(self, file_name: str):

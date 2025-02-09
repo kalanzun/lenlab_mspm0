@@ -84,6 +84,8 @@ class OscilloscopeWidget(QWidget):
         super().__init__()
         self.lenlab = lenlab
 
+        self.active = False
+
         self.time = np.ndarray((0,))
         self.channel_1 = np.ndarray((0,))
         self.channel_2 = np.ndarray((0,))
@@ -112,12 +114,27 @@ class OscilloscopeWidget(QWidget):
 
         # sidebar_layout.addLayout(layout)
 
-        # start
+        # start / stop
+        layout = QHBoxLayout()
+
+        button = QPushButton("Start")
+        button.setEnabled(False)
+        button.clicked.connect(self.on_start_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
+        layout.addWidget(button)
+
+        button = QPushButton("Stop")
+        button.clicked.connect(self.on_stop_clicked)
+        layout.addWidget(button)
+
+        sidebar_layout.addLayout(layout)
+
+        # single
         layout = QHBoxLayout()
 
         button = QPushButton("Single")
         button.setEnabled(False)
-        button.clicked.connect(self.on_start_clicked)
+        button.clicked.connect(self.on_single_clicked)
         self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
 
@@ -136,6 +153,7 @@ class OscilloscopeWidget(QWidget):
 
         button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -150,10 +168,25 @@ class OscilloscopeWidget(QWidget):
 
         self.lenlab.reply.connect(self.on_reply)
 
-    @Slot()
-    def on_start_clicked(self):
+    def acquire(self):
         if self.lenlab.adc_lock.acquire():
             self.lenlab.send_command(self.signal.create_command(b"a"))
+            return True
+
+        return False
+
+    @Slot()
+    def on_start_clicked(self):
+        if self.acquire():
+            self.active = True
+
+    @Slot()
+    def on_stop_clicked(self):
+        self.active = False
+
+    @Slot()
+    def on_single_clicked(self):
+        self.acquire()
 
     @Slot(bytes)
     def on_reply(self, reply):
@@ -190,6 +223,9 @@ class OscilloscopeWidget(QWidget):
         self.time = np.linspace(-half, half, length, endpoint=False) * interval_ms
 
         self.chart.replace(interval_ms, self.time, self.channel_1, self.channel_2)
+
+        if reply.startswith(b"La") and self.active:
+            self.active = self.acquire()
 
         if reply.startswith(b"Lb"):
             self.bode.emit(interval_25ns, self.channel_1, self.channel_2)

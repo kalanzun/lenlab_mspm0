@@ -129,11 +129,11 @@ class SignalWidget(QWidget):
 
         self.function = Function()
         self.amplitude = Amplitude()
-        self.lenlab.dac_lock.locked.connect(self.amplitude.set_disabled)
+        # self.lenlab.dac_lock.locked.connect(self.amplitude.set_disabled)
         self.frequency = Frequency()
-        self.lenlab.dac_lock.locked.connect(self.frequency.set_disabled)
+        # self.lenlab.dac_lock.locked.connect(self.frequency.set_disabled)
         self.harmonic = Multiplier()
-        self.lenlab.dac_lock.locked.connect(self.harmonic.set_disabled)
+        # self.lenlab.dac_lock.locked.connect(self.harmonic.set_disabled)
 
         parameters: list[Parameter] = [
             self.function,
