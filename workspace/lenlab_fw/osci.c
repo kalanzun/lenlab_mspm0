@@ -69,16 +69,21 @@ static inline void channel_continue(const struct ChannelConfig *self)
 }
 */
 
-/*
-static inline void channel_start(const struct ChannelConfig *self)
+static void osci_startChannel(uint8_t index, ADC12_Regs *adc12, uint8_t chan_id)
 {
-    self->channel->done = false;
-    self->channel->block_count = 9;
-    self->channel->block_write = 7;
+    volatile struct Channel *const self = &osci.channel[index];
 
-    channel_continue(self);
+    DL_DMA_setDestAddr(DMA, chan_id, (uint32_t)osci.payload[index][self->block_write]);
+    DL_DMA_setTransferSize(DMA, chan_id, LENGTH(osci.payload[0][0]));
+    static_assert(LENGTH(osci.payload[0][0]) == 384,
+        "DMA size is not 384");
+    DL_DMA_enableChannel(DMA, chan_id);
+    DL_ADC12_enableDMA(adc12);
+
+    self->block_count = self->block_count - 1;
+    self->block_write = (self->block_write + 1) & 0x7;
+
 }
-*/
 
 void osci_acquire(uint8_t code, uint32_t interval)
 {
@@ -90,25 +95,13 @@ void osci_acquire(uint8_t code, uint32_t interval)
     self->channel[0].block_count = 9;
     self->channel[0].block_write = 7;
 
-    DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)osci.payload[0][self->channel[0].block_write]);
-    DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 384); // LENGTH(osci.payload[0][0])
-    DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
-    DL_ADC12_enableDMA(ADC12_CH1_INST);
-
-    self->channel[0].block_count = self->channel[0].block_count - 1;
-    self->channel[0].block_write = (self->channel[0].block_write + 1) & 0x7;
+    osci_startChannel(0, ADC12_CH1_INST, DMA_CH1_CHAN_ID);
 
     self->channel[1].done = false;
     self->channel[1].block_count = 9;
     self->channel[1].block_write = 7;
 
-    DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)osci.payload[1][self->channel[1].block_write]);
-    DL_DMA_setTransferSize(DMA, DMA_CH2_CHAN_ID, 384); // LENGTH(osci.payload[1][0])
-    DL_DMA_enableChannel(DMA, DMA_CH2_CHAN_ID);
-    DL_ADC12_enableDMA(ADC12_CH2_INST);
-
-    self->channel[1].block_count = self->channel[1].block_count - 1;
-    self->channel[1].block_write = (self->channel[1].block_write + 1) & 0x7;
+    osci_startChannel(1, ADC12_CH2_INST, DMA_CH2_CHAN_ID);
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
@@ -133,13 +126,7 @@ void ADC12_CH1_INST_IRQHandler(void)
             }
         }
         else {
-            DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)osci.payload[0][self->block_write]);
-            DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 384);
-            DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
-            DL_ADC12_enableDMA(ADC12_CH1_INST);
-
-            self->block_count = self->block_count - 1;
-            self->block_write = (self->block_write + 1) & 0x7;
+            osci_startChannel(0, ADC12_CH1_INST, DMA_CH1_CHAN_ID);
         }
         break;
     default:
@@ -161,13 +148,7 @@ void ADC12_CH2_INST_IRQHandler(void)
             }
         }
         else {
-            DL_DMA_setDestAddr(DMA, DMA_CH2_CHAN_ID, (uint32_t)osci.payload[1][self->block_write]);
-            DL_DMA_setTransferSize(DMA, DMA_CH2_CHAN_ID, 384);
-            DL_DMA_enableChannel(DMA, DMA_CH2_CHAN_ID);
-            DL_ADC12_enableDMA(ADC12_CH2_INST);
-
-            self->block_count = self->block_count - 1;
-            self->block_write = (self->block_write + 1) & 0x7;
+            osci_startChannel(1, ADC12_CH2_INST, DMA_CH2_CHAN_ID);
         }
         break;
     default:
