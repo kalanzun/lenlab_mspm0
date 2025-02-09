@@ -112,11 +112,11 @@ void osci_acquire(uint8_t code, uint32_t interval)
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
-    DL_Timer_setLoadValue(OSCI_TIMER_INST, interval - 1);
+    DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
     
     self->packet.arg = interval;
     
-    DL_Timer_startCounter(OSCI_TIMER_INST);
+    DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
 void ADC12_CH1_INST_IRQHandler(void)
@@ -128,7 +128,7 @@ void ADC12_CH1_INST_IRQHandler(void)
         if (self->block_count == 0) {
             self->done = true;
             if (osci.channel[1].done) {
-                DL_Timer_stopCounter(OSCI_TIMER_INST);
+                DL_Timer_stopCounter(MAIN_TIMER_INST);
                 terminal_transmitPacket(&osci.packet);
             }
         }
@@ -156,7 +156,7 @@ void ADC12_CH2_INST_IRQHandler(void)
         if (self->block_count == 0) {
             self->done = true;
             if (osci.channel[0].done) {
-                DL_Timer_stopCounter(OSCI_TIMER_INST);
+                DL_Timer_stopCounter(MAIN_TIMER_INST);
                 terminal_transmitPacket(&osci.packet);
             }
         }
