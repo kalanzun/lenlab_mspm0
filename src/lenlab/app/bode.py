@@ -113,6 +113,20 @@ class BodeWidget(QWidget):
 
         sidebar_layout.addLayout(layout)
 
+        # amplitude
+        layout = QHBoxLayout()
+
+        label = QLabel("Amplitude")
+        layout.addWidget(label)
+
+        self.amplitude = QComboBox()
+        for choice in ["1.5 V", "1.4 V", "1.3 V", "1.2 V", "1.1 V", "1.0 V"]:
+            self.amplitude.addItem(str(choice))
+
+        layout.addWidget(self.amplitude)
+
+        sidebar_layout.addLayout(layout)
+
         # start / stop
         layout = QHBoxLayout()
 
@@ -156,7 +170,9 @@ class BodeWidget(QWidget):
 
     @Slot()
     def on_start_clicked(self):
-        self.bode.start(step=1 << self.samples.currentIndex())
+        step = 1 << self.samples.currentIndex()
+        amplitude = 1.5 - 0.1 * self.amplitude.currentIndex()
+        self.bode.start(step, amplitude)
 
     @Slot()
     def on_save_as_clicked(self):
@@ -173,6 +189,8 @@ class BodeWidget(QWidget):
 
 
 class BodePlotter(QObject):
+    dac_per_volt = 4096 / 3.3
+
     def __init__(self, lenlab: Lenlab):
         super().__init__()
         self.lenlab = lenlab
@@ -180,6 +198,7 @@ class BodePlotter(QObject):
         self.active = False
         self.index = 0
         self.step = 1
+        self.amplitude = 1.5
         self.magnitude = QLineSeries()
         self.phase = QLineSeries()
 
@@ -187,7 +206,7 @@ class BodePlotter(QObject):
     def on_ready(self, ready):
         self.active = False
 
-    def start(self, step: int):
+    def start(self, step: int, amplitude: float):
         if self.active:
             return
 
@@ -201,6 +220,7 @@ class BodePlotter(QObject):
 
         self.index = 0
         self.step = step
+        self.amplitude = amplitude
 
         self.measure()
 
@@ -211,12 +231,13 @@ class BodePlotter(QObject):
     def measure(self):
         freq, sample_rate, length = sine_table[self.index]
         interval_25ns = 40000 // sample_rate
+        amplitude = int(self.amplitude * self.dac_per_volt)
         self.lenlab.send_command(
             command(
                 b"b",
                 interval_25ns,
                 length,
-                1862,  # 1.5 V
+                amplitude,
             )
         )
 
