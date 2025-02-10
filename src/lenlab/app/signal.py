@@ -115,6 +115,7 @@ class Multiplier(Slider):
     def __init__(self):
         super().__init__(tr("Frequency multiplier", "Frequenzmultiplikator"))
 
+        self.slider.setMinimum(1)
         self.slider.setMaximum(20)
 
 
@@ -156,7 +157,7 @@ class SignalWidget(QWidget):
         frequency_hertz, interval_25ns, points = sine_table[self.frequency.get_value()]
 
         harmonic = self.harmonic.get_value()
-        if harmonic:
+        if harmonic > 1:
             harmonic_amplitude = amplitude = self.amplitude.get_value() // 2
         else:
             amplitude = self.amplitude.get_value()

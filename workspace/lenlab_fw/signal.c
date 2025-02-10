@@ -114,7 +114,7 @@ void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint
 
     signal_createSinus(length, amplitude);
 
-    if (multiplier > 0 && harmonic > 0)
+    if (multiplier > 1 && harmonic > 0)
         signal_addHarmonic(length, multiplier, harmonic);
 
     DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)self->payload);
