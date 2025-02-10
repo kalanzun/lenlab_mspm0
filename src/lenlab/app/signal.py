@@ -107,8 +107,8 @@ class Frequency(Slider):
         return f"{value / 1e3:2.1f} kHz"
 
     def format_value(self, value: int) -> str:
-        freq, sample_rate, points = sine_table[value]
-        return self.format_number(freq)
+        frequency_hertz, interval_25ns, points = sine_table[value]
+        return self.format_number(frequency_hertz)
 
 
 class Multiplier(Slider):
@@ -153,8 +153,7 @@ class SignalWidget(QWidget):
         self.setLayout(parameter_layout)
 
     def create_command(self, code: bytes):
-        frequency, sample_rate, length = sine_table[self.frequency.get_value()]
-        interval_25ns = 40000 // sample_rate
+        frequency_hertz, interval_25ns, points = sine_table[self.frequency.get_value()]
 
         harmonic = self.harmonic.get_value()
         if harmonic:
@@ -166,7 +165,7 @@ class SignalWidget(QWidget):
         return command(
             code,
             interval_25ns,
-            length,
+            points,
             amplitude,
             harmonic,
             harmonic_amplitude,

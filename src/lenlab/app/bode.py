@@ -229,14 +229,13 @@ class BodePlotter(QObject):
         self.active = False
 
     def measure(self):
-        freq, sample_rate, length = sine_table[self.index]
-        interval_25ns = 40000 // sample_rate
+        frequency_hertz, interval_25ns, points = sine_table[self.index]
         amplitude = int(self.amplitude * self.dac_per_volt)
         self.lenlab.send_command(
             command(
                 b"b",
                 interval_25ns,
-                length,
+                points,
                 amplitude,
             )
         )
@@ -244,7 +243,8 @@ class BodePlotter(QObject):
     @Slot(int, object, object)
     def on_bode(self, interval_25ns, channel_1, channel_2):
         interval = interval_25ns * 25e-9  # seconds
-        f = sine_table[self.index][0]  # hertz
+        frequency_hertz, interval_25ns, points = sine_table[self.index]
+        f = frequency_hertz
         length = channel_1.shape[0]
 
         x = 2 * np.pi * f * np.linspace(0, interval * length, length, endpoint=False)

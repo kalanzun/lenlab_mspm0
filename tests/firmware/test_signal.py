@@ -24,8 +24,12 @@ def receive(port):
     return receive
 
 
-# 44 seconds
-@pytest.mark.parametrize("length", list(range(800, 2002, 2)))
+@pytest.fixture(params=list(range(200, 2002, 2)))
+def length(request):
+    return request.param
+
+
+# 65 seconds
 def test_sinus(firmware, send, receive, length):
     # DAC output PA15
 
@@ -41,6 +45,39 @@ def test_sinus(firmware, send, receive, length):
 
     expected = np.sin(np.linspace(0, 2 * np.pi, endpoint=False, num=length)) * amplitude
     expected = expected.astype("<i2")
+
+    # fig, ax = plt.subplots()
+    # ax.plot(sinus)
+    # ax.plot(expected)
+    # ax.grid()
+    # fig.show()
+
+    assert np.all(np.absolute(expected - sinus) < 4)
+
+
+@pytest.fixture(params=list(range(2, 21)))
+def multiplier(request):
+    return request.param
+
+
+def test_harmonic(firmware, send, receive, length, multiplier):
+    # DAC output PA15
+
+    amplitude = 1000
+    # MATHACL produces an error at exactly -90 deg
+    # length = 1024
+    # length = 512
+    send(command(b"s", 0, length, amplitude, multiplier, amplitude))
+
+    reply = receive(2 * 2000 + 8)
+    payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    sinus = payload[:length]
+
+    expected = np.sin(np.linspace(0, 2 * np.pi, endpoint=False, num=length)) * amplitude
+    expected += (
+        np.sin(np.linspace(0, 2 * np.pi * multiplier, endpoint=False, num=length)) * amplitude
+    )
+    expected = np.round(expected).astype("<i2")
 
     # fig, ax = plt.subplots()
     # ax.plot(sinus)
