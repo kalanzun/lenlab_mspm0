@@ -92,15 +92,11 @@ static void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
 
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1 << 31, length >> 1) * multiplier;
+    uint32_t angle_inc = uq0_div(1ul << 31, (uint32_t)length >> 1) * multiplier;
 
     for (uint32_t i = 0; i < length; i++) {
         self->payload[i] += q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
-        if (angle < angle_inc) {
-            // round on overflow
-            angle = angle_inc;
-        }
     }
 }
 
