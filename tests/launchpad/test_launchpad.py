@@ -349,3 +349,11 @@ def test_find_tiva_launchpad():
 
     names = [pi.name for pi in port_infos]
     assert names == ["COM0"]
+
+
+def test_bsl_connect_packet_crc():
+    assert launchpad.last(launchpad.crc([0x12])) == 0xDE44613A
+
+
+def test_last():
+    assert launchpad.last(range(7)) == 6
