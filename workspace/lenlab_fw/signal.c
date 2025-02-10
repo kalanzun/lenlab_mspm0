@@ -64,38 +64,40 @@ void signal_init(void)
     DL_MathACL_enableSaturation(MATHACL);
 }
 
+static uint32_t uq0_angle_inc(uint32_t length)
+{
+    return uq0_div(1ul << 31, length >> 1);
+}
+
+static uint32_t q31_sinus(uint32_t angle, uint32_t amplitude)
+{
+    return q31_mul(q31_sin(angle), amplitude);
+}
+
 static void signal_createSinus(uint16_t length, uint16_t amplitude)
 {
     struct Signal* const self = &signal;
 
-    self->length = length;
-    self->packet.arg = length;
-
     // angle from 0 to 180 degree and then from -180 degree to 0 (0 not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1ul << 31, (uint32_t)length >> 1);
-
-    // my board produces a calculation error for length = 1024 or length = 512
-    // it's a single wrong value near i = 800
+    uint32_t angle_inc = uq0_angle_inc(length);
 
     for (uint16_t i = 0; i < length; i++) {
-        self->payload[i] = q31_mul(q31_sin(angle), amplitude);
+        self->payload[i] = q31_sinus(angle, amplitude);
         angle += angle_inc;
     }
 }
 
-static void signal_addHarmonic(uint16_t multiplier, uint16_t amplitude)
+static void signal_addHarmonic(uint16_t length, uint16_t multiplier, uint16_t amplitude)
 {
     struct Signal* const self = &signal;
 
-    uint16_t length = self->length;
-
     // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1ul << 31, (uint32_t)length >> 1) * multiplier;
+    uint32_t angle_inc = uq0_angle_inc(length) * multiplier;
 
     for (uint32_t i = 0; i < length; i++) {
-        self->payload[i] += q31_mul(q31_sin(angle), amplitude);
+        self->payload[i] += q31_sinus(angle, amplitude);
         angle += angle_inc;
     }
 }
@@ -105,6 +107,7 @@ void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint
     struct Signal* const self = &signal;
 
     // length: even number of samples
+    self->packet.arg = length;
 
     // disable channel for safe reconfiguration
     DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
@@ -112,7 +115,7 @@ void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint
     signal_createSinus(length, amplitude);
 
     if (multiplier > 0 && harmonic > 0)
-        signal_addHarmonic(multiplier, harmonic);
+        signal_addHarmonic(length, multiplier, harmonic);
 
     DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)self->payload);
     DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) & (DAC0->DATA0));
