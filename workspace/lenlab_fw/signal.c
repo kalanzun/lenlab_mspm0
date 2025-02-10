@@ -15,10 +15,12 @@ static uint32_t q31_sin(uint32_t angle)
 
     DL_MathACL_startSinCosOperation(MATHACL, &sinus_config, angle);
     DL_MathACL_waitForOperation(MATHACL);
-    return DL_MathACL_getResultTwo(MATHACL);
+    uint32_t amplitude = DL_MathACL_getResultTwo(MATHACL);
+    // it might calculate a value just one bit smaller than -1 at -90 degrees
+    return angle & (1ul << 31) && amplitude == (1ul << 31) - 1 ? (1ul << 31) : amplitude;
 }
 
-static uint32_t q31_mul(uint32_t a, uint32_t b)
+static int32_t q31_mul(int32_t a, int32_t b)
 {
     static const DL_MathACL_operationConfig mpy_config = {
         .opType = DL_MATHACL_OP_TYPE_MPY_32,
@@ -51,7 +53,7 @@ static uint32_t uq0_div(uint32_t dividend, uint32_t divisor)
 struct Signal signal = {
     .packet = {
         .label = 'L',
-        .code = 'g',
+        .code = 's',
         .length = sizeof(signal.payload),
     },
 };
@@ -59,6 +61,7 @@ struct Signal signal = {
 void signal_init(void)
 {
     DL_DAC12_performSelfCalibrationBlocking(DAC0);
+    DL_MathACL_enableSaturation(MATHACL);
 }
 
 static void signal_createSinus(uint16_t length, uint16_t amplitude)
@@ -68,14 +71,14 @@ static void signal_createSinus(uint16_t length, uint16_t amplitude)
     self->length = length;
     self->packet.arg = length;
 
-    // angle from 0 to 180 degree and then from -180 degree to 0 (not included)
+    // angle from 0 to 180 degree and then from -180 degree to 0 (0 not included)
     uint32_t angle = 0;
-    uint32_t angle_inc = uq0_div(1 << 31, length >> 1);
+    uint32_t angle_inc = uq0_div(1ul << 31, (uint32_t)length >> 1);
 
     // my board produces a calculation error for length = 1024 or length = 512
     // it's a single wrong value near i = 800
 
-    for (uint32_t i = 0; i < length; i++) {
+    for (uint16_t i = 0; i < length; i++) {
         self->payload[i] = q31_mul(q31_sin(angle), amplitude);
         angle += angle_inc;
     }

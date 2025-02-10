@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from matplotlib import pyplot as plt
 
-from lenlab.launchpad.protocol import command, pack
+from lenlab.launchpad.protocol import command
 
 
 @pytest.fixture(scope="module")
@@ -24,22 +24,31 @@ def receive(port):
     return receive
 
 
-def test_sinus(firmware, send, receive):
+# 44 seconds
+@pytest.mark.parametrize("length", list(range(800, 2002, 2)))
+def test_sinus(firmware, send, receive, length):
     # DAC output PA15
-    length = 1024  # my board produces a calculation error
-    length = 512  # my board produces a calculation error
-    send(command(b"s", 1000, length, 1024, 0, 256))
-    reply = receive(8)
-    assert reply == pack(b"s")
 
-    send(command(b"g"))
+    amplitude = 2000
+    # MATHACL produces an error at exactly -90 deg
+    # length = 1024
+    # length = 512
+    send(command(b"s", 0, length, amplitude, 0, 256))
+
     reply = receive(2 * 2000 + 8)
     payload = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    sinus = payload[:length]
 
-    fig, ax = plt.subplots()
-    ax.plot(payload[:length])
-    ax.grid()
-    fig.show()
+    expected = np.sin(np.linspace(0, 2 * np.pi, endpoint=False, num=length)) * amplitude
+    expected = expected.astype("<i2")
+
+    # fig, ax = plt.subplots()
+    # ax.plot(sinus)
+    # ax.plot(expected)
+    # ax.grid()
+    # fig.show()
+
+    assert np.all(np.absolute(expected - sinus) < 4)
 
 
 def test_osci(firmware, send, receive):
