@@ -54,9 +54,11 @@ def test_sinus(firmware, send, receive, length):
 def test_osci(firmware, send, receive):
     # ch1 input PA24
     # ch2 input PA17
-    send(command(b"a", 5))  # run
+    # sample rate 1 MHz
+    # DAC 1 kHz
+    send(command(b"a", 40, 1000, int(4096 / 3.3), 0, 0))  # run
     reply = receive(8 + 2 * 4 * 3 * 1024)
-    channels = np.frombuffer(reply, np.dtype("<i2"), offset=8)
+    channels = np.frombuffer(reply, np.dtype("<u2"), offset=8)
     mid = channels.shape[0] // 2
     ch1 = channels[:mid]
     ch2 = channels[mid:]
