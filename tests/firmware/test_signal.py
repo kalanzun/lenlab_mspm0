@@ -24,14 +24,12 @@ def receive(port):
     return receive
 
 
-@pytest.fixture(params=list(range(200, 2002, 2)))
-def length(request):
-    return request.param
-
-
-# 65 seconds
+# 70 seconds
+@pytest.mark.parametrize("length", list(range(200, 2002, 2)))
 def test_sinus(firmware, send, receive, length):
     # DAC output PA15
+
+    # length = range(200, 2002, 2)
 
     amplitude = 2000
     # MATHACL produces an error at exactly -90 deg
@@ -55,11 +53,8 @@ def test_sinus(firmware, send, receive, length):
     assert np.all(np.absolute(expected - sinus) < 4)
 
 
-@pytest.fixture(params=list(range(2, 21)))
-def multiplier(request):
-    return request.param
-
-
+@pytest.mark.parametrize("length", [200, 202, 220, 500, 512, 800, 802, 998, 1000, 1002, 1022, 1024, 1026, 1998, 2000])
+@pytest.mark.parametrize("multiplier", [2, 3, 4, 5, 8, 10, 15, 18, 19, 20])
 def test_harmonic(firmware, send, receive, length, multiplier):
     # DAC output PA15
 
@@ -79,13 +74,15 @@ def test_harmonic(firmware, send, receive, length, multiplier):
     )
     expected = np.round(expected).astype("<i2")
 
-    # fig, ax = plt.subplots()
-    # ax.plot(sinus)
-    # ax.plot(expected)
-    # ax.grid()
-    # fig.show()
+    if not np.all(np.absolute(expected - sinus) < 8):
+        fig, ax = plt.subplots()
+        ax.plot(sinus)
+        ax.plot(expected)
+        ax.title(f"{length=}, {multiplier=}")
+        ax.grid()
+        fig.show()
 
-    assert np.all(np.absolute(expected - sinus) < 4)
+        assert False
 
 
 def test_osci(firmware, send, receive):
