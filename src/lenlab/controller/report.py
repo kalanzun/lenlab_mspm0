@@ -1,5 +1,6 @@
 import logging
 from io import StringIO
+from typing import TextIO
 
 
 class Report:
@@ -14,6 +15,5 @@ class Report:
         handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
         logging.getLogger().addHandler(handler)
 
-    def save_as(self, file_name: str):
-        with open(file_name, "w", encoding="utf-8") as file:
-            file.write(self.log.getvalue())
+    def save_as(self, file: TextIO) -> None:
+        file.write(self.log.getvalue())

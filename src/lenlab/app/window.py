@@ -86,7 +86,8 @@ class MainWindow(QMainWindow):
             self.report.file_format,
         )
         if file_name:
-            self.report.save_as(file_name)
+            with open(file_name, "w", encoding="utf-8") as file:
+                self.report.save_as(file)
 
     @Slot()
     def install_rules(self):
