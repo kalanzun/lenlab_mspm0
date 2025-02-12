@@ -32,12 +32,12 @@ void osci_init(void)
     DL_DMA_setSrcAddr(DMA, osci.channel[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(osci.channel[1].adc12));
 }
 
-static void osci_initChannel(struct Channel* const self)
+static void osci_initChannel(struct Channel* const self, uint16_t block_offset)
 {
     self->done = false;
-    // two extra blocks
-    self->block_count = LENGTH(osci.payload[0]) + 2;
-    self->block_write = LENGTH(osci.payload[0]) - 2;
+
+    self->block_count = LENGTH(osci.payload[0]) + block_offset;
+    self->block_write = LENGTH(osci.payload[0]) - block_offset;
 }
 
 static void osci_enableChannel(struct Channel* const self)
@@ -48,26 +48,38 @@ static void osci_enableChannel(struct Channel* const self)
     DL_ADC12_enableDMA(self->adc12);
 
     self->block_count = self->block_count - 1;
-    self->block_write = (self->block_write + 1) & 0x7;
+    static_assert(LENGTH(osci.payload[0]) == 16, "block count is not 16");
+    self->block_write = (self->block_write + 1) & 0xF;
 }
 
-void osci_acquire(uint8_t code, uint32_t interval)
+void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
 {
     struct Osci* const self = &osci;
 
     self->packet.code = code;
 
-    osci_initChannel(&self->channel[0]);
+    static_assert(LENGTH(osci.payload[0]) == 16, "block count is not 16");
+    static_assert(LENGTH(osci.payload[0][0]) == 216, "sample count is not 216");
+    // end = 5184 = (16 + 8) blocks * 216 double samples
+    // mid = 3684 = end - window / 2; (3000 / 2)
+    // begin = 2184 = end - window
+    
+    uint16_t offset = 2184 - (3684 % (length >> 1)); // double samples
+    // min case: offset = 1266
+
+    uint16_t block_offset = offset / 216;
+    self->packet.arg = interval + ((offset % 216) << 17); // offset in samples (times 2)
+
+    osci_initChannel(&self->channel[0], block_offset);
     osci_enableChannel(&self->channel[0]);
 
-    osci_initChannel(&self->channel[1]);
+    osci_initChannel(&self->channel[1], block_offset);
     osci_enableChannel(&self->channel[1]);
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
     DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
 
-    self->packet.arg = interval;
 
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }

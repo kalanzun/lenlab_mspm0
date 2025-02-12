@@ -244,7 +244,8 @@ class BodePlotter(QObject):
     def on_bode(self, waveform):
         frequency_hertz, interval_25ns, points = sine_table[self.index]
 
-        x = 2 * np.pi * frequency_hertz * waveform.time_ms / 1000.0
+        t = np.linspace(0, waveform.length, waveform.length, endpoint=False) * waveform.time_step
+        x = 2 * np.pi * frequency_hertz * t
         y = np.sin(x) + 1j * np.cos(x)
         transfer = np.sum(y * waveform.channels[1]) / np.sum(y * waveform.channels[0])
 

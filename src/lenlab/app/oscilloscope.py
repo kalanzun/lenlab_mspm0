@@ -1,6 +1,4 @@
-from importlib import metadata
 
-import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
@@ -30,6 +28,8 @@ class OscilloscopeChart(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.waveform = Waveform()
 
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -67,10 +67,13 @@ class OscilloscopeChart(QWidget):
         self.setLayout(layout)
 
     def replace(self, waveform: Waveform):
-        for channel, values in zip(self.channels, waveform.channels, strict=False):
-            channel.replace(list(map(QPointF, waveform.time_ms, values)))
+        self.waveform = waveform
 
-        self.x_axis.setRange(-3e3 * waveform.time_step_ms, 3e3 * waveform.time_step_ms)
+        time_ms = waveform.time_aligned() * 1e3
+        for i, channel in enumerate(self.channels):
+            channel.replace(list(map(QPointF, time_ms, waveform.channel_aligned(i))))
+
+        self.x_axis.setRange(-3e6 * waveform.time_step, 3e6 * waveform.time_step)
 
 
 class OscilloscopeWidget(QWidget):
@@ -86,10 +89,6 @@ class OscilloscopeWidget(QWidget):
         self.lenlab = lenlab
 
         self.active = False
-
-        self.time = np.ndarray((0,))
-        self.channel_1 = np.ndarray((0,))
-        self.channel_2 = np.ndarray((0,))
 
         chart_layout = QVBoxLayout()
 
@@ -218,12 +217,5 @@ class OscilloscopeWidget(QWidget):
         if not file_name:  # cancelled
             return
 
-        self.save_as(file_name)
-
-    def save_as(self, file_name: str):
         with open(file_name, "w") as file:
-            version = metadata.version("lenlab")
-            file.write(f"Lenlab MSPM0 {version} Oszilloskop\n")
-            file.write("Zeit; Kanal_1; Kanal_2\n")
-            for t, ch1, ch2 in zip(self.time, self.channel_1, self.channel_2, strict=False):
-                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
+            self.chart.waveform.save_as(file)

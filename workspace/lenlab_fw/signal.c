@@ -66,6 +66,7 @@ void signal_init(void)
 
 static uint32_t uq0_angle_inc(uint32_t length)
 {
+    // length: even number of samples
     return uq0_div(1ul << 31, length >> 1);
 }
 
@@ -106,7 +107,6 @@ void signal_sinus(uint16_t length, uint16_t amplitude, uint16_t multiplier, uint
 {
     struct Signal* const self = &signal;
 
-    // length: even number of samples
     self->packet.arg = length;
 
     // disable channel for safe reconfiguration

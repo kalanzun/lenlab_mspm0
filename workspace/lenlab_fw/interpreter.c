@@ -50,12 +50,12 @@ void interpreter_handleCommand(void)
 
         case 'a': // acquire
             signal_sinus(self->payload[0], self->payload[1], self->payload[2], self->payload[3]);
-            osci_acquire('a', cmd->arg);
+            osci_acquire('a', cmd->arg, self->payload[0]);
             break;
 
         case 'b': // bode
             signal_sinus(self->payload[0], self->payload[1], 0, 0);
-            osci_acquire('b', cmd->arg);
+            osci_acquire('b', cmd->arg, self->payload[0]);
             break;
         }
     }
