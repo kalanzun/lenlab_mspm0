@@ -240,16 +240,13 @@ class BodePlotter(QObject):
             )
         )
 
-    @Slot(int, object, object)
-    def on_bode(self, interval_25ns, channel_1, channel_2):
-        interval = interval_25ns * 25e-9  # seconds
+    @Slot(object)
+    def on_bode(self, waveform):
         frequency_hertz, interval_25ns, points = sine_table[self.index]
-        f = frequency_hertz
-        length = channel_1.shape[0]
 
-        x = 2 * np.pi * f * np.linspace(0, interval * length, length, endpoint=False)
+        x = 2 * np.pi * frequency_hertz * waveform.time_ms / 1000.0
         y = np.sin(x) + 1j * np.cos(x)
-        transfer = np.sum(y * channel_2) / np.sum(y * channel_1)
+        transfer = np.sum(y * waveform.channels[1]) / np.sum(y * waveform.channels[0])
 
         magnitude = 20 * np.log10(np.absolute(transfer))
         angle = np.angle(transfer) / np.pi * 180.0
@@ -257,15 +254,14 @@ class BodePlotter(QObject):
         prev = self.phase.at(self.phase.count() - 1).y() if self.phase.count() else 0
         phase = np.unwrap((prev, angle), period=360.0)[1]  # remove jumps by 2 pi
 
-        self.magnitude.append(float(f), float(magnitude))
-        self.phase.append(float(f), float(phase))
+        self.magnitude.append(float(frequency_hertz), float(magnitude))
+        self.phase.append(float(frequency_hertz), float(phase))
 
         self.index += self.step
         if self.active and self.index < len(sine_table):
             self.measure()
         else:
             self.active = False
-
             self.lenlab.adc_lock.release()
 
     def save_as(self, file_name: str):

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..controller.lenlab import Lenlab
+from ..model.waveform import Waveform
 from ..translate import Translate, tr
 from .checkbox import BoolCheckBox
 from .signal import SignalWidget
@@ -65,11 +66,11 @@ class OscilloscopeChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
-    def replace(self, interval_ms, time, channel_1, channel_2):
-        for channel, values in zip(self.channels, [channel_1, channel_2], strict=False):
-            channel.replace(list(map(QPointF, time, values)))
+    def replace(self, waveform: Waveform):
+        for channel, values in zip(self.channels, waveform.channels, strict=False):
+            channel.replace(list(map(QPointF, waveform.time_ms, values)))
 
-        self.x_axis.setRange(-3e3 * interval_ms, 3e3 * interval_ms)
+        self.x_axis.setRange(-3e3 * waveform.time_step_ms, 3e3 * waveform.time_step_ms)
 
 
 class OscilloscopeWidget(QWidget):
@@ -78,7 +79,7 @@ class OscilloscopeWidget(QWidget):
     # sample_rates = ["4 MHz", "2 MHz", "1 MHz", "500 kHz", "250 kHz"]
     # intervals_25ns = [10, 20, 40, 80, 160]
 
-    bode = Signal(int, object, object)
+    bode = Signal(object)
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -196,39 +197,15 @@ class OscilloscopeWidget(QWidget):
         if reply.startswith(b"La"):
             self.lenlab.adc_lock.release()
 
-        payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
-        interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
-        interval_ms = interval_25ns * 25e-6
+        waveform = Waveform.parse_reply(reply)
 
-        # 12 bit signed binary (2s complement), left aligned
-        # payload = payload >> 4
-
-        data = payload.astype(np.float64)
-        data = data * 3.3 / 4096 - 1.65  # 12 bit ADC
-
-        length = data.shape[0] // 2  # 2 channels
-
-        # the ADC delivers some broken values at the start of the buffer
-        # select the center 6 k points
-        assert length == 6 * 1024
-        # offset = (length - 6000) // 2
-        # self.channel_1 = data[offset : length - offset]
-        # self.channel_2 = data[length + offset : -offset]
-        self.channel_1 = data[:length]
-        self.channel_2 = data[length:]
-
-        # time in milliseconds
-        length = self.channel_1.shape[0]
-        half = length / 2
-        self.time = np.linspace(-half, half, length, endpoint=False) * interval_ms
-
-        self.chart.replace(interval_ms, self.time, self.channel_1, self.channel_2)
+        self.chart.replace(waveform)
 
         if reply.startswith(b"La") and self.active:
             self.active = self.acquire()
 
         if reply.startswith(b"Lb"):
-            self.bode.emit(interval_25ns, self.channel_1, self.channel_2)
+            self.bode.emit(waveform)
 
     @Slot()
     def on_save_as_clicked(self):
