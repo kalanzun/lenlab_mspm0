@@ -19,4 +19,6 @@ static_assert(sizeof(struct Packet) == 8,
 
 #define ARG_STR(_x) ((_x[0]) + ((_x[1]) << 8) + ((_x[2]) << 16) + ((_x[3]) << 24))
 
+#define IS_POWER_OF_TWO(x) ((x) && !((x) & ((x) - 1)))
+
 #endif

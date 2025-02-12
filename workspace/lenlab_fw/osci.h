@@ -5,6 +5,7 @@
 
 #include "ti/devices/msp/peripherals/hw_adc12.h"
 
+
 struct Channel {
     const uint8_t index;
     ADC12_Regs* const adc12;
@@ -17,8 +18,7 @@ struct Channel {
 
 struct Osci {
     struct Packet packet;
-    // the sample count (uint32_t) needs to be dividable by 6 because of DMA and FIFO length
-    uint32_t payload[2][16][216]; // two samples per uint32_t
+    uint32_t payload[2][8][432]; // two samples per uint32_t
     struct Channel channel[2];
 };
 

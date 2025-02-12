@@ -1,4 +1,3 @@
-
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
