@@ -34,7 +34,6 @@ class Waveform:
         return np.linspace(-3e3, 3e3, 6001, endpoint=True) * self.time_step
 
     def channel_aligned(self, i: int) -> np.ndarray:
-        # TODO might the last point be missing?
         return self.channels[i][self.offset : self.offset + 6001]
 
     def save_as(self, file: TextIO):
