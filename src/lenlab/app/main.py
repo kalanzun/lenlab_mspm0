@@ -25,13 +25,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--probe-timeout",
-        default=600,
+        default=Lenlab.default_probe_timeout,
         type=int,
         help="timeout for probing in milliseconds, default %(default)s",
     )
     parser.add_argument(
         "--reply-timeout",
-        default=600,
+        default=Lenlab.default_reply_timeout,
         type=int,
         help="timeout for firmware replies in milliseconds, default %(default)s",
     )

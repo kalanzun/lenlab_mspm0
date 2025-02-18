@@ -24,7 +24,7 @@ def test_lock():
 
 @pytest.fixture
 def lenlab():
-    return Lenlab("COM0", 400, 400)
+    return Lenlab()
 
 
 def test_lenlab(lenlab):
@@ -33,13 +33,13 @@ def test_lenlab(lenlab):
 
 def test_on_terminal_ready(lenlab):
     spy = Spy(lenlab.ready)
-    lenlab.discovery.ready.emit(Terminal("COM0"))
+    lenlab.discovery.ready.emit(Terminal())
     assert spy.get_single_arg() is True
     assert lenlab.lock.is_locked is False
 
 
 def test_on_terminal_error(lenlab):
-    lenlab.discovery.ready.emit(terminal := Terminal("COM0"))
+    lenlab.discovery.ready.emit(terminal := Terminal())
     spy = Spy(lenlab.ready)
     terminal.error.emit(ResourceError())
     assert spy.get_single_arg() is False
