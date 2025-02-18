@@ -39,7 +39,12 @@ class Lenlab(QObject):
     default_probe_timeout = 600
     default_reply_timeout = 600
 
-    def __init__(self, port_name: str = "", probe_timeout: int = default_probe_timeout, reply_timeout: int = default_reply_timeout):
+    def __init__(
+        self,
+        port_name: str = "",
+        probe_timeout: int = default_probe_timeout,
+        reply_timeout: int = default_reply_timeout,
+    ):
         super().__init__()
         self.reply_timeout = reply_timeout
         logger.info(f"set reply timeout to {self.reply_timeout} ms")

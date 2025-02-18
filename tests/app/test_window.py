@@ -20,7 +20,11 @@ def test_main_window(window):
 
 def test_report(window, monkeypatch, tmp_path):
     tmp_file = tmp_path / "report.txt"
-    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda parent, title, file_name, file_format: (tmp_file, file_format))
+    monkeypatch.setattr(
+        QFileDialog,
+        "getSaveFileName",
+        lambda parent, title, file_name, file_format: (tmp_file, file_format),
+    )
     window.report_action.trigger()
     # it's empty without logging
     assert tmp_file.exists()

@@ -1,4 +1,3 @@
-import sys
 
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
