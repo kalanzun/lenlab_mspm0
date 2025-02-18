@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 
@@ -60,14 +59,6 @@ def app():
         from PySide6.QtWidgets import QApplication
 
         return QApplication()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def logger():
-    logging.basicConfig(level=logging.INFO)
-
-    logger = logging.getLogger(__name__)
-    return logger
 
 
 @pytest.fixture(scope="module")

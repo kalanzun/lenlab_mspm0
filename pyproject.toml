@@ -45,6 +45,7 @@ cache-keys = [
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+    "--log-cli-level=INFO",
 ]
 
 [tool.ruff]

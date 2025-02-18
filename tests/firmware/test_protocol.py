@@ -7,6 +7,8 @@ from PySide6.QtSerialPort import QSerialPort
 
 from lenlab.launchpad.protocol import command
 
+logger = logging.getLogger(__name__)
+
 connect_packet = bytes((0x80, 0x01, 0x00, 0x12, 0x3A, 0x61, 0x44, 0xDE))
 knock_packet = b"Lk\x08\x00nock, knock!"
 knock_reply = b"Lk\x00\x00nock"
@@ -103,7 +105,7 @@ def plot(title, *waveforms):
     fig.show()
 
 
-def check_sinus(logger, sinus: np.ndarray, expected: np.ndarray, title: str):
+def check_sinus(sinus: np.ndarray, expected: np.ndarray, title: str):
     error = np.absolute(expected - sinus)
     if not np.all(error < 4):
         max_error = int(error.max())
