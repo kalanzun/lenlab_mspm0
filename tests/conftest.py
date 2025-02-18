@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -42,9 +43,22 @@ def linux():
         pytest.skip(reason="No Linux")
 
 
+@pytest.fixture(scope="session")
+def widgets():
+    if "CI" in os.environ:
+        pytest.skip(reason="No Qt Widgets")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    return QCoreApplication()
+    if "CI" in os.environ:
+        # No Qt Widgets in CI
+        return QCoreApplication()
+
+    else:
+        from PySide6.QtWidgets import QApplication
+
+        return QApplication()
 
 
 @pytest.fixture(scope="module")

@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> None:
 
     lenlab = Lenlab(args.port, args.probe_timeout, args.reply_timeout)
 
-    window = MainWindow(lenlab, report)
+    window = MainWindow(lenlab, report, rules=sys.platform == "linux")
     window.show()
 
     app.exec()

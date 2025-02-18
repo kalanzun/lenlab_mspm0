@@ -16,7 +16,7 @@ from .programmer import ProgrammerWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, lenlab: Lenlab, report: Report):
+    def __init__(self, lenlab: Lenlab, report: Report, rules: bool = False):
         super().__init__()
         self.lenlab = lenlab
         self.report = report
@@ -55,14 +55,14 @@ class MainWindow(QMainWindow):
 
         menu = menu_bar.addMenu("&Lenlab")
 
-        action = QAction(tr("Save Error Report", "Fehlerbericht speichern"), self)
-        action.triggered.connect(self.save_report)
-        menu.addAction(action)
+        self.report_action = QAction(tr("Save Error Report", "Fehlerbericht speichern"), self)
+        self.report_action.triggered.connect(self.save_report)
+        menu.addAction(self.report_action)
 
-        if sys.platform == "linux":
-            action = QAction(tr("Install rules", "Regeln installieren"), self)
-            action.triggered.connect(self.install_rules)
-            menu.addAction(action)
+        if rules:
+            self.rules_action = QAction(tr("Install rules", "Regeln installieren"), self)
+            self.rules_action.triggered.connect(self.install_rules)
+            menu.addAction(self.rules_action)
 
         menu.addSeparator()
 
