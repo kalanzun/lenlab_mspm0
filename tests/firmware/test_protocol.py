@@ -153,7 +153,11 @@ def test_oscilloscope(firmware, send, receive):
     # sample rate 1 MHz
     # DAC 1 kHz
     send(command(b"a", 40, 1000, int(4096 / 3.3), 0, 0))  # run
-    reply = receive(8 + 2 * 4 * 3 * 1024)
+    payload_size = 4 * 2 * 8 * 432
+    reply = receive(8 + payload_size)
+    length = int.from_bytes(reply[2:4], byteorder="little")
+    assert length == payload_size
+
     channels = np.frombuffer(reply, np.dtype("<u2"), offset=8)
     mid = channels.shape[0] // 2
     ch1 = channels[:mid]
