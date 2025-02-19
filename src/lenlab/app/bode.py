@@ -270,7 +270,7 @@ class BodePlotter(QObject):
             version = metadata.version("lenlab")
             file.write(f"Lenlab MSPM0 {version} Bode\n")
             file.write("Frequenz; Betrag; Phase\n")
-            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=False):
+            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
                 file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QFileDialog
 
 
 def pytest_addoption(parser):
@@ -78,3 +78,30 @@ def output():
     output = Path("output")
     output.mkdir(exist_ok=True)
     return output
+
+
+class SaveFile:
+    def __init__(self, base_path):
+        self.base_path = base_path
+        self.cancel = False
+
+    def __call__(self, parent, title, file_name, file_format):
+        if self.cancel:
+            return "", ""
+
+        self.file_path = self.base_path / file_name
+        return str(self.file_path), file_format
+
+    def read_text(self):
+        return self.file_path.read_text(encoding="utf-8")
+
+
+@pytest.fixture()
+def save_file(monkeypatch, output):
+    save_file = SaveFile(output)
+    monkeypatch.setattr(
+        QFileDialog,
+        "getSaveFileName",
+        save_file,
+    )
+    return save_file
