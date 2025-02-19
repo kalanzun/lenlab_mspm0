@@ -40,7 +40,8 @@ class Waveform:
         version = metadata.version("lenlab")
         file.write(f"Lenlab MSPM0 {version} Oszilloskop\n")
         file.write("Zeit; Kanal_1; Kanal_2\n")
+        # time is always 6001 points, channels may be empty
         for t, ch1, ch2 in zip(
-            self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1), strict=True
+            self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1), strict=False
         ):
             file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")

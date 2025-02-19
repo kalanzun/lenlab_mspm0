@@ -41,11 +41,12 @@ def test_time_aligned(waveform):
     assert time[-1] == 3e-3
 
 
-def test_channel_aligned(waveform):
-    channel_1 = waveform.channel_aligned(0)
-    assert channel_1.shape == (6001,)
+@pytest.mark.parametrize("index", [0, 1])
+def test_channel_aligned(waveform, index):
+    channel = waveform.channel_aligned(index)
+    assert channel.shape == (6001,)
 
-    value_0 = int(round((float(channel_1[0]) + 1.65) / 3.3 * 4096))
+    value_0 = int(round((float(channel[0]) + 1.65) / 3.3 * 4096))
     assert value_0 == 88
 
 
