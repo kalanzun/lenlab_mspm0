@@ -146,7 +146,7 @@ def test_harmonic(firmware, get_sinus, length, multiplier):
     check_sinus(sinus, expected, f"sinus {length=}, {multiplier=}")
 
 
-def test_oscilloscope(firmware, send, receive):
+def test_oscilloscope(firmware, output, send, receive):
     # ch1 input PA24
     # ch2 input PA17
 
@@ -168,4 +168,4 @@ def test_oscilloscope(firmware, send, receive):
     ax.plot(ch2)
     ax.set_title("oscilloscope acquire")
     ax.grid()
-    fig.show()
+    fig.savefig(output / "oscilloscope.svg")

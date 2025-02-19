@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
@@ -71,3 +72,10 @@ def port(request):
     port.setBaudRate(1_000_000)
     yield port
     port.close()
+
+
+@pytest.fixture(scope="session")
+def output():
+    output = Path("output")
+    output.mkdir(exist_ok=True)
+    return output
