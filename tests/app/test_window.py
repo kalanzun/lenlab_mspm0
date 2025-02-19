@@ -10,7 +10,7 @@ from lenlab.launchpad import rules
 
 
 @pytest.fixture
-def window(widgets):
+def window(qt_widgets):
     return MainWindow(Lenlab(), Report(), rules=True)
 
 

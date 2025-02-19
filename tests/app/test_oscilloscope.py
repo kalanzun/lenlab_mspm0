@@ -24,7 +24,7 @@ def spy(lenlab):
 
 
 @pytest.fixture()
-def oscilloscope(widgets, lenlab):
+def oscilloscope(qt_widgets, lenlab):
     return OscilloscopeWidget(lenlab)
 
 

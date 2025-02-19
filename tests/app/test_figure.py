@@ -6,7 +6,7 @@ from lenlab.app.figure import LaunchpadFigure, PinAssignmentFigure
 
 
 @pytest.fixture()
-def render(widgets, output):
+def render(qt_widgets, output):
     def render(widget, file_name=None):
         buffer = QBuffer()
         generator = QSvgGenerator()

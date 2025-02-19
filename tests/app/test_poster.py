@@ -10,7 +10,7 @@ class NoShowPosterWidget(PosterWidget):
 
 
 @pytest.fixture()
-def poster(widgets):
+def poster(qt_widgets):
     return NoShowPosterWidget()
 
 

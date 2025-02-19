@@ -45,7 +45,7 @@ def linux():
 
 
 @pytest.fixture(scope="session")
-def widgets():
+def qt_widgets():
     if "CI" in os.environ:
         pytest.skip(reason="No Qt Widgets")
 
