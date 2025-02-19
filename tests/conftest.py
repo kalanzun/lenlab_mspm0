@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
+from PySide6.QtWidgets import QApplication
 
 
 def pytest_addoption(parser):
@@ -57,8 +58,6 @@ def app():
         return QCoreApplication()
 
     else:
-        from PySide6.QtWidgets import QApplication
-
         return QApplication()
 
 
