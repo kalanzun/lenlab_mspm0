@@ -95,6 +95,9 @@ class SaveFile:
     def read_text(self):
         return self.file_path.read_text(encoding="utf-8")
 
+    def read_bytes(self):
+        return self.file_path.read_bytes()
+
 
 @pytest.fixture()
 def save_file(monkeypatch, output):
