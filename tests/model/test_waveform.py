@@ -3,10 +3,9 @@ from io import StringIO
 import numpy as np
 import pytest
 
+from lenlab.controller.oscilloscope import channel_length
 from lenlab.launchpad.protocol import pack
 from lenlab.model.waveform import Waveform
-
-channel_length = 8 * 864
 
 
 @pytest.fixture

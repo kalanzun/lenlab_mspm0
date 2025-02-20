@@ -3,11 +3,10 @@ import pytest
 
 from lenlab.app.bode import BodeWidget
 from lenlab.controller.lenlab import Lenlab
+from lenlab.controller.oscilloscope import channel_length
 from lenlab.controller.signal import sine_table
 from lenlab.model.waveform import Waveform
 from lenlab.spy import Spy
-
-channel_length = 8 * 864
 
 
 @pytest.fixture()
