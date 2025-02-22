@@ -31,8 +31,3 @@ def test_export(programmer, save_file):
 
     content = save_file.read_bytes()
     assert len(content) > 0
-
-
-def test_no_file(programmer, save_file):
-    save_file.cancel = True
-    programmer.on_export_clicked()

@@ -2,7 +2,6 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QPushButton,
     QVBoxLayout,
@@ -13,6 +12,7 @@ from ..controller.lenlab import Lenlab
 from ..model.waveform import Waveform
 from ..translate import Translate, tr
 from .checkbox import BoolCheckBox
+from .save_as import save_as, skippable
 from .signal import SignalWidget
 
 
@@ -207,14 +207,13 @@ class OscilloscopeWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        file_name, file_format = QFileDialog.getSaveFileName(
-            self,
-            tr("Save Oscilloscope Data", "Oszilloskop-Daten speichern"),
-            "lenlab_osci.csv",
-            "CSV (*.csv)",
-        )
-        if not file_name:  # cancelled
-            return
-
-        with open(file_name, "w") as file:
+        with (
+            skippable(),
+            save_as(
+                self,
+                tr("Save Oscilloscope Data", "Oszilloskop-Daten speichern"),
+                "lenlab_osci.csv",
+                "CSV (*.csv)",
+            ) as file,
+        ):
             self.chart.waveform.save_as(file)

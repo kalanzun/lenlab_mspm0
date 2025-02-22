@@ -1,4 +1,5 @@
 from importlib import metadata
+from typing import TextIO
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
@@ -6,7 +7,6 @@ from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -20,6 +20,7 @@ from ..controller.signal import sine_table
 from ..launchpad.protocol import command
 from ..message import Message
 from ..translate import Translate, tr
+from .save_as import save_as, skippable
 
 
 class BodeChart(QWidget):
@@ -176,16 +177,16 @@ class BodeWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        file_name, file_format = QFileDialog.getSaveFileName(
-            self,
-            tr("Save Bode Plot", "Bode-Plot speichern"),
-            "lenlab_bode.csv",
-            "CSV (*.csv)",
-        )
-        if not file_name:  # cancelled
-            return
-
-        self.bode.save_as(file_name)
+        with (
+            skippable(),
+            save_as(
+                self,
+                tr("Save Bode Plot", "Bode-Plot speichern"),
+                "lenlab_bode.csv",
+                "CSV (*.csv)",
+            ) as file,
+        ):
+            self.bode.save_as(file)
 
 
 class BodePlotter(QObject):
@@ -265,13 +266,12 @@ class BodePlotter(QObject):
             self.active = False
             self.lenlab.adc_lock.release()
 
-    def save_as(self, file_name: str):
-        with open(file_name, "w") as file:
-            version = metadata.version("lenlab")
-            file.write(f"Lenlab MSPM0 {version} Bode\n")
-            file.write("Frequenz; Betrag; Phase\n")
-            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
-                file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
+    def save_as(self, file: TextIO):
+        version = metadata.version("lenlab")
+        file.write(f"Lenlab MSPM0 {version} Bode\n")
+        file.write("Frequenz; Betrag; Phase\n")
+        for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
+            file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
 
 
 class PinAssignment(Message):

@@ -65,11 +65,6 @@ def test_save_as(oscilloscope, save_file):
     assert len(content) > 0
 
 
-def test_no_file(oscilloscope, save_file):
-    save_file.cancel = True
-    oscilloscope.on_save_as_clicked()
-
-
 def test_reply(lenlab, spy, oscilloscope):
     assert oscilloscope.acquire()
 

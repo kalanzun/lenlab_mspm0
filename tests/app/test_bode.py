@@ -89,11 +89,6 @@ def test_save_as(unlocked, bode, save_file, waveform):
     assert len(content) > 0
 
 
-def test_no_file(bode, save_file):
-    save_file.cancel = True
-    bode.on_save_as_clicked()
-
-
 def test_finish(spy, bode, save_file, waveform):
     bode.on_start_clicked()
     assert bode.bode.active is True

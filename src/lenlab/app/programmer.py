@@ -1,9 +1,7 @@
 from importlib import resources
-from pathlib import Path
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
@@ -21,6 +19,7 @@ from ..message import Message
 from ..translate import Translate, tr
 from .figure import LaunchpadFigure
 from .poster import PosterWidget
+from .save_as import save_as, skippable
 
 
 class ProgrammerWidget(QWidget):
@@ -101,20 +100,18 @@ class ProgrammerWidget(QWidget):
 
     @Slot()
     def on_export_clicked(self):
-        file_name, file_format = QFileDialog.getSaveFileName(
-            self,
-            tr("Export Firmware", "Firmware exportieren"),
-            "lenlab_fw.bin",
-            "Binary (*.bin)",
-        )
-        if not file_name:  # cancelled
-            return
-
-        try:
+        with (
+            skippable(),
+            save_as(
+                self,
+                tr("Export Firmware", "Firmware exportieren"),
+                "lenlab_fw.bin",
+                "Binary (*.bin)",
+                "wb",
+            ) as file,
+        ):
             firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
-            Path(file_name).write_bytes(firmware)
-        except Exception as error:
-            self.poster.set_error(ExportError(error))
+            file.write(firmware)
 
 
 class Introduction(Message):
