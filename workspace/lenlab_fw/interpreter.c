@@ -59,6 +59,4 @@ void interpreter_handleCommand(void)
             break;
         }
     }
-
-    terminal_receiveCommand();
 }

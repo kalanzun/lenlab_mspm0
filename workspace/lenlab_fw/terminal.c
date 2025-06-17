@@ -24,7 +24,7 @@ static void terminal_receive(uint32_t address, uint32_t size)
     DL_DMA_enableChannel(DMA, DMA_CH_RX_CHAN_ID);
 }
 
-void terminal_receiveCommand(void)
+static void terminal_receiveCommand(void)
 {
     terminal_receive((uint32_t)&terminal.cmd, terminal_cmd_packet_size);
 }
@@ -94,6 +94,7 @@ void TERMINAL_UART_INST_IRQHandler(void)
     case DL_UART_MAIN_IIDX_DMA_DONE_RX:
         terminal.rx_flag = false;
         interpreter_handleCommand();
+        terminal_receiveCommand();
         break;
     default:
         break;
