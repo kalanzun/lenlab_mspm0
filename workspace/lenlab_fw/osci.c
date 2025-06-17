@@ -1,5 +1,6 @@
 #include "osci.h"
 
+#include "adc.h"
 #include "terminal.h"
 
 #include "ti_msp_dl_config.h"
@@ -77,6 +78,9 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
 
     uint16_t offset_blocks = offset / N_SAMPLES;
     self->packet.arg = interval + ((offset % N_SAMPLES) << 17); // offset in single samples (offset times two)
+
+    adc_reconfigureOsci(self->channel[0].adc12);
+    adc_reconfigureOsci(self->channel[1].adc12);
 
     osci_initChannel(&self->channel[0], offset_blocks);
     osci_enableChannel(&self->channel[0]);
