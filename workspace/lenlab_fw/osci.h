@@ -1,17 +1,13 @@
 #ifndef OSCI_H
 #define OSCI_H
 
+#include "adc.h"
 #include "packet.h"
 
-#include "ti/devices/msp/peripherals/hw_adc12.h"
-
-
-struct Channel {
+struct OsciChannel {
     const uint8_t index;
-    ADC12_Regs* const adc12;
     const uint8_t chan_id;
 
-    bool done;
     uint16_t block_count;
     uint16_t block_write;
 };
@@ -19,7 +15,8 @@ struct Channel {
 struct Osci {
     struct Packet packet;
     uint32_t payload[2][8][432]; // two samples per uint32_t
-    struct Channel channel[2];
+    
+    struct OsciChannel channel[2];
 };
 
 extern struct Osci osci;

@@ -1,6 +1,5 @@
 #include "osci.h"
 
-#include "adc.h"
 #include "terminal.h"
 
 #include "ti_msp_dl_config.h"
@@ -13,12 +12,10 @@ struct Osci osci = {
     .channel = {
         {
             .index = 0,
-            .adc12 = ADC12_CH1_INST,
             .chan_id = DMA_CH1_CHAN_ID,
         },
         {
             .index = 1,
-            .adc12 = ADC12_CH2_INST,
             .chan_id = DMA_CH2_CHAN_ID,
         },
     },
@@ -34,28 +31,25 @@ static_assert(sizeof(osci.payload) == 27 * 1024, "27 KB");
 
 void osci_init(void)
 {
-    NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
-    NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
-
-    DL_DMA_setSrcAddr(DMA, osci.channel[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(osci.channel[0].adc12));
-    DL_DMA_setSrcAddr(DMA, osci.channel[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(osci.channel[1].adc12));
+    DL_DMA_setSrcAddr(DMA, osci.channel[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[0].adc12));
+    DL_DMA_setSrcAddr(DMA, osci.channel[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[1].adc12));
 }
 
-static void osci_initChannel(struct Channel* const self, uint16_t offset)
+static void osci_initChannel(struct OsciChannel* const self, uint16_t offset)
 {
-    self->done = false;
-
     self->block_count = LENGTH(osci.payload[0]) + offset;
     self->block_write = LENGTH(osci.payload[0]) - offset;
 }
 
-static void osci_enableChannel(struct Channel* const self)
+static void osci_enableChannel(struct OsciChannel* const self)
 {
     DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)osci.payload[self->index][self->block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
     DL_DMA_setTransferSize(DMA, self->chan_id, N_SAMPLES);
     DL_DMA_enableChannel(DMA, self->chan_id);
-    DL_ADC12_enableDMA(self->adc12);
+    DL_ADC12_enableDMA(adc[self->index].adc12);
+
+    adc[self->index].done = false;
 
     self->block_count = self->block_count - 1;
     static_assert(IS_POWER_OF_TWO(N_BLOCKS), "efficient ring buffer implementation");
@@ -79,8 +73,8 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset_blocks = offset / N_SAMPLES;
     self->packet.arg = interval + ((offset % N_SAMPLES) << 17); // offset in single samples (offset times two)
 
-    adc_reconfigureOsci(self->channel[0].adc12);
-    adc_reconfigureOsci(self->channel[1].adc12);
+    adc_reconfigureOsci(&adc[0]);
+    adc_reconfigureOsci(&adc[1]);
 
     osci_initChannel(&self->channel[0], offset_blocks);
     osci_enableChannel(&self->channel[0]);
@@ -95,45 +89,20 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
-static void osci_finishChannel(struct Channel* const self, struct Channel* const other)
+static void osci_finish(void)
 {
-    self->done = true;
-    if (other->done) {
-        DL_Timer_stopCounter(MAIN_TIMER_INST);
-        terminal_transmitPacket(&osci.packet);
-    }
+    DL_Timer_stopCounter(MAIN_TIMER_INST);
+    terminal_transmitPacket(&osci.packet);
 }
 
-void ADC12_CH1_INST_IRQHandler(void)
+void osci_handler(void)
 {
-    static struct Channel* const self = &osci.channel[0];
+    struct OsciChannel* const self = &osci.channel[0];
 
-    switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
-    case DL_ADC12_IIDX_DMA_DONE:
-        if (self->block_count == 0) {
-            osci_finishChannel(self, &osci.channel[1]);
-        } else {
-            osci_enableChannel(self);
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void ADC12_CH2_INST_IRQHandler(void)
-{
-    static struct Channel* const self = &osci.channel[1];
-
-    switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
-    case DL_ADC12_IIDX_DMA_DONE:
-        if (self->block_count == 0) {
-            osci_finishChannel(self, &osci.channel[0]);
-        } else {
-            osci_enableChannel(self);
-        }
-        break;
-    default:
-        break;
+    if (self->block_count == 0) {
+        osci_finish();
+    } else {
+        osci_enableChannel(self);
+        osci_enableChannel(&osci.channel[1]);
     }
 }

@@ -1,3 +1,4 @@
+#include "adc.h"
 #include "osci.h"
 #include "signal.h"
 #include "terminal.h"
@@ -8,6 +9,7 @@ int main(void)
 {
     SYSCFG_DL_init();
 
+    adc_init();
     osci_init();
     signal_init();
     terminal_init();

@@ -4,6 +4,7 @@
 #include "signal.h"
 #include "terminal.h"
 #include "version.h"
+#include "volt.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -56,6 +57,16 @@ void interpreter_handleCommand(void)
         case 'b': // bode
             signal_sinus(self->payload[0], self->payload[1], 0, 0);
             osci_acquire('b', cmd->arg, self->payload[0]);
+            break;
+
+        case 'v': // volt
+            if (cmd->arg == ARG_STR("next")) { // next
+                volt_next();
+            } else if (cmd->arg == ARG_STR("stop")) { // stop
+                volt_stop();
+            } else if (cmd->arg == ARG_STR("strt")) { // start
+                volt_start(self->payload[0]);
+            }
             break;
         }
     }
