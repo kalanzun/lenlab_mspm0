@@ -9,16 +9,6 @@ struct Osci osci = {
         .label = 'L',
         .length = sizeof(osci.payload),
     },
-    .channel = {
-        {
-            .index = 0,
-            .chan_id = DMA_CH1_CHAN_ID,
-        },
-        {
-            .index = 1,
-            .chan_id = DMA_CH2_CHAN_ID,
-        },
-    },
 };
 
 static_assert(sizeof(osci.payload) == 27 * 1024, "27 KB");
@@ -31,25 +21,27 @@ static_assert(sizeof(osci.payload) == 27 * 1024, "27 KB");
 
 void osci_init(void)
 {
-    DL_DMA_setSrcAddr(DMA, osci.channel[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[0].adc12));
-    DL_DMA_setSrcAddr(DMA, osci.channel[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[1].adc12));
+    DL_DMA_setSrcAddr(DMA, adc[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[0].adc12));
+    DL_DMA_setSrcAddr(DMA, adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(adc[1].adc12));
 }
 
-static void osci_initChannel(struct OsciChannel* const self, uint16_t offset)
-{
-    self->block_count = LENGTH(osci.payload[0]) + offset;
-    self->block_write = LENGTH(osci.payload[0]) - offset;
-}
-
-static void osci_enableChannel(struct OsciChannel* const self)
+static void osci_enableChannel(struct ADC* const self)
 {
     DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)osci.payload[self->index][self->block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
     DL_DMA_setTransferSize(DMA, self->chan_id, N_SAMPLES);
     DL_DMA_enableChannel(DMA, self->chan_id);
-    DL_ADC12_enableDMA(adc[self->index].adc12);
+    DL_ADC12_enableDMA(self->adc12);
 
-    adc[self->index].done = false;
+    adc_restart(self);
+}
+
+static void osci_enableDMA(struct ADC* const self)
+{
+    struct ADC * const self = &osci;
+
+    osci_enableChannel(&adc[0]);
+    osci_enableChannel(&adc[1]);
 
     self->block_count = self->block_count - 1;
     static_assert(IS_POWER_OF_TWO(N_BLOCKS), "efficient ring buffer implementation");
@@ -76,11 +68,14 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     adc_reconfigureOsci(&adc[0]);
     adc_reconfigureOsci(&adc[1]);
 
-    osci_initChannel(&self->channel[0], offset_blocks);
-    osci_enableChannel(&self->channel[0]);
+    adc_restart(&adc[0]);
+    adc_restart(&adc[1]);
 
-    osci_initChannel(&self->channel[1], offset_blocks);
-    osci_enableChannel(&self->channel[1]);
+    self->block_count = LENGTH(osci.payload[0]) + offset_blocks;
+    self->block_write = LENGTH(osci.payload[0]) - offset_blocks;
+
+    osci_enableDMA(&adc[0]);
+    osci_enableDMA(&adc[1]);
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1

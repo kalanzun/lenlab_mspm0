@@ -44,6 +44,9 @@ void volt_start(uint32_t interval)
     adc_reconfigureVolt(&adc[0]);
     adc_reconfigureVolt(&adc[1]);
 
+    adc_restart(&adc[0]);
+    adc_restart(&adc[1]);
+
     // VOLT_TIMER_INST_LOAD_VALUE = (1 s * 50000 Hz) - 1
     DL_Timer_setLoadValue(VOLT_TIMER_INST, interval * 50 - 1);
     DL_Timer_startCounter(VOLT_TIMER_INST);
@@ -81,7 +84,7 @@ void volt_stop(void)
     terminal_sendReply('v', ARG_STR("stop"));
 }
 
-void volt_handler(void)
+void volt_callback(void)
 {
     struct Volt* const self = &volt;
 
@@ -104,9 +107,9 @@ void volt_handler(void)
     point->time = self->time;
     self->time += self->interval;
 
-    point->ch[0] = DL_ADC12_getMemResult(adc[0].adc12, DL_ADC12_MEM_IDX_0);
-    point->ch[1] = DL_ADC12_getMemResult(adc[1].adc12, DL_ADC12_MEM_IDX_0);
+    point->ch[0] = adc_getResult(&adc[0]);
+    point->ch[1] = adc_getResult(&adc[1]);
 
-    adc[0].done = false;
-    adc[1].done = false;
+    adc_restart(&adc[0]);
+    adc_restart(&adc[1]);
 }

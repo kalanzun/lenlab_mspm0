@@ -4,19 +4,12 @@
 #include "adc.h"
 #include "packet.h"
 
-struct OsciChannel {
-    const uint8_t index;
-    const uint8_t chan_id;
-
-    uint16_t block_count;
-    uint16_t block_write;
-};
-
 struct Osci {
     struct Packet packet;
     uint32_t payload[2][8][432]; // two samples per uint32_t
     
-    struct OsciChannel channel[2];
+    uint16_t block_count;
+    uint16_t block_write;
 };
 
 extern struct Osci osci;
