@@ -1,35 +1,36 @@
-from contextlib import contextmanager, suppress
+from collections.abc import Callable
+from functools import wraps
 
+from attrs import frozen
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 
-class Skip(Exception):
-    pass
+@frozen
+class SaveAs:
+    title: str
+    default_file_name: str
+    file_formats: str
 
+    def __call__(self, method: Callable[[QWidget, str, str], None]) -> Callable[[QWidget], None]:
+        @wraps(method)
+        def wrapper(parent: QWidget):
+            file_name, file_format = QFileDialog.getSaveFileName(
+                parent,
+                self.title,
+                self.default_file_name,
+                self.file_formats,
+            )
 
-@contextmanager
-def skippable():
-    with suppress(Skip):
-        yield
+            if not file_name:  # the dialog was canceled
+                return
 
+            try:
+                method(parent, file_name, file_format)
 
-@contextmanager
-def save_as(
-    parent: QWidget, title: str, default_file_name: str, file_formats: str, mode: str = "w"
-):
-    file_name, file_format = QFileDialog.getSaveFileName(
-        parent,
-        title,
-        default_file_name,
-        file_formats,
-    )
+            except AssertionError:  # pass through assertion errors for testing
+                raise
 
-    if not file_name:
-        raise Skip()
+            except Exception as e:  # display other errors
+                QMessageBox.critical(parent, self.title, str(e))
 
-    try:
-        with open(file_name, mode) as file:
-            yield file
-
-    except Exception as e:
-        QMessageBox.critical(parent, title, str(e))
+        return wrapper

@@ -19,7 +19,7 @@ from ..message import Message
 from ..translate import Translate, tr
 from .figure import LaunchpadFigure
 from .poster import PosterWidget
-from .save_as import save_as, skippable
+from .save_as import SaveAs
 
 
 class ProgrammerWidget(QWidget):
@@ -99,17 +99,13 @@ class ProgrammerWidget(QWidget):
         self.poster.set_error(error)
 
     @Slot()
-    def on_export_clicked(self):
-        with (
-            skippable(),
-            save_as(
-                self,
-                tr("Export Firmware", "Firmware exportieren"),
-                "lenlab_fw.bin",
-                "Binary (*.bin)",
-                "wb",
-            ) as file,
-        ):
+    @SaveAs(
+        tr("Export Firmware", "Firmware exportieren"),
+        "lenlab_fw.bin",
+        "Binary (*.bin)",
+    )
+    def on_export_clicked(self, file_name: str, file_format: str):
+        with open(file_name, "wb") as file:
             firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
             file.write(firmware)
 

@@ -20,7 +20,7 @@ from ..controller.signal import sine_table
 from ..launchpad.protocol import command
 from ..message import Message
 from ..translate import Translate, tr
-from .save_as import save_as, skippable
+from .save_as import SaveAs
 
 
 class BodeChart(QWidget):
@@ -176,16 +176,13 @@ class BodeWidget(QWidget):
         self.bode.start(step, amplitude)
 
     @Slot()
-    def on_save_as_clicked(self):
-        with (
-            skippable(),
-            save_as(
-                self,
-                tr("Save Bode Plot", "Bode-Plot speichern"),
-                "lenlab_bode.csv",
-                "CSV (*.csv)",
-            ) as file,
-        ):
+    @SaveAs(
+        tr("Save Bode Plot", "Bode-Plot speichern"),
+        "lenlab_bode.csv",
+        "CSV (*.csv)",
+    )
+    def on_save_as_clicked(self, file_name: str, file_format: str):
+        with open(file_name, "w") as file:
             self.bode.save_as(file)
 
 

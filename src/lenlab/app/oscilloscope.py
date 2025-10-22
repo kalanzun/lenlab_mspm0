@@ -12,7 +12,7 @@ from ..controller.lenlab import Lenlab
 from ..model.waveform import Waveform
 from ..translate import Translate, tr
 from .checkbox import BoolCheckBox
-from .save_as import save_as, skippable
+from .save_as import SaveAs
 from .signal import SignalWidget
 
 
@@ -206,14 +206,11 @@ class OscilloscopeWidget(QWidget):
             self.bode.emit(waveform)
 
     @Slot()
-    def on_save_as_clicked(self):
-        with (
-            skippable(),
-            save_as(
-                self,
-                tr("Save Oscilloscope Data", "Oszilloskop-Daten speichern"),
-                "lenlab_osci.csv",
-                "CSV (*.csv)",
-            ) as file,
-        ):
+    @SaveAs(
+        tr("Save Oscilloscope Data", "Oszilloskop-Daten speichern"),
+        "lenlab_osci.csv",
+        "CSV (*.csv)",
+    )
+    def on_save_as_clicked(self, file_name: str, file_format: str):
+        with open(file_name, "w") as file:
             self.chart.waveform.save_as(file)
