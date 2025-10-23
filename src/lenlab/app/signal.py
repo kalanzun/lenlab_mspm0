@@ -52,11 +52,11 @@ class Slider(Parameter):
         yield self.field
         yield self.slider
 
-    @Slot(bool)
-    def set_disabled(self, disabled):
-        self.slider.setDisabled(disabled)
-        if disabled:
-            self.slider.setValue(0)
+    # @Slot(bool)
+    # def set_disabled(self, disabled):
+    #     self.slider.setDisabled(disabled)
+    #     if disabled:
+    #         self.slider.setValue(0)
 
     def get_value(self):
         return self.slider.value()
@@ -95,12 +95,8 @@ class Frequency(Slider):
 
     @staticmethod
     def format_number(value: int) -> str:
-        if value < 10:
-            return f"{value:1.2f} Hz"
-        if value < 100:
-            return f"{value:2.1f} Hz"
         if value < 1_000:
-            return f"{value:3.0f} Hz"
+            return f"{value:d} Hz"
         if value < 10_000:
             return f"{value / 1e3:1.2f} kHz"
 
