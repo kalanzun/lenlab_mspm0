@@ -16,3 +16,20 @@ ADC configuration for continuous timer events
 - Conversion Mode: Single
 - Enable Repeat Mode: True
 - Trigger Mode: Valid trigger will step to next memory conversion register
+
+## Mode change
+
+Oscilloscope mode or voltmeter mode.
+
+Voltmeter does not enable DMA, but fetches the values from the FIFO in the interrupt handler.
+
+Different sample window duration:
+
+```c
+DL_ADC12_setSampleTime0(ADC12_CH1_INST,20); // 500 ns
+DL_ADC12_setSampleTime0(ADC12_CH1_INST,24000); // 600 us
+```
+
+Voltmeter triggers the ADC slowly, oscilloscope quickly.
+
+Both modes use the same memory, as memory is limited.
