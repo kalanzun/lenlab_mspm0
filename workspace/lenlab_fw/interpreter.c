@@ -57,6 +57,14 @@ void interpreter_handleCommand(void)
             signal_sinus(self->payload[0], self->payload[1], 0, 0);
             volt_acquire('b', cmd->arg, self->payload[0]);
             break;
+
+        case 'v': // start logging
+            volt_startLogging(cmd->arg);
+            break;
+
+        case 'x': // stop logging
+            volt_stopLogging();
+            break;
         }
     }
 

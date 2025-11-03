@@ -11,6 +11,7 @@ struct ADC {
     const uint8_t chan_id;
 
     bool done;
+
     uint16_t block_count;
     uint16_t block_write;
 };
@@ -32,11 +33,18 @@ struct Volt {
     };
 
     struct ADC adc[2];
+
+    uint16_t ping_pong;
+    uint16_t point_index;
 };
 
 extern struct Volt volt;
 
 void volt_init(void);
+
+void volt_startLogging(uint32_t interval);
+
+void volt_stopLogging(void);
 
 void volt_acquire(uint8_t code, uint16_t interval, uint16_t offset);
 
