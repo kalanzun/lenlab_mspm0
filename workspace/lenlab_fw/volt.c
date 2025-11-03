@@ -91,26 +91,28 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
-static void osci_finishChannel(struct Channel* const self, struct Channel* const other)
+static void osci_handleDMAInterrupt(struct Channel* const self, struct Channel* const other)
 {
-    self->done = true;
-    if (other->done) {
-        DL_Timer_stopCounter(MAIN_TIMER_INST);
-        terminal_transmitPacket(&osci.packet);
+    if (self->block_count == 0) {
+        self->done = true;
+
+        if (other->done) {
+            DL_Timer_stopCounter(MAIN_TIMER_INST);
+            terminal_transmitPacket(&osci.packet);
+        }
+    } else {
+        osci_enableChannel(self);
     }
 }
 
 void ADC12_CH1_INST_IRQHandler(void)
 {
     static struct Channel* const self = &osci.channel[0];
+    static struct Channel* const other = &osci.channel[1];
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
-        if (self->block_count == 0) {
-            osci_finishChannel(self, &osci.channel[1]);
-        } else {
-            osci_enableChannel(self);
-        }
+        osci_handleDMAInterrupt(self, other);
         break;
     default:
         break;
@@ -120,14 +122,11 @@ void ADC12_CH1_INST_IRQHandler(void)
 void ADC12_CH2_INST_IRQHandler(void)
 {
     static struct Channel* const self = &osci.channel[1];
+    static struct Channel* const other = &osci.channel[0];
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
-        if (self->block_count == 0) {
-            osci_finishChannel(self, &osci.channel[0]);
-        } else {
-            osci_enableChannel(self);
-        }
+        osci_handleDMAInterrupt(self, other);
         break;
     default:
         break;
