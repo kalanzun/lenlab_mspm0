@@ -1,4 +1,4 @@
-#include "osci.h"
+#include "volt.h"
 #include "signal.h"
 #include "terminal.h"
 

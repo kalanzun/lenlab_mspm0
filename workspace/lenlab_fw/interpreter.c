@@ -1,6 +1,6 @@
 #include "interpreter.h"
 
-#include "osci.h"
+#include "volt.h"
 #include "signal.h"
 #include "terminal.h"
 #include "version.h"
