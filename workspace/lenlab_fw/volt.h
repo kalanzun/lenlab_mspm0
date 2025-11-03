@@ -36,8 +36,8 @@ struct Volt {
 
 extern struct Volt volt;
 
-void osci_init(void);
+void volt_init(void);
 
-void osci_acquire(uint8_t code, uint16_t interval, uint16_t offset);
+void volt_acquire(uint8_t code, uint16_t interval, uint16_t offset);
 
 #endif

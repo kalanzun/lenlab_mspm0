@@ -8,7 +8,7 @@ int main(void)
 {
     SYSCFG_DL_init();
 
-    osci_init();
+    volt_init();
     signal_init();
     terminal_init();
 

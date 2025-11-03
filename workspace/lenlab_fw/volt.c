@@ -27,7 +27,7 @@ static_assert(sizeof(volt.osci.payload) == 27 * 1024, "27 KB");
 #define WINDOW 3000
 #define PRE_BLOCKS 4
 
-void osci_init(void)
+void volt_init(void)
 {
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
@@ -36,15 +36,7 @@ void osci_init(void)
     DL_DMA_setSrcAddr(DMA, volt.adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[1].adc12));
 }
 
-static void osci_initChannel(struct ADC* const self, uint16_t offset)
-{
-    self->done = false;
-
-    self->block_count = N_BLOCKS + offset;
-    self->block_write = N_BLOCKS - offset;
-}
-
-static void osci_enableChannel(struct ADC* const self)
+static void volt_enableDMAChannel(struct ADC* const self)
 {
     DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.osci.payload[self->index][self->block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
@@ -57,7 +49,17 @@ static void osci_enableChannel(struct ADC* const self)
     self->block_write = (self->block_write + 1) & (N_BLOCKS - 1);
 }
 
-void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
+static void volt_startDMAChannel(struct ADC* const self, uint16_t offset)
+{
+    self->done = false;
+
+    self->block_count = N_BLOCKS + offset;
+    self->block_write = N_BLOCKS - offset;
+
+    volt_enableDMAChannel(self);
+}
+
+void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
 {
     struct Volt* const self = &volt;
 
@@ -76,11 +78,8 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset_blocks = offset / N_SAMPLES;
     self->osci.packet.arg = interval + ((offset % N_SAMPLES) << 17); // offset in single samples (offset times two)
 
-    osci_initChannel(&self->adc[0], offset_blocks);
-    osci_enableChannel(&self->adc[0]);
-
-    osci_initChannel(&self->adc[1], offset_blocks);
-    osci_enableChannel(&self->adc[1]);
+    volt_startDMAChannel(&self->adc[0], offset_blocks);
+    volt_startDMAChannel(&self->adc[1], offset_blocks);
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
@@ -89,7 +88,7 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
-static void osci_handleDMAInterrupt(struct ADC* const self, struct ADC* const other)
+static void volt_handleDMAInterrupt(struct ADC* const self, struct ADC* const other)
 {
     if (self->block_count == 0) {
         self->done = true;
@@ -99,7 +98,7 @@ static void osci_handleDMAInterrupt(struct ADC* const self, struct ADC* const ot
             terminal_transmitPacket(&volt.osci.packet);
         }
     } else {
-        osci_enableChannel(self);
+        volt_enableDMAChannel(self);
     }
 }
 
@@ -110,7 +109,7 @@ void ADC12_CH1_INST_IRQHandler(void)
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
-        osci_handleDMAInterrupt(self, other);
+        volt_handleDMAInterrupt(self, other);
         break;
     default:
         break;
@@ -124,7 +123,7 @@ void ADC12_CH2_INST_IRQHandler(void)
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
-        osci_handleDMAInterrupt(self, other);
+        volt_handleDMAInterrupt(self, other);
         break;
     default:
         break;
