@@ -1,4 +1,5 @@
 import logging
+from time import sleep
 
 import numpy as np
 import pytest
@@ -169,3 +170,29 @@ def test_oscilloscope(firmware, output, send, receive):
     ax.set_title("oscilloscope acquire")
     ax.grid()
     fig.savefig(output / "oscilloscope.svg")
+
+
+def test_voltmeter(firmware, send, receive):
+    # ch1 input PA24
+    # ch2 input PA17
+
+    # sample rate 1 MHz
+    # DAC 1 kHz
+    send(command(b"v", 200))  # start logging 200 ms
+    reply = receive(8)
+    assert reply == b"Lv\x00\x00\xc8\x00\x00\x00"
+
+    sleep(1)
+
+    send(command(b"v", 0))  # get points
+    reply = receive(8)
+    assert reply.startswith(b"Lv")
+    length = int.from_bytes(reply[2:4], byteorder="little")
+    assert length > 0
+
+    payload = receive(length)
+    assert payload
+
+    send(command(b"x", 0))  # stop
+    reply = receive(8)
+    assert reply == b"Lx\x00\x00stop"
