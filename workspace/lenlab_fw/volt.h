@@ -1,5 +1,5 @@
-#ifndef OSCI_H
-#define OSCI_H
+#ifndef VOLT_H
+#define VOLT_H
 
 #include "packet.h"
 
@@ -19,10 +19,16 @@ struct Channel {
 struct Osci {
     struct Packet packet;
     uint32_t payload[2][8][432]; // two samples per uint32_t
+};
+
+struct Volt {
+    union {
+        struct Osci osci;
+    };
     struct Channel channel[2];
 };
 
-extern struct Osci osci;
+extern struct Volt volt;
 
 void osci_init(void);
 
