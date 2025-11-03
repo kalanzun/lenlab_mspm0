@@ -5,11 +5,7 @@
 #include "ti_msp_dl_config.h"
 
 struct Volt volt = {
-    .osci.packet = {
-        .label = 'L',
-        .length = sizeof(volt.osci.payload),
-    },
-    .channel = {
+    .adc = {
         {
             .index = 0,
             .adc12 = ADC12_CH1_INST,
@@ -36,11 +32,11 @@ void osci_init(void)
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 
-    DL_DMA_setSrcAddr(DMA, volt.channel[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.channel[0].adc12));
-    DL_DMA_setSrcAddr(DMA, volt.channel[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.channel[1].adc12));
+    DL_DMA_setSrcAddr(DMA, volt.adc[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[0].adc12));
+    DL_DMA_setSrcAddr(DMA, volt.adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[1].adc12));
 }
 
-static void osci_initChannel(struct Channel* const self, uint16_t offset)
+static void osci_initChannel(struct ADC* const self, uint16_t offset)
 {
     self->done = false;
 
@@ -48,7 +44,7 @@ static void osci_initChannel(struct Channel* const self, uint16_t offset)
     self->block_write = N_BLOCKS - offset;
 }
 
-static void osci_enableChannel(struct Channel* const self)
+static void osci_enableChannel(struct ADC* const self)
 {
     DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.osci.payload[self->index][self->block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
@@ -65,7 +61,9 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
 {
     struct Volt* const self = &volt;
 
+    self->osci.packet.label = 'L';
     self->osci.packet.code = code;
+    self->osci.packet.length = sizeof(volt.osci.payload);
 
     // in units of uint32_t (two samples)
     // one extra double sample for a window including the endpoint
@@ -78,11 +76,11 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset_blocks = offset / N_SAMPLES;
     self->osci.packet.arg = interval + ((offset % N_SAMPLES) << 17); // offset in single samples (offset times two)
 
-    osci_initChannel(&self->channel[0], offset_blocks);
-    osci_enableChannel(&self->channel[0]);
+    osci_initChannel(&self->adc[0], offset_blocks);
+    osci_enableChannel(&self->adc[0]);
 
-    osci_initChannel(&self->channel[1], offset_blocks);
-    osci_enableChannel(&self->channel[1]);
+    osci_initChannel(&self->adc[1], offset_blocks);
+    osci_enableChannel(&self->adc[1]);
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
@@ -91,7 +89,7 @@ void osci_acquire(uint8_t code, uint16_t interval, uint16_t length)
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
-static void osci_handleDMAInterrupt(struct Channel* const self, struct Channel* const other)
+static void osci_handleDMAInterrupt(struct ADC* const self, struct ADC* const other)
 {
     if (self->block_count == 0) {
         self->done = true;
@@ -107,8 +105,8 @@ static void osci_handleDMAInterrupt(struct Channel* const self, struct Channel* 
 
 void ADC12_CH1_INST_IRQHandler(void)
 {
-    static struct Channel* const self = &volt.channel[0];
-    static struct Channel* const other = &volt.channel[1];
+    static struct ADC* const self = &volt.adc[0];
+    static struct ADC* const other = &volt.adc[1];
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
@@ -121,8 +119,8 @@ void ADC12_CH1_INST_IRQHandler(void)
 
 void ADC12_CH2_INST_IRQHandler(void)
 {
-    static struct Channel* const self = &volt.channel[1];
-    static struct Channel* const other = &volt.channel[0];
+    static struct ADC* const self = &volt.adc[1];
+    static struct ADC* const other = &volt.adc[0];
 
     switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
     case DL_ADC12_IIDX_DMA_DONE:
