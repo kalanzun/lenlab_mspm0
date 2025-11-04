@@ -21,4 +21,12 @@ static_assert(sizeof(struct Packet) == 8,
 
 #define IS_POWER_OF_TWO(x) ((x) && !((x) & ((x) - 1)))
 
+static inline void packet_write(struct Packet* const self, uint8_t code, uint16_t length, uint32_t arg)
+{
+    self->label = 'L';
+    self->code = code;
+    self->length = length;
+    self->arg = arg;
+}
+
 #endif

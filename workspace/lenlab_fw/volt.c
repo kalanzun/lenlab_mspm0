@@ -39,14 +39,6 @@ void volt_init(void)
     DL_DMA_setSrcAddr(DMA, volt.adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[1].adc12));
 }
 
-static void volt_initPacket(struct Packet* const self, uint8_t code, uint16_t length, uint32_t arg)
-{
-    self->label = 'L';
-    self->code = code;
-    self->length = length;
-    self->arg = arg;
-}
-
 static void volt_setLoggerMode(struct ADC* const self)
 {
     // In sysconfig (and ti_msp_dl_config.c), ADC12_CH1 is in osci mode and ADC12_CH2 is in logger mode
@@ -55,7 +47,7 @@ static void volt_setLoggerMode(struct ADC* const self)
     // Sample Time 0 is active in both modes, I just change the time
     // Sample Time 1 is also the value for logger mode for reference
     DL_ADC12_setSampleTime0(self->adc12, 20000); // 1 ms
-    
+
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_enableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
@@ -98,8 +90,8 @@ void volt_startLogging(uint32_t interval)
         volt_setLoggerMode(&self->adc[0]);
         volt_setLoggerMode(&self->adc[1]);
 
-        volt_initPacket(&self->points[0].packet, 'v', 0, interval);
-        volt_initPacket(&self->points[1].packet, 'v', 0, interval);
+        packet_write(&self->points[0].packet, 'v', 0, interval);
+        packet_write(&self->points[1].packet, 'v', 0, interval);
 
         self->ping_pong = 0;
         self->point_index = 0;
@@ -156,7 +148,7 @@ void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset = begin - (mid % (length >> 1)); // double samples
 
     uint16_t offset_blocks = offset / N_SAMPLES;
-    volt_initPacket(&self->osci.packet, code, sizeof(volt.osci.payload), interval + ((offset % N_SAMPLES) << 17)); // offset in single samples (offset times two)
+    packet_write(&self->osci.packet, code, sizeof(volt.osci.payload), interval + ((offset % N_SAMPLES) << 17)); // offset in single samples (offset times two)
 
     volt_startDMAChannel(&self->adc[0], offset_blocks);
     volt_startDMAChannel(&self->adc[1], offset_blocks);
@@ -164,7 +156,6 @@ void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
     DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
-
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
