@@ -13,7 +13,7 @@ struct ADC {
     volatile bool done;
 };
 
-struct Osci { // waveform
+struct Waveform { // oscilloscope
     struct Packet packet;
     uint32_t payload[2][8][432]; // two samples per uint32_t
 };
@@ -25,17 +25,17 @@ struct Points { // logging
 
 struct Volt {
     union {
-        struct Osci osci;
+        struct Waveform wave;
         struct Points points[2];
     };
 
     struct ADC adc[2];
 
-    uint16_t ping_pong;
-    uint16_t point_index;
-
     uint16_t block_count;
     uint16_t block_write;
+
+    uint16_t ping_pong;
+    uint16_t point_index;
 };
 
 extern struct Volt volt;
@@ -46,6 +46,6 @@ void volt_startLogging(uint32_t interval);
 
 void volt_stopLogging(void);
 
-void volt_acquire(uint8_t code, uint16_t interval, uint16_t offset);
+void volt_acquireWaveform(uint8_t code, uint16_t interval, uint16_t offset);
 
 #endif

@@ -19,13 +19,14 @@ struct Volt volt = {
     },
 };
 
-static_assert(sizeof(volt.osci.payload) == 27 * 1024, "27 KB");
+static_assert(sizeof(volt.wave.payload) == 27 * 1024, "27 KB");
 
 #define POINT_SIZE sizeof(volt.points[0].payload[0])
 #define N_POINTS LENGTH(volt.points[0].payload)
 
-#define N_BLOCKS LENGTH(volt.osci.payload[0])
-#define N_SAMPLES LENGTH(volt.osci.payload[0][0])
+#define WAVEFORM_SIZE sizeof(volt.wave.payload)
+#define N_BLOCKS LENGTH(volt.wave.payload[0])
+#define N_SAMPLES LENGTH(volt.wave.payload[0][0])
 
 #define WINDOW 3000
 #define PRE_BLOCKS 4
@@ -111,7 +112,7 @@ void volt_stopLogging(void)
 
 static void volt_enableDMAChannel(struct ADC* const self)
 {
-    DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.osci.payload[self->index][volt.block_write]);
+    DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.wave.payload[self->index][volt.block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
     DL_DMA_setTransferSize(DMA, self->chan_id, N_SAMPLES);
     DL_DMA_enableChannel(DMA, self->chan_id);
@@ -130,7 +131,7 @@ static void volt_enableDMA(void)
     self->block_write = (self->block_write + 1) & (N_BLOCKS - 1);
 }
 
-void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
+void volt_acquireWaveform(uint8_t code, uint16_t interval, uint16_t length)
 {
     struct Volt* const self = &volt;
 
@@ -146,7 +147,7 @@ void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset = begin - (mid % (length >> 1)); // double samples
 
     uint16_t offset_blocks = offset / N_SAMPLES;
-    packet_write(&self->osci.packet, code, sizeof(volt.osci.payload), interval + ((offset % N_SAMPLES) << 17)); // offset in single samples (offset times two)
+    packet_write(&self->wave.packet, code, WAVEFORM_SIZE, interval + ((offset % N_SAMPLES) << 17)); // offset in single samples (offset times two)
 
     self->block_count = N_BLOCKS + offset_blocks;
     self->block_write = N_BLOCKS - offset_blocks;
@@ -183,7 +184,7 @@ static void volt_handleDMAInterrupt(void)
 
     if (self->block_count == 0) {
         DL_Timer_stopCounter(MAIN_TIMER_INST);
-        terminal_transmitPacket(&self->osci.packet);
+        terminal_transmitPacket(&self->wave.packet);
     } else {
         volt_enableDMA();
     }
