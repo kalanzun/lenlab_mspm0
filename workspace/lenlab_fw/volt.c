@@ -31,23 +31,29 @@ static_assert(sizeof(volt.wave.payload) == 27 * 1024, "27 KB");
 #define WINDOW 3000
 #define PRE_BLOCKS 4
 
+static void volt_initADC(struct ADC* const self)
+{
+    // Just setting those to DL_ADC12_HW_AVG_NUM_ACC_DISABLED for osci mode does not work. The timing is broken, then.
+    DL_ADC12_configHwAverage(self->adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
+
+    DL_DMA_setSrcAddr(DMA, self->chan_id, (uint32_t)DL_ADC12_getFIFOAddress(self->adc12));
+}
+
 void volt_init(void)
 {
+    struct Volt* const self = &volt;
+
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 
-    // Just setting those to DL_ADC12_HW_AVG_NUM_ACC_DISABLED for osci mode does not work. The timing is broken, then.
-    DL_ADC12_configHwAverage(volt.adc[0].adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
-    DL_ADC12_configHwAverage(volt.adc[1].adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
-
-    DL_DMA_setSrcAddr(DMA, volt.adc[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[0].adc12));
-    DL_DMA_setSrcAddr(DMA, volt.adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[1].adc12));
+    volt_initADC(&self->adc[0]);
+    volt_initADC(&self->adc[1]);
 }
 
 static void volt_configConversionMemory0(struct ADC* const self, bool sample_time_source, bool averaging)
 {
     // requires previous DL_ADC12_disableConversions
-    volatile uint32_t * const memctl = &self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0];
+    volatile uint32_t* const memctl = &self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0];
 
     if (sample_time_source) {
         *memctl |= ADC12_MEMCTL_STIME_MASK;
@@ -73,7 +79,7 @@ static void volt_setLoggerMode(struct ADC* const self)
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_enableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
-    
+
     DL_ADC12_enableConversions(self->adc12);
 }
 
@@ -109,11 +115,7 @@ void volt_startLogging(uint32_t interval)
     }
 
     else { // start logging
-        /*
-            if (DL_Timer_isRunning(VOLT_TIMER_INST)) {
-                DL_Timer_stopCounter(VOLT_TIMER_INST);
-            }
-        */
+        DL_Timer_stopCounter(MAIN_TIMER_INST);
 
         volt_setLoggerMode(&self->adc[0]);
         volt_setLoggerMode(&self->adc[1]);
@@ -127,6 +129,7 @@ void volt_startLogging(uint32_t interval)
         // interval in 25 ns
         DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
         DL_Timer_startCounter(MAIN_TIMER_INST);
+
         terminal_sendReply('v', interval);
     }
 }
@@ -162,6 +165,8 @@ void volt_acquireWaveform(uint8_t code, uint16_t interval, uint16_t length)
 {
     struct Volt* const self = &volt;
 
+    DL_Timer_stopCounter(MAIN_TIMER_INST);
+
     volt_setOsciMode(&self->adc[0]);
     volt_setOsciMode(&self->adc[1]);
 
@@ -192,7 +197,7 @@ static inline uint32_t volt_getResult(struct ADC* const self)
     return DL_ADC12_getMemResult(self->adc12, DL_ADC12_MEM_IDX_0);
 }
 
-static void volt_handleInterrupt(void)
+static void volt_handlePoint(void)
 {
     struct Volt* const self = &volt;
 
@@ -205,7 +210,7 @@ static void volt_handleInterrupt(void)
     }
 }
 
-static void volt_handleDMAInterrupt(void)
+static void volt_handleWaveform(void)
 {
     struct Volt* const self = &volt;
 
@@ -227,10 +232,10 @@ static void volt_IRQHandler(struct ADC* const self, struct ADC* const other)
 
         switch (iidx) {
         case DL_ADC12_IIDX_MEM0_RESULT_LOADED:
-            volt_handleInterrupt();
+            volt_handlePoint();
             break;
         case DL_ADC12_IIDX_DMA_DONE:
-            volt_handleDMAInterrupt();
+            volt_handleWaveform();
             break;
         default:
             break;
