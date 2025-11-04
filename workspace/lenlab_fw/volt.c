@@ -46,23 +46,20 @@ void volt_init(void)
 
 static void volt_configConversionMemory0(struct ADC* const self, bool sample_time_source, bool averaging)
 {
-    uint32_t config = self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0];
+    // requires previous DL_ADC12_disableConversions
+    volatile uint32_t * const memctl = &self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0];
 
     if (sample_time_source) {
-        config |= ADC12_MEMCTL_STIME_MASK;
+        *memctl |= ADC12_MEMCTL_STIME_MASK;
     } else {
-        config &= ~ADC12_MEMCTL_STIME_MASK;
+        *memctl &= ~ADC12_MEMCTL_STIME_MASK;
     }
 
     if (averaging) {
-        config |= ADC12_MEMCTL_AVGEN_MASK;
+        *memctl |= ADC12_MEMCTL_AVGEN_MASK;
     } else {
-        config &= ~ADC12_MEMCTL_AVGEN_MASK;
+        *memctl &= ~ADC12_MEMCTL_AVGEN_MASK;
     }
-
-    // TODO this configuration change does not work
-    // Maybe I have to stop the ADC, configure it, and start it again
-    self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0] = config;
 }
 
 static void volt_setLoggerMode(struct ADC* const self)
