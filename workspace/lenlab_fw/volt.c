@@ -36,18 +36,40 @@ void volt_init(void)
     NVIC_EnableIRQ(ADC12_CH1_INST_INT_IRQN);
     NVIC_EnableIRQ(ADC12_CH2_INST_INT_IRQN);
 
+    // Just setting those to DL_ADC12_HW_AVG_NUM_ACC_DISABLED for osci mode does not work. The timing is broken, then.
+    DL_ADC12_configHwAverage(volt.adc[0].adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
+    DL_ADC12_configHwAverage(volt.adc[1].adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
+
     DL_DMA_setSrcAddr(DMA, volt.adc[0].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[0].adc12));
     DL_DMA_setSrcAddr(DMA, volt.adc[1].chan_id, (uint32_t)DL_ADC12_getFIFOAddress(volt.adc[1].adc12));
 }
 
+static void volt_configConversionMemory0(struct ADC* const self, bool sample_time_source, bool averaging)
+{
+    uint32_t config = self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0];
+
+    if (sample_time_source) {
+        config |= ADC12_MEMCTL_STIME_MASK;
+    } else {
+        config &= ~ADC12_MEMCTL_STIME_MASK;
+    }
+
+    if (averaging) {
+        config |= ADC12_MEMCTL_AVGEN_MASK;
+    } else {
+        config &= ~ADC12_MEMCTL_AVGEN_MASK;
+    }
+
+    // TODO this configuration change does not work
+    // Maybe I have to stop the ADC, configure it, and start it again
+    self->adc12->ULLMEM.MEMCTL[DL_ADC12_MEM_IDX_0] = config;
+}
+
 static void volt_setLoggerMode(struct ADC* const self)
 {
-    // In sysconfig (and ti_msp_dl_config.c), ADC12_CH1 is in osci mode and ADC12_CH2 is in logger mode
+    volt_configConversionMemory0(self, 1, 1);
+
     DL_ADC12_disableFIFO(self->adc12);
-    DL_ADC12_configHwAverage(self->adc12, DL_ADC12_HW_AVG_NUM_ACC_16, DL_ADC12_HW_AVG_DEN_DIV_BY_16);
-    // Sample Time 0 is active in both modes, I just change the time
-    // Sample Time 1 is also the value for logger mode for reference
-    DL_ADC12_setSampleTime0(self->adc12, 20000); // 1 ms
 
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
@@ -56,9 +78,9 @@ static void volt_setLoggerMode(struct ADC* const self)
 
 static void volt_setOsciMode(struct ADC* const self)
 {
+    volt_configConversionMemory0(self, 0, 0);
+
     DL_ADC12_enableFIFO(self->adc12);
-    DL_ADC12_configHwAverage(self->adc12, DL_ADC12_HW_AVG_NUM_ACC_DISABLED, DL_ADC12_HW_AVG_DEN_DIV_BY_1);
-    DL_ADC12_setSampleTime0(self->adc12, 10); // 500 ns
 
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
