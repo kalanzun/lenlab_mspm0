@@ -189,7 +189,7 @@ def test_voltmeter(firmware, send, receive):
     reply = receive(8)
     assert reply.startswith(b"Lv")
     length = int.from_bytes(reply[2:4], byteorder="little")
-    assert length > 0
+    assert length == 20
     arg = int.from_bytes(reply[4:8], byteorder="little")
     assert arg == 8000000
 

@@ -111,25 +111,23 @@ void volt_stopLogging(void)
 
 static void volt_enableDMAChannel(struct ADC* const self)
 {
-    DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.osci.payload[self->index][self->block_write]);
+    DL_DMA_setDestAddr(DMA, self->chan_id, (uint32_t)volt.osci.payload[self->index][volt.block_write]);
     static_assert(N_SAMPLES % 6 == 0, "DMA and FIFO require divisibility by 12 samples or 6 uint32_t");
     DL_DMA_setTransferSize(DMA, self->chan_id, N_SAMPLES);
     DL_DMA_enableChannel(DMA, self->chan_id);
     DL_ADC12_enableDMA(self->adc12);
+}
+
+static void volt_enableDMA(void)
+{
+    struct Volt* const self = &volt;
+
+    volt_enableDMAChannel(&self->adc[0]);
+    volt_enableDMAChannel(&self->adc[1]);
 
     self->block_count = self->block_count - 1;
     static_assert(IS_POWER_OF_TWO(N_BLOCKS), "efficient ring buffer implementation");
     self->block_write = (self->block_write + 1) & (N_BLOCKS - 1);
-}
-
-static void volt_startDMAChannel(struct ADC* const self, uint16_t offset)
-{
-    self->done = false;
-
-    self->block_count = N_BLOCKS + offset;
-    self->block_write = N_BLOCKS - offset;
-
-    volt_enableDMAChannel(self);
 }
 
 void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
@@ -150,8 +148,10 @@ void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
     uint16_t offset_blocks = offset / N_SAMPLES;
     packet_write(&self->osci.packet, code, sizeof(volt.osci.payload), interval + ((offset % N_SAMPLES) << 17)); // offset in single samples (offset times two)
 
-    volt_startDMAChannel(&self->adc[0], offset_blocks);
-    volt_startDMAChannel(&self->adc[1], offset_blocks);
+    self->block_count = N_BLOCKS + offset_blocks;
+    self->block_write = N_BLOCKS - offset_blocks;
+
+    volt_enableDMA();
 
     // interval in 25 ns
     // OSCI_TIMER_INST_LOAD_VALUE = (500 ns * 40 MHz) - 1
@@ -159,68 +159,65 @@ void volt_acquire(uint8_t code, uint16_t interval, uint16_t length)
     DL_Timer_startCounter(MAIN_TIMER_INST);
 }
 
-static void volt_handleInterrupt(struct ADC* const self, struct ADC* const other)
+static inline uint32_t volt_getResult(struct ADC* const self)
 {
-    uint16_t* point = (uint16_t*)&volt.points[volt.ping_pong].payload[volt.point_index];
-    point[self->index] = DL_ADC12_getMemResult(self->adc12, DL_ADC12_MEM_IDX_0);
+    return DL_ADC12_getMemResult(self->adc12, DL_ADC12_MEM_IDX_0);
+}
 
-    self->done = true;
+static void volt_handleInterrupt(void)
+{
+    struct Volt* const self = &volt;
 
-    if (other->done) {
-        self->done = false;
-        other->done = false;
+    self->points[self->ping_pong].payload[self->point_index] = (volt_getResult(&self->adc[0])
+        + (volt_getResult(&self->adc[1]) << 16));
 
-        volt.point_index = volt.point_index + 1;
-        if (volt.point_index >= N_POINTS) {
-            DL_Timer_stopCounter(MAIN_TIMER_INST);
-        }
+    self->point_index = self->point_index + 1;
+    if (self->point_index >= N_POINTS) {
+        DL_Timer_stopCounter(MAIN_TIMER_INST);
     }
 }
 
-static void volt_handleDMAInterrupt(struct ADC* const self, struct ADC* const other)
+static void volt_handleDMAInterrupt(void)
 {
-    if (self->block_count == 0) {
-        self->done = true;
+    struct Volt* const self = &volt;
 
-        if (other->done) {
-            DL_Timer_stopCounter(MAIN_TIMER_INST);
-            terminal_transmitPacket(&volt.osci.packet);
+    if (self->block_count == 0) {
+        DL_Timer_stopCounter(MAIN_TIMER_INST);
+        terminal_transmitPacket(&self->osci.packet);
+    } else {
+        volt_enableDMA();
+    }
+}
+
+static void volt_IRQHandler(struct ADC* const self, struct ADC* const other)
+{
+    // the handler must read the pending interrupt value
+    const DL_ADC12_IIDX iidx = DL_ADC12_getPendingInterrupt(self->adc12);
+
+    if (other->done) {
+        other->done = false;
+
+        switch (iidx) {
+        case DL_ADC12_IIDX_MEM0_RESULT_LOADED:
+            volt_handleInterrupt();
+            break;
+        case DL_ADC12_IIDX_DMA_DONE:
+            volt_handleDMAInterrupt();
+            break;
+        default:
+            break;
         }
     } else {
-        volt_enableDMAChannel(self);
+        self->done = true;
     }
 }
 
 void ADC12_CH1_INST_IRQHandler(void)
 {
-    static struct ADC* const self = &volt.adc[0];
-    static struct ADC* const other = &volt.adc[1];
-
-    switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
-    case DL_ADC12_IIDX_MEM0_RESULT_LOADED:
-        volt_handleInterrupt(self, other);
-        break;
-    case DL_ADC12_IIDX_DMA_DONE:
-        volt_handleDMAInterrupt(self, other);
-        break;
-    default:
-        break;
-    }
+    volt_IRQHandler(&volt.adc[0], &volt.adc[1]);
 }
 
 void ADC12_CH2_INST_IRQHandler(void)
 {
-    static struct ADC* const self = &volt.adc[1];
-    static struct ADC* const other = &volt.adc[0];
-
-    switch (DL_ADC12_getPendingInterrupt(self->adc12)) {
-    case DL_ADC12_IIDX_MEM0_RESULT_LOADED:
-        volt_handleInterrupt(self, other);
-        break;
-    case DL_ADC12_IIDX_DMA_DONE:
-        volt_handleDMAInterrupt(self, other);
-        break;
-    default:
-        break;
-    }
+    volt_IRQHandler(&volt.adc[1], &volt.adc[0]);
 }

@@ -10,9 +10,7 @@ struct ADC {
     ADC12_Regs* const adc12;
     const uint8_t chan_id;
 
-    bool done;
-    uint16_t block_count;
-    uint16_t block_write;
+    volatile bool done;
 };
 
 struct Osci { // waveform
@@ -35,6 +33,9 @@ struct Volt {
 
     uint16_t ping_pong;
     uint16_t point_index;
+
+    uint16_t block_count;
+    uint16_t block_write;
 };
 
 extern struct Volt volt;
