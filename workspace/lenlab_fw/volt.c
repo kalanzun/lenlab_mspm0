@@ -67,6 +67,8 @@ static void volt_configConversionMemory0(struct ADC* const self, bool sample_tim
 
 static void volt_setLoggerMode(struct ADC* const self)
 {
+    DL_ADC12_disableConversions(self->adc12);
+
     volt_configConversionMemory0(self, 1, 1);
 
     DL_ADC12_disableFIFO(self->adc12);
@@ -74,10 +76,14 @@ static void volt_setLoggerMode(struct ADC* const self)
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_enableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
+    
+    DL_ADC12_enableConversions(self->adc12);
 }
 
 static void volt_setOsciMode(struct ADC* const self)
 {
+    DL_ADC12_disableConversions(self->adc12);
+
     volt_configConversionMemory0(self, 0, 0);
 
     DL_ADC12_enableFIFO(self->adc12);
@@ -85,6 +91,8 @@ static void volt_setOsciMode(struct ADC* const self)
     DL_ADC12_disableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_clearInterruptStatus(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE | DL_ADC12_INTERRUPT_MEM0_RESULT_LOADED));
     DL_ADC12_enableInterrupt(self->adc12, (DL_ADC12_INTERRUPT_DMA_DONE));
+
+    DL_ADC12_enableConversions(self->adc12);
 }
 
 void volt_startLogging(uint32_t interval)
