@@ -153,6 +153,7 @@ def test_oscilloscope(firmware, output, send, receive):
 
     # sample rate 1 MHz
     # DAC 1 kHz
+    # interval 40 in 25 ns
     send(command(b"a", 40, 1000, int(4096 / 3.3), 0, 0))  # run
     payload_size = 4 * 2 * 8 * 432
     reply = receive(8 + payload_size)
@@ -176,11 +177,11 @@ def test_voltmeter(firmware, send, receive):
     # ch1 input PA24
     # ch2 input PA17
 
-    # sample rate 1 MHz
-    # DAC 1 kHz
-    send(command(b"v", 200))  # start logging 200 ms
+    # sample interval 200 ms
+    # interval 8000000 in 25 ns
+    send(command(b"v", 8000000))  # start logging 200 ms
     reply = receive(8)
-    assert reply == b"Lv\x00\x00\xc8\x00\x00\x00"
+    assert reply == b"Lv\x00\x00\x00\x12z\x00"
 
     sleep(1)
 
@@ -189,6 +190,8 @@ def test_voltmeter(firmware, send, receive):
     assert reply.startswith(b"Lv")
     length = int.from_bytes(reply[2:4], byteorder="little")
     assert length > 0
+    arg = int.from_bytes(reply[4:8], byteorder="little")
+    assert arg == 8000000
 
     payload = receive(length)
     assert payload
