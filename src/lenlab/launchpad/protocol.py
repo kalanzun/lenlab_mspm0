@@ -18,6 +18,8 @@ def unpack_fw_version(reply: bytes) -> str | None:
     if reply[0:4] == b"L8\x00\x00":
         return "8." + reply[4:8].strip(b"\x00").decode("ascii", errors="strict")
 
+    return None
+
 
 def get_app_version() -> str:
     # compare without bugfix release (third version number)

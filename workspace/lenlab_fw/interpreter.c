@@ -1,9 +1,9 @@
 #include "interpreter.h"
 
-#include "volt.h"
 #include "signal.h"
 #include "terminal.h"
 #include "version.h"
+#include "volt.h"
 
 #include "ti_msp_dl_config.h"
 
@@ -64,6 +64,13 @@ void interpreter_handleCommand(void)
 
         case 'x': // stop logging
             volt_stopLogging();
+            break;
+
+        case 'u':
+            volt_createLoggingExampleData(cmd->arg);
+            break;
+
+        default:
             break;
         }
     }

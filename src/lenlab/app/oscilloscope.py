@@ -1,5 +1,7 @@
+import logging
+
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import QPointF, Qt, Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -14,6 +16,8 @@ from ..translate import Translate, tr
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
 from .signal import SignalWidget
+
+logger = logging.getLogger(__name__)
 
 
 class OscilloscopeChart(QWidget):
@@ -70,7 +74,7 @@ class OscilloscopeChart(QWidget):
 
         time_ms = waveform.time_aligned() * 1e3
         for i, channel in enumerate(self.channels):
-            channel.replace(list(map(QPointF, time_ms, waveform.channel_aligned(i))))
+            channel.replaceNp(time_ms, waveform.channel_aligned(i))
 
         self.x_axis.setRange(-3e6 * waveform.time_step, 3e6 * waveform.time_step)
 
@@ -148,14 +152,10 @@ class OscilloscopeWidget(QWidget):
             sidebar_layout.addWidget(checkbox)
 
         # save as
-        layout = QHBoxLayout()
-
         button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
         self.lenlab.adc_lock.locked.connect(button.setDisabled)
-        layout.addWidget(button)
-
-        sidebar_layout.addLayout(layout)
+        sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
 

@@ -11,6 +11,7 @@ from .bode import BodeWidget
 from .figure import LaunchpadWidget
 from .poster import PosterWidget
 from .programmer import ProgrammerWidget
+from .voltmeter import VoltmeterWidget
 
 
 class MainWindow(QMainWindow):
@@ -31,6 +32,7 @@ class MainWindow(QMainWindow):
         self.tabs = [
             LaunchpadWidget(),
             ProgrammerWidget(lenlab.discovery),
+            VoltmeterWidget(lenlab),
             osci := OscilloscopeWidget(lenlab),
             bode := BodeWidget(lenlab),
         ]

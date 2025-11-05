@@ -20,7 +20,7 @@ struct Waveform { // oscilloscope
 
 struct Points { // logging
     struct Packet packet;
-    uint32_t payload[512]; // two values per uint32_t
+    uint32_t payload[1024]; // two values per uint32_t
 };
 
 struct Volt {
@@ -36,6 +36,7 @@ struct Volt {
 
     uint16_t ping_pong;
     uint16_t point_index;
+    uint16_t point_reset;
 };
 
 extern struct Volt volt;
@@ -45,6 +46,8 @@ void volt_init(void);
 void volt_startLogging(uint32_t interval);
 
 void volt_stopLogging(void);
+
+void volt_createLoggingExampleData(uint32_t interval);
 
 void volt_acquireWaveform(uint8_t code, uint16_t interval, uint16_t offset);
 

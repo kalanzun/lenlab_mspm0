@@ -2,7 +2,7 @@ from importlib import metadata
 from typing import Self, TextIO
 
 import numpy as np
-from attrs import frozen
+from attrs import Factory, frozen
 
 
 @frozen
@@ -10,13 +10,13 @@ class Waveform:
     length: int = 0
     offset: int = 0
     time_step: float = 0.0
-    channels: tuple[np.ndarray, np.ndarray] = (np.ndarray((0,)), np.ndarray((0,)))
+    channels: tuple[np.ndarray, np.ndarray] = Factory(lambda: (np.ndarray((0,)), np.ndarray((0,))))
 
     @classmethod
     def parse_reply(cls, reply: bytes) -> Self:
-        payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
         sampling_interval_25ns = int.from_bytes(reply[4:6], byteorder="little")
         offset = int.from_bytes(reply[6:8], byteorder="little")
+        payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
 
         time_step = sampling_interval_25ns * 25e-9
 

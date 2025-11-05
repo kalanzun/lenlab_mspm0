@@ -110,7 +110,7 @@ void volt_startLogging(uint32_t interval)
         // ping pong if not empty
         if (self->point_index) {
             self->ping_pong = (self->ping_pong + 1) & 1;
-            self->point_index = 0;
+            self->point_index = self->point_reset;
         }
     }
 
@@ -125,6 +125,7 @@ void volt_startLogging(uint32_t interval)
 
         self->ping_pong = 0;
         self->point_index = 0;
+        self->point_reset = 0;
 
         // interval in 25 ns
         DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
@@ -138,6 +139,27 @@ void volt_stopLogging(void)
 {
     DL_Timer_stopCounter(MAIN_TIMER_INST);
     terminal_sendReply('x', ARG_STR("stop"));
+}
+
+void volt_createLoggingExampleData(uint32_t interval)
+{
+    struct Volt* const self = &volt;
+
+    DL_Timer_stopCounter(MAIN_TIMER_INST);
+
+    packet_write(&self->points[0].packet, 'v', 0, interval);
+    packet_write(&self->points[1].packet, 'v', 0, interval);
+
+    for (uint16_t i = 0; i < N_POINTS; i++) {
+        self->points[0].payload[i] = (i << 2) | ((4096 - (i << 2)) << 16);
+        self->points[1].payload[i] = (4096 - (i << 2)) | ((i << 2) << 16);
+    }
+
+    self->ping_pong = 0;
+    self->point_index = N_POINTS;
+    self->point_reset = N_POINTS;
+
+    terminal_sendReply('u', interval);
 }
 
 static void volt_enableDMAChannel(struct ADC* const self)
