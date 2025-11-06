@@ -35,8 +35,6 @@ class VoltmeterChart(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.points = Points()
-
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.chart = self.chart_view.chart()
@@ -75,10 +73,12 @@ class VoltmeterChart(QWidget):
     limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
 
     @classmethod
-    def get_limit(cls, value: float) -> float:
+    def get_time_limit(cls, value: float) -> float:
         for x in cls.limits:
             if x >= value:
                 return x
+
+        return cls.limits[-1]
 
     @staticmethod
     def get_time_unit(value: float) -> int:
@@ -89,13 +89,17 @@ class VoltmeterChart(QWidget):
         else:
             return 60 * 60  # hours
 
-    def update(self):
-        unit = self.get_time_unit(self.points.get_current_seconds())
+    def plot(self, points: Points):
+        unit = self.get_time_unit(points.get_current_time())
+        time = points.get_plot_time(unit)
 
+        # channel.replaceNp iterates over the raw c-array
+        # and copies the values into a QList<QPointF>
+        # It cannot read views or strides
         for i, channel in enumerate(self.channels):
-            channel.replaceNp(self.points.get_seconds() / unit, self.points.get_channel(i))
+            channel.replaceNp(time, points.get_plot_values(i))
 
-        self.x_axis.setMax(self.get_limit(self.points.get_current_seconds() / unit))
+        self.x_axis.setMax(self.get_time_limit(points.get_current_time() / unit))
 
 
 class VoltmeterWidget(QWidget):
@@ -216,6 +220,7 @@ class VoltmeterWidget(QWidget):
         if self.lenlab.adc_lock.acquire():
             index = self.interval.currentIndex()
             interval_25ns = self.intervals[index] * 40_000
+            self.points = Points(self.intervals[index] / 1000)
             self.lenlab.send_command(command(b"v", interval_25ns))
 
     @Slot()
@@ -238,8 +243,8 @@ class VoltmeterWidget(QWidget):
                 self.poll_timer.setInterval(interval_ms)
 
             else:  # new points
-                self.chart.points.parse_reply(reply)
-                self.chart.update()
+                self.points.parse_reply(reply)
+                self.chart.plot(self.points)
 
             self.poll_timer.start()
 

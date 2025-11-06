@@ -6,34 +6,64 @@ from lenlab.model.points import Points
 
 
 @pytest.fixture
-def reply():
-    payload = np.empty((2 * 4096,), np.dtype("<u2"))
-    payload[::2] = np.arange(0, 4096)  # channel 1
+def length():
+    return 1024
+
+
+@pytest.fixture
+def reply(length):
+    amplitude = 4
+    assert length * amplitude == 4096
+
+    payload = np.empty((2 * length,), np.dtype("<u2"))
+    payload[::2] = np.arange(0, length) * amplitude  # channel 1
     payload[1::2] = 4096 - payload[::2]  # channel 2
 
-    interval_25ns = 1000 * 40_000
-    return pack(b"v", arg=interval_25ns.to_bytes(4, "little"), length=4096) + payload.tobytes()
+    interval_25ns = 1000 * 40_000  # 1 s
+    return pack(b"v", arg=interval_25ns.to_bytes(4, "little"), length=length) + payload.tobytes()
 
 
-def test_parse_reply(reply):
-    points = Points()
+@pytest.fixture
+def rising(length):
+    return np.linspace(0, 3.3, length, endpoint=False)
+
+
+@pytest.fixture
+def falling(length):
+    return np.linspace(3.3, 0, length, endpoint=False)
+
+
+def test_parse_reply(length, reply, rising, falling):
+    points = Points(0.1)
     points.parse_reply(reply)
 
-    rising = np.linspace(0, 3.3, 4096, endpoint=False)
-    falling = np.linspace(3.3, 0, 4096, endpoint=False)
+    current_time = (length - 1) * points.interval
+    assert points.get_current_time() == current_time
+    assert np.allclose(
+        points.get_plot_time(),
+        np.linspace(0, current_time, length, endpoint=True, dtype=np.double),
+    )
+    assert np.allclose(points.get_plot_values(channel=0), rising)
+    assert np.allclose(points.get_plot_values(channel=1), falling)
 
-    assert points.get_seconds()[-1] == 4095.0
-    assert np.allclose(points.get_seconds(), np.linspace(0, 4096, 4096, endpoint=False))
-    assert np.allclose(points.get_channel(0), rising)
-    assert np.allclose(points.get_channel(1), falling)
 
+def test_append_reply(length, reply, rising, falling):
+    points = Points(1.0)
+    points.parse_reply(reply)
     points.parse_reply(reply)
 
-    assert points.get_seconds()[-1] == 8191.0
-    assert np.allclose(points.get_channel(0)[:4096], rising)
-    assert np.allclose(points.get_channel(1)[:4096], falling)
-    assert np.allclose(points.get_channel(0)[4096:], rising)
-    assert np.allclose(points.get_channel(1)[4096:], falling)
+    current_time = 2 * length * points.interval - 1.0
+    # still under two hours
+    assert current_time < 2 * 60 * 60
+    assert points.get_current_time() == current_time
+    assert np.allclose(
+        points.get_plot_time(),
+        np.linspace(0, current_time, 2 * length, endpoint=True, dtype=np.double),
+    )
+    assert np.allclose(points.get_plot_values(channel=0)[:length], rising)
+    assert np.allclose(points.get_plot_values(channel=1)[:length], falling)
+    assert np.allclose(points.get_plot_values(channel=0)[length:], rising)
+    assert np.allclose(points.get_plot_values(channel=1)[length:], falling)
 
 
 def test_numpy_mean():
@@ -41,3 +71,69 @@ def test_numpy_mean():
     data = data.reshape((4, 2))
     data = data.mean(axis=1)
     assert np.allclose(data, np.asarray([0, 1, 2, 3]))
+
+
+def test_numpy_mean_two_channels():
+    data = np.asarray([0, 5, 0, 5, 1, 6, 1, 6, 2, 7, 2, 7, 3, 8, 3, 8])
+    data = data.reshape((8, 2))
+
+    data = data.reshape((4, 2, 2))
+    data = data.mean(axis=1)
+    assert np.allclose(data, np.asarray([[0, 5], [1, 6], [2, 7], [3, 8]]))
+
+
+def test_numpy_pad():
+    data = np.empty((4,))
+    data = np.pad(data, (0, 4), mode="empty")
+    assert data.shape == (8,)
+
+
+def test_numpy_pad_two_channels():
+    data = np.empty((4, 2))
+    data = np.pad(data, ((0, 4), (0, 0)), mode="empty")
+    assert data.shape == (8, 2)
+
+
+def test_numpy_cast():
+    payload = np.asarray([1, 2], np.dtype("<u2"))
+    values = payload / 2
+    assert values.dtype == np.double
+    assert np.allclose(values, np.asarray([0.5, 1.0]))
+
+
+def test_compression(length, reply):
+    points = Points(interval=0.2)
+
+    # one reply is 1024 points (interval = 0.2 seconds) or 3.4 minutes
+    points.parse_reply(reply)
+
+    # it should batch to seconds after two minutes
+    compressed = int(length * points.interval)
+    assert points.get_plot_time().shape == (compressed,)
+    assert points.get_plot_values(channel=0).shape == (compressed,)
+    assert points.get_plot_values(channel=1).shape == (compressed,)
+
+
+def test_padding(length, reply):
+    points = Points(interval=1.0)
+
+    for _ in range(100):
+        points.parse_reply(reply)
+
+    assert points.values[0].shape == (110_000,)
+    assert points.values[1].shape == (110_000,)
+
+
+def test_huge_compression(length, reply):
+    points = Points(interval=0.1)
+
+    # one reply is 1024 points (interval = 0.1 seconds)
+    # one hundred replies is 2.84 hours
+    for _ in range(100):
+        points.parse_reply(reply)
+
+    # it should batch to minutes after two hours
+    compressed = int(100 * length * points.interval) // 60
+    assert points.get_plot_time().shape == (compressed,)
+    assert points.get_plot_values(channel=0).shape == (compressed,)
+    assert points.get_plot_values(channel=1).shape == (compressed,)

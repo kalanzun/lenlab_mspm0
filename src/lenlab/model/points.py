@@ -1,63 +1,65 @@
 import numpy as np
-from attrs import Factory, define
+from attrs import define, field
 
 
 @define
 class Points:
-    seconds: np.ndarray = Factory(lambda: np.empty((6000,)))
-    channels: tuple[np.ndarray, np.ndarray] = Factory(
-        lambda: (np.empty((6000,)), np.empty((6000,)))
-    )
+    interval: float
 
-    length: int = 6000
     index: int = 0
+    values: list[np.ndarray] = field()
+
+    @values.default
+    def get_values_default(self):
+        return [
+            np.empty((100_000,), dtype=np.double),
+            np.empty((100_000,), dtype=np.double),
+        ]
 
     def parse_reply(self, reply: bytes):
-        interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
+        # interval = int.from_bytes(reply[4:8], byteorder="little")
         payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
-
-        # 12 bit unsigned integer
-        data = payload.astype(np.float64) / 4096 * 3.3  # 12 bit ADC
-        length = data.shape[0] // 2  # 2 channels
-
-        if self.index + length > self.length:
-            self.length += 6000
-
-            seconds = self.seconds
-            self.seconds = np.empty((self.length,))
-            self.seconds[: self.index] = seconds[: self.index]
-
-            channels = self.channels
-            self.channels = (np.empty((self.length,)), np.empty((self.length,)))
-            for i in range(len(self.channels)):
-                self.channels[i][: self.index] = channels[i][: self.index]
-
-        interval = interval_25ns / 40_000_000
-        offset = self.seconds[self.index - 1] + interval if self.index else 0
-        time = np.arange(length) * interval + offset
+        length = payload.shape[0] // 2
+        payload = payload.reshape((length, 2), copy=False)  # 2 channels interleaved
 
         index = self.index + length
+        for i, values in enumerate(self.values):
+            if index > values.shape[0]:
+                self.values[i] = values = np.pad(values, (0, 10_000), mode="empty")
 
-        self.seconds[self.index : index] = time
-        for i in range(len(self.channels)):
-            self.channels[i][self.index : index] = data[i::2]
+            values[self.index : index] = payload[:, i] / 4096 * 3.3
 
         self.index = index
 
-    @staticmethod
-    def get_batch_size(last_time: float, interval: int) -> int:
-        if last_time <= 2.0 * 60.0:  # 2 minutes
+    def get_current_time(self) -> float:
+        return (self.index - 1) * self.interval if self.index else 0.0
+
+    def get_batch_size(self) -> int:
+        current_time = self.get_current_time()
+        if current_time <= 2.0 * 60.0:  # 2 minutes
             return 1  # all points
-        elif last_time <= 2 * 60.0 * 60.0:  # 2 hours
-            return 1000 // interval  # seconds
+        elif current_time <= 2 * 60.0 * 60.0:  # 2 hours
+            return max(int(round(1 / self.interval)), 1)  # seconds
         else:
-            return 1000 // interval * 60  # minutes
+            return int(round(60 / self.interval))  # minutes
 
-    def get_seconds(self):
-        return self.seconds[: self.index]
+    def get_plot_time(self, unit: float = 1.0) -> np.ndarray:
+        batch = self.get_batch_size()
+        return np.linspace(
+            0.0,
+            self.index * self.interval / unit,
+            self.index // batch,
+            endpoint=False,
+            dtype=np.double,
+        )
 
-    def get_current_seconds(self):
-        return self.seconds[self.index - 1] if self.index else 0
+    def get_plot_values(self, channel: int) -> np.ndarray:
+        batch = self.get_batch_size()
+        values = self.values[channel][: self.index]
 
-    def get_channel(self, i: int):
-        return self.channels[i][: self.index]
+        if batch > 1:
+            length = self.index // batch
+            values = values[: length * batch].reshape((length, batch))
+            values = values.mean(axis=1)
+
+        return values
