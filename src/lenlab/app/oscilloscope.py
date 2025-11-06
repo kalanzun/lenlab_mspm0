@@ -32,8 +32,6 @@ class OscilloscopeChart(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.waveform = Waveform()
-
         self.chart_view = QChartView()
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.chart = self.chart_view.chart()
@@ -69,9 +67,7 @@ class OscilloscopeChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
-    def replace(self, waveform: Waveform):
-        self.waveform = waveform
-
+    def plot(self, waveform: Waveform):
         time_ms = waveform.time_aligned() * 1e3
         for i, channel in enumerate(self.channels):
             channel.replaceNp(time_ms, waveform.channel_aligned(i))
@@ -92,6 +88,7 @@ class OscilloscopeWidget(QWidget):
         self.lenlab = lenlab
 
         self.active = False
+        self.waveform = Waveform()
 
         chart_layout = QVBoxLayout()
 
@@ -195,15 +192,14 @@ class OscilloscopeWidget(QWidget):
         if reply.startswith(b"La"):
             self.lenlab.adc_lock.release()
 
-        waveform = Waveform.parse_reply(reply)
-
-        self.chart.replace(waveform)
+        self.waveform = Waveform.parse_reply(reply)
+        self.chart.plot(self.waveform)
 
         if reply.startswith(b"La") and self.active:
             self.active = self.acquire()
 
         if reply.startswith(b"Lb"):
-            self.bode.emit(waveform)
+            self.bode.emit(self.waveform)
 
     @Slot()
     @SaveAs(
@@ -213,4 +209,4 @@ class OscilloscopeWidget(QWidget):
     )
     def on_save_as_clicked(self, file_name: str, file_format: str):
         with open(file_name, "w") as file:
-            self.chart.waveform.save_as(file)
+            self.waveform.save_as(file)
