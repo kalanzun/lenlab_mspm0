@@ -97,13 +97,13 @@ class VoltmeterChart(QWidget):
 
     def plot(self, points: Points):
         unit = self.get_time_unit(points.get_current_time())
-        time = points.get_plot_time(unit)
+        time = points.get_time(unit, compression=True)
 
         # channel.replaceNp iterates over the raw c-array
         # and copies the values into a QList<QPointF>
         # It cannot read views or strides
         for i, channel in enumerate(self.channels):
-            channel.replaceNp(time, points.get_plot_values(i))
+            channel.replaceNp(time, points.get_values(i, compression=True))
 
         self.x_axis.setMax(self.get_time_limit(points.get_current_time() / unit))
         self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[unit]))
@@ -189,7 +189,6 @@ class VoltmeterWidget(QWidget):
         # save as
         button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
-        self.lenlab.adc_lock.locked.connect(button.setDisabled)
         sidebar_layout.addWidget(button)
 
         self.file_name = QLineEdit()
@@ -268,7 +267,7 @@ class VoltmeterWidget(QWidget):
                 self.time_field.setText(self.format_time(self.points.get_current_time(), self.points.interval < 1.0))
                 for i, field in enumerate(self.fields):
                     if field.isEnabled():
-                        field.setText(f"{self.points.get_last_values(i):.3f} V")
+                        field.setText(f"{self.points.get_last_value(i):.3f} V")
 
             self.poll_timer.start()
 
@@ -282,6 +281,7 @@ class VoltmeterWidget(QWidget):
         "CSV (*.csv)",
     )
     def on_save_as_clicked(self, file_name: str, file_format: str):
-        pass
-        # with open(file_name, "w") as file:
-        #     self.chart.waveform.save_as(file)
+        with open(file_name, "w") as file:
+            self.points.save_as(file)
+
+        self.file_name.setText(file_name)

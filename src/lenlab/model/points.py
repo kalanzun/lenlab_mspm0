@@ -1,3 +1,6 @@
+from importlib import metadata
+from typing import TextIO
+
 import numpy as np
 from attrs import define, field
 
@@ -35,7 +38,7 @@ class Points:
         # invalid when empty
         return (self.index - 1) * self.interval
 
-    def get_last_values(self, channel: int) -> float:
+    def get_last_value(self, channel: int) -> float:
         # invalid when empty
         return self.values[channel][self.index - 1]
 
@@ -48,23 +51,32 @@ class Points:
         else:
             return int(round(60 / self.interval))  # minutes
 
-    def get_plot_time(self, unit: float = 1.0) -> np.ndarray:
-        batch = self.get_batch_size()
+    def get_time(self, unit: float = 1.0, compression: bool = False) -> np.ndarray:
+        batch_size = self.get_batch_size() if compression else 1
         return np.linspace(
             0.0,
             self.index * self.interval / unit,
-            self.index // batch,
+            self.index // batch_size,
             endpoint=False,
             dtype=np.double,
         )
 
-    def get_plot_values(self, channel: int) -> np.ndarray:
-        batch = self.get_batch_size()
+    def get_values(self, channel: int, compression: bool = False) -> np.ndarray:
+        batch_size = self.get_batch_size()
         values = self.values[channel][: self.index]
 
-        if batch > 1:
-            length = self.index // batch
-            values = values[: length * batch].reshape((length, batch))
+        if compression and batch_size > 1:
+            length = self.index // batch_size
+            values = values[: length * batch_size].reshape((length, batch_size))
             values = values.mean(axis=1)
 
         return values
+
+    def save_as(self, file: TextIO):
+        version = metadata.version("lenlab")
+        file.write(f"Lenlab MSPM0 {version} Voltmeter\n")
+        file.write("Zeit; Kanal_1; Kanal_2\n")
+        for t, ch1, ch2 in zip(
+            self.get_time(), self.get_values(0), self.get_values(1), strict=True
+        ):
+            file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
