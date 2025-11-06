@@ -32,7 +32,12 @@ class Points:
         self.index = index
 
     def get_current_time(self) -> float:
-        return (self.index - 1) * self.interval if self.index else 0.0
+        # invalid when empty
+        return (self.index - 1) * self.interval
+
+    def get_last_values(self, channel: int) -> float:
+        # invalid when empty
+        return self.values[channel][self.index - 1]
 
     def get_batch_size(self) -> int:
         current_time = self.get_current_time()

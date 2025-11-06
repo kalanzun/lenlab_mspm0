@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QTimer, Slot
@@ -29,8 +30,14 @@ class VoltmeterChart(QWidget):
         Translate("Channel 2 (ADC 1, PA 17)", "Kanal 2 (ADC 1, PA 17)"),
     )
 
-    x_label = Translate("time [s]", "Zeit [s]")
-    y_label = Translate("voltage [V]", "Spannung [V]")
+    x_label = Translate("time [{0}]", "Zeit [{0}]")
+    y_label = Translate("voltage [volt]", "Spannung [Volt]")
+
+    unit_labels = {
+        1: Translate("seconds", "Sekunden"),
+        60: Translate("minutes", "Minuten"),
+        60*60: Translate("hours", "Stunden"),
+    }
 
     def __init__(self):
         super().__init__()
@@ -49,7 +56,7 @@ class VoltmeterChart(QWidget):
         self.x_axis.setRange(0.0, 4.0)
         self.x_axis.setTickCount(5)
         self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(str(self.x_label))
+        self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[1]))
         self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
 
         self.y_axis = QValueAxis()
@@ -70,15 +77,14 @@ class VoltmeterChart(QWidget):
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
-    limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
-
-    @classmethod
-    def get_time_limit(cls, value: float) -> float:
-        for x in cls.limits:
+    @staticmethod
+    def get_time_limit(value: float) -> float:
+        limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
+        for x in limits:
             if x >= value:
                 return x
 
-        return cls.limits[-1]
+        return limits[-1]
 
     @staticmethod
     def get_time_unit(value: float) -> int:
@@ -100,6 +106,7 @@ class VoltmeterChart(QWidget):
             channel.replaceNp(time, points.get_plot_values(i))
 
         self.x_axis.setMax(self.get_time_limit(points.get_current_time() / unit))
+        self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[unit]))
 
 
 class VoltmeterWidget(QWidget):
@@ -172,6 +179,8 @@ class VoltmeterWidget(QWidget):
         ) in zip(checkboxes, self.fields, self.chart.channels, strict=True):
             checkbox.setChecked(True)
             checkbox.check_changed.connect(channel.setVisible)
+            checkbox.check_changed.connect(field.clear)
+            checkbox.check_changed.connect(field.setEnabled)
             sidebar_layout.addWidget(checkbox)
 
             field.setReadOnly(True)
@@ -232,6 +241,16 @@ class VoltmeterWidget(QWidget):
     def on_poll_timeout(self):
         self.lenlab.send_command(command(b"v"))
 
+    @staticmethod
+    def format_time(time: float, show_ms: bool = True) -> str:
+        td = timedelta(seconds=time)
+        if td.microseconds:
+            return str(td)[:-4]
+        elif show_ms:
+            return f"{td}.00"
+        else:
+            return str(td)
+
     @Slot(bytes)
     def on_reply(self, reply):
         if reply.startswith(b"Lv") or reply.startswith(b"Lu"):
@@ -245,6 +264,11 @@ class VoltmeterWidget(QWidget):
             else:  # new points
                 self.points.parse_reply(reply)
                 self.chart.plot(self.points)
+
+                self.time_field.setText(self.format_time(self.points.get_current_time(), self.points.interval < 1.0))
+                for i, field in enumerate(self.fields):
+                    if field.isEnabled():
+                        field.setText(f"{self.points.get_last_values(i):.3f} V")
 
             self.poll_timer.start()
 
