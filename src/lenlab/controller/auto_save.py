@@ -1,4 +1,5 @@
 from importlib import metadata
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
@@ -15,8 +16,8 @@ class AutoSave(QObject):
     auto_save: bool
     auto_save_changed = Signal(bool)
 
-    file_name: str
-    file_name_changed = Signal(str)
+    file_path: Path | None
+    file_path_changed = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -25,7 +26,7 @@ class AutoSave(QObject):
 
         self.unsaved = False
         self.auto_save = False
-        self.file_name = ""
+        self.file_path = None
 
     def set_points(self, points: Points):
         self.points = points
@@ -33,7 +34,7 @@ class AutoSave(QObject):
 
         self.set_unsaved(bool(points.index))
         self.set_auto_save(False)
-        self.set_file_name("")
+        self.set_file_path(None)
 
     @Slot(bool)
     def set_unsaved(self, unsaved: bool):
@@ -51,15 +52,15 @@ class AutoSave(QObject):
                 self.save(0)
 
     @Slot(bool)
-    def set_file_name(self, file_name: str):
-        self.file_name = file_name
-        self.file_name_changed.emit(file_name)
+    def set_file_path(self, file_path: Path | None):
+        self.file_path = file_path
+        self.file_path_changed.emit(file_path.name if file_path is not None else "")
 
     @Slot(str)
-    def save_as(self, file_name: str):
+    def save_as(self, file_path: Path):
         points = self.points
 
-        with open(file_name, "w") as file:
+        with file_path.open("w") as file:
             version = metadata.version("lenlab")
             file.write(f"Lenlab MSPM0 {version} Voltmeter\n")
             # TODO: csv file format translate?
@@ -74,10 +75,10 @@ class AutoSave(QObject):
 
         self.save_idx = points.index
         self.set_unsaved(False)
-        self.set_file_name(file_name)
+        self.set_file_path(file_path)
 
     def save(self, interval: float = 5.0):
-        if not self.auto_save or not self.file_name or not self.unsaved:
+        if not self.unsaved or not self.auto_save or self.file_path is None:
             return
 
         points = self.points
@@ -85,7 +86,7 @@ class AutoSave(QObject):
         if points.index < self.save_idx + n:
             return
 
-        with open(self.file_name, "a") as file:
+        with self.file_path.open("a") as file:
             for t, ch1, ch2 in zip(
                 points.get_time(self.save_idx),
                 points.get_values(0, self.save_idx),

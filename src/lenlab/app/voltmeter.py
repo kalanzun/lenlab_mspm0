@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from pathlib import Path
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QTimer, Slot
@@ -196,7 +197,7 @@ class VoltmeterWidget(QWidget):
 
         self.file_name = QLineEdit()
         self.file_name.setReadOnly(True)
-        self.auto_save.file_name_changed.connect(self.file_name.setText)
+        self.auto_save.file_path_changed.connect(self.file_name.setText)
         sidebar_layout.addWidget(self.file_name)
 
         checkbox = BoolCheckBox(tr("Automatic saving", "Automatisch speichern"))
@@ -291,4 +292,4 @@ class VoltmeterWidget(QWidget):
         "CSV (*.csv)",
     )
     def on_save_as_clicked(self, file_name: str, file_format: str):
-        self.auto_save.save_as(file_name)
+        self.auto_save.save_as(Path(file_name))
