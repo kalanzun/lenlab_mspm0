@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..controller.auto_save import AutoSave
 from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
 from ..model.points import Points
@@ -36,7 +37,7 @@ class VoltmeterChart(QWidget):
     unit_labels = {
         1: Translate("seconds", "Sekunden"),
         60: Translate("minutes", "Minuten"),
-        60*60: Translate("hours", "Stunden"),
+        60 * 60: Translate("hours", "Stunden"),
     }
 
     def __init__(self):
@@ -97,13 +98,13 @@ class VoltmeterChart(QWidget):
 
     def plot(self, points: Points):
         unit = self.get_time_unit(points.get_current_time())
-        time = points.get_time(unit, compression=True)
+        time = points.get_plot_time(unit)
 
         # channel.replaceNp iterates over the raw c-array
         # and copies the values into a QList<QPointF>
         # It cannot read views or strides
         for i, channel in enumerate(self.channels):
-            channel.replaceNp(time, points.get_values(i, compression=True))
+            channel.replaceNp(time, points.get_plot_values(i))
 
         self.x_axis.setMax(self.get_time_limit(points.get_current_time() / unit))
         self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[unit]))
@@ -117,6 +118,8 @@ class VoltmeterWidget(QWidget):
     def __init__(self, lenlab: Lenlab):
         super().__init__()
         self.lenlab = lenlab
+
+        self.auto_save = AutoSave()
 
         # poll interval
         self.poll_timer = QTimer()
@@ -193,16 +196,17 @@ class VoltmeterWidget(QWidget):
 
         self.file_name = QLineEdit()
         self.file_name.setReadOnly(True)
+        self.auto_save.file_name_changed.connect(self.file_name.setText)
         sidebar_layout.addWidget(self.file_name)
 
-        self.auto_save = BoolCheckBox(tr("Automatic saving", "Automatisch speichern"))
-        self.auto_save.setEnabled(False)
-        # self.auto_save.check_changed.connect(self.voltmeter.set_auto_save)
+        checkbox = BoolCheckBox(tr("Automatic saving", "Automatisch speichern"))
+        # self.auto_save_check_box.setEnabled(False)
+        checkbox.check_changed.connect(self.auto_save.set_auto_save)
         # set_auto_save might cause a change back in case of an error
-        # self.voltmeter.auto_save_changed.connect(
-        #     self.auto_save.setChecked, Qt.ConnectionType.QueuedConnection
-        # )
-        sidebar_layout.addWidget(self.auto_save)
+        self.auto_save.auto_save_changed.connect(
+            checkbox.setChecked, Qt.ConnectionType.QueuedConnection
+        )
+        sidebar_layout.addWidget(checkbox)
 
         button = QPushButton(tr("Save image", "Bild speichern"))
         # button.clicked.connect(self.on_save_image_clicked)
@@ -229,6 +233,7 @@ class VoltmeterWidget(QWidget):
             index = self.interval.currentIndex()
             interval_25ns = self.intervals[index] * 40_000
             self.points = Points(self.intervals[index] / 1000)
+            self.auto_save.set_points(self.points)
             self.lenlab.send_command(command(b"v", interval_25ns))
 
     @Slot()
@@ -262,9 +267,14 @@ class VoltmeterWidget(QWidget):
 
             else:  # new points
                 self.points.parse_reply(reply)
-                self.chart.plot(self.points)
+                self.auto_save.set_unsaved(True)
 
-                self.time_field.setText(self.format_time(self.points.get_current_time(), self.points.interval < 1.0))
+                self.chart.plot(self.points)
+                self.auto_save.save()
+
+                self.time_field.setText(
+                    self.format_time(self.points.get_current_time(), self.points.interval < 1.0)
+                )
                 for i, field in enumerate(self.fields):
                     if field.isEnabled():
                         field.setText(f"{self.points.get_last_value(i):.3f} V")
@@ -281,7 +291,4 @@ class VoltmeterWidget(QWidget):
         "CSV (*.csv)",
     )
     def on_save_as_clicked(self, file_name: str, file_format: str):
-        with open(file_name, "w") as file:
-            self.points.save_as(file)
-
-        self.file_name.setText(file_name)
+        self.auto_save.save_as(file_name)
