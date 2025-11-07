@@ -120,8 +120,8 @@ def test_padding(length, reply):
     for _ in range(100):
         points.parse_reply(reply)
 
-    assert points.values[0].shape == (110_000,)
-    assert points.values[1].shape == (110_000,)
+    assert points.channels[0].shape == (110_000,)
+    assert points.channels[1].shape == (110_000,)
 
 
 def test_huge_compression(length, reply):
