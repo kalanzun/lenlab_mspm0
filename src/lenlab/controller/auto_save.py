@@ -7,11 +7,8 @@ from lenlab.model.points import Points
 
 
 class AutoSave(QObject):
-    points: Points | None
+    points: Points
     save_idx: int
-
-    unsaved: bool
-    unsaved_changed = Signal(bool)
 
     auto_save: bool
     auto_save_changed = Signal(bool)
@@ -21,26 +18,18 @@ class AutoSave(QObject):
 
     def __init__(self):
         super().__init__()
-        self.points = None
+        self.points = Points()
         self.save_idx = 0
 
-        self.unsaved = False
         self.auto_save = False
         self.file_path = None
 
-    def set_points(self, points: Points):
-        self.points = points
+    def clear(self):
+        self.points.clear()
         self.save_idx = 0
 
-        self.set_unsaved(bool(points.index))
         self.set_auto_save(False)
         self.set_file_path(None)
-
-    @Slot(bool)
-    def set_unsaved(self, unsaved: bool):
-        if unsaved != self.unsaved:
-            self.unsaved = unsaved
-            self.unsaved_changed.emit(unsaved)
 
     @Slot(bool)
     def set_auto_save(self, auto_save: bool):
@@ -49,14 +38,12 @@ class AutoSave(QObject):
             self.auto_save_changed.emit(auto_save)
 
             if auto_save:
-                self.save(0)
+                self.save(buffered=False)
 
-    @Slot(bool)
     def set_file_path(self, file_path: Path | None):
         self.file_path = file_path
         self.file_path_changed.emit(file_path.name if file_path is not None else "")
 
-    @Slot(str)
     def save_as(self, file_path: Path):
         points = self.points
 
@@ -73,18 +60,20 @@ class AutoSave(QObject):
             ):
                 file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
 
+        points.unsaved = False
         self.save_idx = points.index
-        self.set_unsaved(False)
         self.set_file_path(file_path)
 
-    def save(self, interval: float = 5.0):
-        if not self.unsaved or not self.auto_save or self.file_path is None:
+    def save(self, buffered: bool = True):
+        points = self.points
+
+        if not points.unsaved or not self.auto_save or self.file_path is None:
             return
 
-        points = self.points
-        n = int(interval / points.interval)
-        if points.index < self.save_idx + n:
-            return
+        if buffered:
+            n = int(5.0 / points.interval)
+            if points.index < self.save_idx + n:
+                return
 
         with self.file_path.open("a") as file:
             for t, ch1, ch2 in zip(
@@ -95,5 +84,5 @@ class AutoSave(QObject):
             ):
                 file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
 
+        points.unsaved = False
         self.save_idx = points.index
-        self.set_unsaved(False)

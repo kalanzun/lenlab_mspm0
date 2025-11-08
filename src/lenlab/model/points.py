@@ -4,22 +4,31 @@ from attrs import define, field
 
 @define
 class Points:
-    interval: float
+    interval: float = 0.0  # seconds
 
+    channels: list[np.ndarray] = field()  # volt
     index: int = 0
-    channels: list[np.ndarray] = field()
+
+    unsaved: bool = False
 
     @channels.default
     def _channels_factory(self):
-        return [
-            np.empty((100_000,), dtype=np.double),
-            np.empty((100_000,), dtype=np.double),
-        ]
+        # 100_000 doubles is 800 KiB and 2.7 hours at 100 ms
+        # 1 million doubles is 8 MiB and 5.5 hours at 20 ms
+        return [np.empty((100_000,), dtype=np.double) for _ in range(2)]
+
+    def clear(self):
+        self.interval = 0.0
+        self.index = 0
+        self.unsaved = False
 
     def parse_reply(self, reply: bytes):
         # interval = int.from_bytes(reply[4:8], byteorder="little")
         payload = np.frombuffer(reply, np.dtype("<u2"), offset=8)
         length = payload.shape[0] // 2
+        if length == 0:
+            return
+
         payload = payload.reshape((length, 2), copy=False)  # 2 channels interleaved
 
         index = self.index + length
@@ -30,6 +39,7 @@ class Points:
             channel[self.index : index] = payload[:, i] / 4096 * 3.3
 
         self.index = index
+        self.unsaved = True
 
     def get_current_time(self) -> float:
         # invalid when empty

@@ -11,7 +11,7 @@ class SaveAs:
     default_file_name: str
     file_formats: str
 
-    def __call__(self, method: Callable[[QWidget, str, str], None]) -> Callable[[QWidget], None]:
+    def __call__(self, method: Callable[[QWidget, str, str], None]) -> Callable[[QWidget], bool]:
         @wraps(method)
         def wrapper(parent: QWidget):
             file_name, file_format = QFileDialog.getSaveFileName(
@@ -22,7 +22,7 @@ class SaveAs:
             )
 
             if not file_name:  # the dialog was canceled
-                return
+                return False
 
             try:
                 method(parent, file_name, file_format)
@@ -32,5 +32,8 @@ class SaveAs:
 
             except Exception as e:  # display other errors
                 QMessageBox.critical(parent, self.title, str(e))
+                return False
+
+            return True
 
         return wrapper

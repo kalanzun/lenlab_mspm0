@@ -45,7 +45,7 @@ void volt_init(void);
 
 void volt_startLogging(uint32_t interval);
 
-void volt_stopLogging(void);
+void volt_getPoints(uint32_t interval);
 
 void volt_createLoggingExampleData(uint32_t interval);
 

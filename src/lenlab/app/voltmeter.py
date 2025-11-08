@@ -3,13 +3,14 @@ from datetime import timedelta
 from pathlib import Path
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import Qt, QTimer, Slot
+from PySide6.QtCore import Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -110,15 +111,30 @@ class VoltmeterChart(QWidget):
         self.x_axis.setMax(self.get_time_limit(points.get_current_time() / unit))
         self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[unit]))
 
+    def clear(self):
+        for channel in self.channels:
+            channel.clear()
+
+        self.x_axis.setMax(4.0)
+        self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[1]))
+
 
 class VoltmeterWidget(QWidget):
     title = Translate("Voltmeter", "Voltmeter")
 
     intervals = [20, 50, 100, 200, 500, 1000, 2000, 5000]
 
+    active: bool
+    active_changed = Signal(bool)
+
+    stop_requested: bool
+
     def __init__(self, lenlab: Lenlab):
         super().__init__()
         self.lenlab = lenlab
+
+        self.active = False
+        self.stop_requested = False
 
         self.auto_save = AutoSave()
 
@@ -139,7 +155,6 @@ class VoltmeterWidget(QWidget):
         for interval in self.intervals:
             self.interval.addItem(f"{interval} ms")
         self.interval.setCurrentIndex(self.intervals.index(1000))
-        # self.voltmeter.active_changed.connect(self.interval.setDisabled)
 
         layout = QHBoxLayout()
 
@@ -160,6 +175,7 @@ class VoltmeterWidget(QWidget):
 
         button = QPushButton("Stop")
         button.clicked.connect(self.on_stop_clicked)
+        self.active_changed.connect(button.setEnabled)
         layout.addWidget(button)
 
         sidebar_layout.addLayout(layout)
@@ -214,8 +230,8 @@ class VoltmeterWidget(QWidget):
         sidebar_layout.addWidget(button)
 
         button = QPushButton(tr("Discard", "Verwerfen"))
-        # self.voltmeter.active_changed.connect(button.setDisabled)
-        # button.clicked.connect(self.on_discard_clicked)
+        self.active_changed.connect(button.setDisabled)
+        button.clicked.connect(self.on_discard_clicked)
         sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch(1)
@@ -228,23 +244,77 @@ class VoltmeterWidget(QWidget):
 
         self.lenlab.reply.connect(self.on_reply)
 
+    def clear(self):
+        self.interval.setEnabled(True)
+        self.time_field.setText("")
+        for field in self.fields:
+            field.setText("")
+
+    def set_active(self, active: bool):
+        if active != self.active:
+            self.active = active
+            self.active_changed.emit(active)
+
     @Slot()
     def on_start_clicked(self):
+        if self.active:
+            return
+
         if self.lenlab.adc_lock.acquire():
             index = self.interval.currentIndex()
             interval_25ns = self.intervals[index] * 40_000
-            self.points = Points(self.intervals[index] / 1000)
-            self.auto_save.set_points(self.points)
+            self.stop_requested = False
+            self.set_active(True)
             self.lenlab.send_command(command(b"v", interval_25ns))
 
     @Slot()
     def on_stop_clicked(self):
-        self.poll_timer.stop()
-        self.lenlab.send_command(command(b"x"))
+        if not self.active:
+            return
+
+        self.stop_requested = True
+
+        if self.poll_timer.isActive():
+            self.poll_timer.stop()
+            # poll timeout immediately
+            self.on_poll_timeout()
+
+    @Slot()
+    def on_discard_clicked(self):
+        if self.active:
+            return
+
+        if self.auto_save.points.unsaved:
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Lenlab")
+            dialog.setText(
+                tr("The voltmeter has unsaved data.", "Das Voltmeter hat ungespeicherte Daten.")
+            )
+            dialog.setInformativeText(
+                tr("Do you want to save the data?", "Möchten Sie die Daten speichern?")
+            )
+            dialog.setStandardButtons(
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel
+            )
+            result = dialog.exec()
+            if result == QMessageBox.StandardButton.Save:
+                if not self.on_save_as_clicked():
+                    return
+            elif result == QMessageBox.StandardButton.Cancel:
+                return
+
+        self.auto_save.clear()
+        self.chart.clear()
+        self.clear()
 
     @Slot()
     def on_poll_timeout(self):
-        self.lenlab.send_command(command(b"v"))
+        if self.stop_requested:
+            self.lenlab.send_command(command(b"x", 0))
+        else:
+            self.lenlab.send_command(command(b"x", 1))
 
     @staticmethod
     def format_time(time: float, show_ms: bool = True) -> str:
@@ -258,32 +328,47 @@ class VoltmeterWidget(QWidget):
 
     @Slot(bytes)
     def on_reply(self, reply):
-        if reply.startswith(b"Lv") or reply.startswith(b"Lu"):
+        points = self.auto_save.points
+
+        if reply.startswith(b"Lv"):  # start
+            interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
+            interval = interval_25ns / 40_000_000
+
+            points.interval = interval
+            self.interval.setEnabled(False)
+
+            interval_ms = max(200, interval_25ns // 40_000)
+            self.poll_timer.setInterval(interval_ms)
+            self.poll_timer.start()
+
+        elif reply.startswith(b"Lx"):  # new points
             length = int.from_bytes(reply[2:4], byteorder="little")
+            interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
 
-            if length == 0:  # start or empty poll
-                interval_25ns = int.from_bytes(reply[4:8], byteorder="little")
-                interval_ms = max(200, interval_25ns // 40_000)
-                self.poll_timer.setInterval(interval_ms)
+            if length:
+                points.parse_reply(reply)
 
-            else:  # new points
-                self.points.parse_reply(reply)
-                self.auto_save.set_unsaved(True)
-
-                self.chart.plot(self.points)
+                self.chart.plot(points)
                 self.auto_save.save()
 
                 self.time_field.setText(
-                    self.format_time(self.points.get_current_time(), self.points.interval < 1.0)
+                    self.format_time(points.get_current_time(), points.interval < 1.0)
                 )
                 for i, field in enumerate(self.fields):
                     if field.isEnabled():
-                        field.setText(f"{self.points.get_last_value(i):.3f} V")
+                        field.setText(f"{points.get_last_value(i):.3f} V")
 
-            self.poll_timer.start()
+            if interval_25ns == 0:  # stop
+                self.lenlab.adc_lock.release()
+                self.set_active(False)
+                self.auto_save.save(buffered=False)
 
-        elif reply == b"Lx\x00\x00stop":
-            self.lenlab.adc_lock.release()
+            elif self.stop_requested:
+                # poll timeout immediately
+                self.on_poll_timeout()
+
+            else:
+                self.poll_timer.start()
 
     @Slot()
     @SaveAs(

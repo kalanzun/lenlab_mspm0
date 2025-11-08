@@ -102,43 +102,44 @@ void volt_startLogging(uint32_t interval)
 {
     struct Volt* const self = &volt;
 
-    if (interval == 0) { // send points
-        // it may be empty
-        self->points[self->ping_pong].packet.length = self->point_index * POINT_SIZE;
-        terminal_transmitPacket(&self->points[self->ping_pong].packet);
+    DL_Timer_stopCounter(MAIN_TIMER_INST);
 
-        // ping pong if not empty
-        if (self->point_index) {
-            self->ping_pong = (self->ping_pong + 1) & 1;
-            self->point_index = self->point_reset;
-        }
-    }
+    volt_setLoggerMode(&self->adc[0]);
+    volt_setLoggerMode(&self->adc[1]);
 
-    else { // start logging
-        DL_Timer_stopCounter(MAIN_TIMER_INST);
+    packet_write(&self->points[0].packet, 'x', 0, interval);
+    packet_write(&self->points[1].packet, 'x', 0, interval);
 
-        volt_setLoggerMode(&self->adc[0]);
-        volt_setLoggerMode(&self->adc[1]);
+    self->ping_pong = 0;
+    self->point_index = 0;
+    self->point_reset = 0;
 
-        packet_write(&self->points[0].packet, 'v', 0, interval);
-        packet_write(&self->points[1].packet, 'v', 0, interval);
+    // interval in 25 ns
+    DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
+    DL_Timer_startCounter(MAIN_TIMER_INST);
 
-        self->ping_pong = 0;
-        self->point_index = 0;
-        self->point_reset = 0;
-
-        // interval in 25 ns
-        DL_Timer_setLoadValue(MAIN_TIMER_INST, interval - 1);
-        DL_Timer_startCounter(MAIN_TIMER_INST);
-
-        terminal_sendReply('v', interval);
-    }
+    terminal_sendReply('v', interval);
 }
 
-void volt_stopLogging(void)
+void volt_getPoints(uint32_t interval)
 {
-    DL_Timer_stopCounter(MAIN_TIMER_INST);
-    terminal_sendReply('x', ARG_STR("stop"));
+    struct Volt* const self = &volt;
+
+    if (interval == 0) { // stop logging
+        self->points[self->ping_pong].packet.arg = 0;
+        DL_Timer_stopCounter(MAIN_TIMER_INST);
+    }
+
+    // send points
+    // it may be empty
+    self->points[self->ping_pong].packet.length = self->point_index * POINT_SIZE;
+    terminal_transmitPacket(&self->points[self->ping_pong].packet);
+
+    // ping pong if not empty
+    if (self->point_index) {
+        self->ping_pong = (self->ping_pong + 1) & 1;
+        self->point_index = self->point_reset;
+    }
 }
 
 void volt_createLoggingExampleData(uint32_t interval)
