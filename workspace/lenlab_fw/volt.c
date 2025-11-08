@@ -107,8 +107,8 @@ void volt_startLogging(uint32_t interval)
     volt_setLoggerMode(&self->adc[0]);
     volt_setLoggerMode(&self->adc[1]);
 
-    packet_write(&self->points[0].packet, 'x', 0, interval);
-    packet_write(&self->points[1].packet, 'x', 0, interval);
+    packet_write(&self->points[0].packet, 'x', 0, 1);
+    packet_write(&self->points[1].packet, 'x', 0, 1);
 
     self->ping_pong = 0;
     self->point_index = 0;
@@ -121,11 +121,11 @@ void volt_startLogging(uint32_t interval)
     terminal_sendReply('v', interval);
 }
 
-void volt_getPoints(uint32_t interval)
+void volt_getPoints(uint32_t polling)
 {
     struct Volt* const self = &volt;
 
-    if (interval == 0) { // stop logging
+    if (polling == 0) { // stop logging
         self->points[self->ping_pong].packet.arg = 0;
         DL_Timer_stopCounter(MAIN_TIMER_INST);
     }
@@ -148,8 +148,8 @@ void volt_createLoggingExampleData(uint32_t interval)
 
     DL_Timer_stopCounter(MAIN_TIMER_INST);
 
-    packet_write(&self->points[0].packet, 'v', 0, interval);
-    packet_write(&self->points[1].packet, 'v', 0, interval);
+    packet_write(&self->points[0].packet, 'v', 0, 0);
+    packet_write(&self->points[1].packet, 'v', 0, 0);
 
     for (uint16_t i = 0; i < N_POINTS; i++) {
         self->points[0].payload[i] = (i << 2) | ((4096 - (i << 2)) << 16);

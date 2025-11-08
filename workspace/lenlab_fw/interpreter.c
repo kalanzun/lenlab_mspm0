@@ -62,7 +62,7 @@ void interpreter_handleCommand(void)
             volt_startLogging(cmd->arg);
             break;
 
-        case 'x': // get points
+        case 'x': // get points / stop logging
             volt_getPoints(cmd->arg);
             break;
 
