@@ -6,43 +6,69 @@ from PySide6.QtCore import QObject, Signal, Slot
 from lenlab.model.points import Points
 
 
+class Flag(QObject):
+    changed = Signal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.value = False
+
+    def __bool__(self) -> bool:
+        return self.value
+
+    @Slot(bool)
+    def set(self, value):
+        if value != self.value:
+            self.value = value
+            self.changed.emit(value)
+
+
+class PathProperty(QObject):
+    changed = Signal(str)
+
+    value: Path | None
+
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    def __bool__(self) -> bool:
+        return self.value is not None
+
+    def __str__(self) -> str:
+        return self.value.name if self.value is not None else ""
+
+    def set(self, value: Path | None):
+        if value != self.value:
+            self.value = value
+            self.changed.emit(str(self))
+
+
 class AutoSave(QObject):
     points: Points
     save_idx: int
-
-    auto_save: bool
-    auto_save_changed = Signal(bool)
-
-    file_path: Path | None
-    file_path_changed = Signal(str)
 
     def __init__(self):
         super().__init__()
         self.points = Points()
         self.save_idx = 0
 
-        self.auto_save = False
-        self.file_path = None
+        self.auto_save = Flag()
+        self.auto_save.changed.connect(self.on_auto_save_changed)
+
+        self.file_path = PathProperty()
 
     def clear(self):
         self.points.clear()
         self.save_idx = 0
 
-        self.set_auto_save(False)
-        self.set_file_path(None)
+        self.auto_save.set(False)
+        self.file_path.set(None)
 
     @Slot(bool)
-    def set_auto_save(self, auto_save: bool):
-        if auto_save != self.auto_save:
-            self.auto_save = auto_save
-            self.auto_save_changed.emit(auto_save)
-
-            if auto_save:
-                self.save(buffered=False)
-
-    def set_file_path(self, file_path: Path | None):
-        self.file_path = file_path
-        self.file_path_changed.emit(file_path.name if file_path is not None else "")
+    def on_auto_save_changed(self, auto_save: bool):
+        if auto_save:
+            self.save(buffered=False)
 
     def save_as(self, file_path: Path):
         points = self.points
@@ -62,12 +88,12 @@ class AutoSave(QObject):
 
         points.unsaved = False
         self.save_idx = points.index
-        self.set_file_path(file_path)
+        self.file_path.set(file_path)
 
     def save(self, buffered: bool = True):
         points = self.points
 
-        if not points.unsaved or not self.auto_save or self.file_path is None:
+        if not points.unsaved or not self.auto_save or not self.file_path:
             return
 
         if buffered:
@@ -75,7 +101,7 @@ class AutoSave(QObject):
             if points.index < self.save_idx + n:
                 return
 
-        with self.file_path.open("a") as file:
+        with self.file_path.value.open("a") as file:
             for t, ch1, ch2 in zip(
                 points.get_time(self.save_idx),
                 points.get_values(0, self.save_idx),

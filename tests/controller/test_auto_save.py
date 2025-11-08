@@ -6,30 +6,24 @@ from attrs import Factory, frozen
 
 from lenlab.controller.auto_save import AutoSave
 from lenlab.launchpad import protocol
-from lenlab.model.points import Points
 from lenlab.spy import Spy
 
 
 @pytest.fixture()
-def points():
-    return Points(1.0)
+def auto_save():
+    auto_save = AutoSave()
+    auto_save.points.interval = 1.0
+    return auto_save
 
 
 @pytest.fixture()
-def add_points(points):
+def add_points(auto_save):
     def add_points(n: int = 1):
         payload = b"\xe0\x04\x00\x08" * n
         reply = protocol.pack(b"v", b"\x00\x00\x00\x00", 4 * n) + payload
-        points.parse_reply(reply)
+        auto_save.points.parse_reply(reply)
 
     return add_points
-
-
-@pytest.fixture()
-def auto_save(points):
-    auto_save = AutoSave()
-    auto_save.set_points(points)
-    return auto_save
 
 
 @frozen
@@ -39,134 +33,108 @@ class MockFileObject:
     def write(self, content: str):
         self.content.append(content)
 
-    def get_value(self):
+    def get_content(self):
         return "".join(self.content)
 
 
 @frozen
 class MockPath:
     name: str
-    file_object: MockFileObject = Factory(MockFileObject)
+    mock_file_object: MockFileObject = Factory(MockFileObject)
 
     @contextmanager
     def open(self, mode):
         if mode == "w":
-            del self.file_object.content[:]
-        yield self.file_object
+            del self.mock_file_object.content[:]
+        yield self.mock_file_object
+
+    def read_text(self) -> str:
+        return self.mock_file_object.get_content()
+
+    def get_lines(self) -> list[str]:
+        return self.read_text().splitlines()
 
 
 @pytest.fixture()
-def file_path():
-    return MockPath("data.csv")
+def mock_path(auto_save):
+    mock_path = MockPath("data.csv")
+    auto_save.save_as(mock_path)
+    auto_save.auto_save.set(True)
+    return mock_path
 
 
-def test_set_points_resets_properties(points):
-    auto_save = AutoSave()
-
-    auto_save.set_unsaved(True)
-    auto_save.set_auto_save(True)
-    auto_save.set_file_path(Path())
-
-    unsaved_changed = Spy(auto_save.unsaved_changed)
-    auto_save_changed = Spy(auto_save.auto_save_changed)
-    file_path_changed = Spy(auto_save.file_path_changed)
-
-    auto_save.set_points(points)
-
-    assert unsaved_changed.get_single_arg() is False
-    assert auto_save.unsaved is False
-
-    assert auto_save_changed.get_single_arg() is False
-    assert auto_save.auto_save is False
-
-    assert file_path_changed.get_single_arg() == ""
-    assert auto_save.file_path is None
-
-
-def test_set_points_unsaved(points, add_points):
+def test_clear(auto_save, add_points, mock_path):
     add_points(1)
 
-    auto_save = AutoSave()
-    auto_save.set_points(points)
+    assert auto_save.points.unsaved
+    assert auto_save.auto_save
+    assert str(auto_save.file_path) == "data.csv"
 
-    assert auto_save.unsaved is True
+    auto_save.clear()
+
+    assert not auto_save.points.unsaved
+    assert not auto_save.auto_save
+    assert str(auto_save.file_path) == ""
 
 
-def test_save_as_empty(auto_save, file_path):
-    auto_save.save_as(file_path)
-
-    content = file_path.file_object.get_value()
+def test_save_as_empty(auto_save, mock_path):
+    content = mock_path.read_text()
     assert content.startswith("Lenlab")
-    assert len(content.splitlines()) == 2
 
-
-def test_save_as(auto_save, add_points, file_path):
-    add_points(1)
-
-    spy = Spy(auto_save.file_path_changed)
-    auto_save.save_as(file_path)
-
-    content = file_path.file_object.get_value()
-    assert content.startswith("Lenlab")
-    lines = content.splitlines()
-    assert len(lines) == 3
-    assert lines[-1] == "0.000000; 1.005469; 1.650000"
-
-    assert spy.get_single_arg() == "data.csv"
-
-
-def test_auto_save(auto_save, add_points, file_path):
-    auto_save.save_as(file_path)
-    auto_save.set_auto_save(True)
-
-    add_points(5)
-    auto_save.set_unsaved(True)
-
-    auto_save.save()
-    assert auto_save.unsaved is False
-
-    lines = file_path.file_object.get_value().splitlines()
-    assert len(lines) == 2 + 5
-
-
-def test_auto_save_batches(auto_save, add_points, file_path):
-    auto_save.save_as(file_path)
-    auto_save.set_auto_save(True)
-
-    add_points(3)
-    auto_save.set_unsaved(True)
-
-    auto_save.save()
-    assert auto_save.unsaved is True
-
-    lines = file_path.file_object.get_value().splitlines()
+    lines = mock_path.get_lines()
     assert len(lines) == 2
 
 
-def test_auto_save_everything(auto_save, add_points, file_path):
-    auto_save.save_as(file_path)
-    auto_save.set_auto_save(True)
+def test_save_as(auto_save, add_points):
+    add_points(1)
 
-    add_points(12)
-    auto_save.set_unsaved(True)
+    spy = Spy(auto_save.file_path.changed)
 
+    mock_path = MockPath("data.csv")
+    auto_save.save_as(mock_path)
+
+    assert spy.get_single_arg() == "data.csv"
+
+    content = mock_path.read_text()
+    assert content.startswith("Lenlab")
+
+    lines = mock_path.get_lines()
+    assert len(lines) == 3
+    assert lines[-1] == "0.000000; 1.005469; 1.650000"
+
+
+def test_auto_save(auto_save, add_points, mock_path):
+    add_points(5)
     auto_save.save()
-    assert auto_save.unsaved is False
+    assert not auto_save.points.unsaved
 
-    lines = file_path.file_object.get_value().splitlines()
+    lines = mock_path.get_lines()
+    assert len(lines) == 2 + 5
+
+
+def test_auto_save_batches(auto_save, add_points, mock_path):
+    add_points(3)
+    auto_save.save()
+    assert auto_save.points.unsaved
+
+    lines = mock_path.get_lines()
+    assert len(lines) == 2
+
+
+def test_auto_save_everything(auto_save, add_points, mock_path):
+    add_points(12)
+    auto_save.save()
+    assert not auto_save.points.unsaved
+
+    lines = mock_path.get_lines()
     assert len(lines) == 2 + 12
 
 
-def test_auto_save_twice(auto_save, add_points, file_path):
-    auto_save.save_as(file_path)
-    auto_save.set_auto_save(True)
-
+def test_auto_save_twice(auto_save, add_points, mock_path):
     for i in range(2):
         add_points(5)
-        auto_save.set_unsaved(True)
-
         auto_save.save()
-        assert auto_save.unsaved is False
+        assert not auto_save.points.unsaved
 
-        lines = file_path.file_object.get_value().splitlines()
+        lines = mock_path.get_lines()
         assert len(lines) == 2 + (i + 1) * 5

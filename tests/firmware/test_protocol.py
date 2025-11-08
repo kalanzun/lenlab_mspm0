@@ -185,17 +185,13 @@ def test_voltmeter(firmware, send, receive):
 
     sleep(1)
 
-    send(command(b"v", 0))  # get points
+    send(command(b"x", 0))  # get points and stop logging
     reply = receive(8)
-    assert reply.startswith(b"Lv")
+    assert reply.startswith(b"Lx")
     length = int.from_bytes(reply[2:4], byteorder="little")
     assert length == 20
     arg = int.from_bytes(reply[4:8], byteorder="little")
-    assert arg == 8000000
+    assert arg == 0
 
     payload = receive(length)
     assert payload
-
-    send(command(b"x", 0))  # stop
-    reply = receive(8)
-    assert reply == b"Lx\x00\x00stop"

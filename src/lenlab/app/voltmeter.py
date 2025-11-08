@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QComboBox,
@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..controller.auto_save import AutoSave
+from ..controller.auto_save import AutoSave, Flag
 from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
 from ..model.points import Points
@@ -119,22 +119,6 @@ class VoltmeterChart(QWidget):
         self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[1]))
 
 
-class Flag(QObject):
-    changed = Signal(bool)
-
-    def __init__(self):
-        super().__init__()
-        self.flag = False
-
-    def __bool__(self) -> bool:
-        return self.flag
-
-    def set(self, flag: bool):
-        if flag != self.flag:
-            self.flag = flag
-            self.changed.emit(flag)
-
-
 class VoltmeterWidget(QWidget):
     title = Translate("Voltmeter", "Voltmeter")
 
@@ -224,14 +208,14 @@ class VoltmeterWidget(QWidget):
 
         self.file_name = QLineEdit()
         self.file_name.setReadOnly(True)
-        self.auto_save.file_path_changed.connect(self.file_name.setText)
+        self.auto_save.file_path.changed.connect(self.file_name.setText)
         sidebar_layout.addWidget(self.file_name)
 
         checkbox = BoolCheckBox(tr("Automatic saving", "Automatisch speichern"))
         # self.auto_save_check_box.setEnabled(False)
-        checkbox.check_changed.connect(self.auto_save.set_auto_save)
-        # set_auto_save might cause a change back in case of an error
-        self.auto_save.auto_save_changed.connect(
+        checkbox.check_changed.connect(self.auto_save.auto_save.set)
+        # auto_save.set might cause a change back in case of an error
+        self.auto_save.auto_save.changed.connect(
             checkbox.setChecked, Qt.ConnectionType.QueuedConnection
         )
         sidebar_layout.addWidget(checkbox)
