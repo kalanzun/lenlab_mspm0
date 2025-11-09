@@ -20,6 +20,6 @@ class CSVWriter:
         file.write(f"{self.x},{self.ch1},{self.ch2}\n")
 
     def write_data(self, file: TextIO, x, ch1, ch2):
-        line_format = f"{{0:{self.x_format}}},{{1:{self.ch1_format}}},{{2:{self.ch2_format}}}\n"
+        line_template = f"%{self.x_format},%{self.ch1_format},%{self.ch2_format}\n"
         for _x, _ch1, _ch2 in zip(x, ch1, ch2, strict=False):
-            file.write(line_format.format(_x, _ch1, _ch2))
+            file.write(line_template % (_x, _ch1, _ch2))
