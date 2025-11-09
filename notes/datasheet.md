@@ -38,6 +38,8 @@ time range: 30 ms, 12 ms, or 6 ms
 
 Note: The Lenlab software automatically selects the sample rate (and time range) according to the sine frequency of the signal generator.
 
+Note: The ADC measurement is delayed by 400 ns after the DAC changes the sample.
+
 software trigger: synchronized with DAC, offset compensation, positive zero-crossing in the middle of the time range
 
 peak-to-peak voltage: 3.3 V
@@ -46,16 +48,16 @@ max amplitude: 1.65 V
 
 virtual zero at mid-level between GND and 3V3
 
-sample window: 500 ns (one half microsecond)
+sample window: 400 ns
 
 ## Voltmeter
 
-logger intervals (sample rates): 20, 50, 100, 200, 500, 1000 ms (common timer with DAC)
+logger intervals (sample rates): 20, 50, 100, 200, 500, 1000, 2000, 5000 ms (common timer with DAC)
 
 voltage range: 0 to 3.3 V
 
 zero level at GND
 
-sample window: 500 us (one half millisecond)
+sample window: 1 ms
 
 hardware averaging: 16 samples

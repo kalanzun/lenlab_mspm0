@@ -26,8 +26,8 @@ Voltmeter does not enable DMA, but fetches the values from the FIFO in the inter
 Different sample window duration:
 
 ```c
-DL_ADC12_setSampleTime0(ADC12_CH1_INST,20); // 500 ns
-DL_ADC12_setSampleTime0(ADC12_CH1_INST,24000); // 600 us
+DL_ADC12_setSampleTime0(ADC12_CH1_INST,8); // 400 ns
+DL_ADC12_setSampleTime0(ADC12_CH1_INST,20000); // 1 ms
 ```
 
 Voltmeter triggers the ADC slowly, oscilloscope quickly.
