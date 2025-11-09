@@ -1,19 +1,5 @@
 # Lenlab 8 for MSPM0G3507
 
-## Liebe Studierende im LEN Workshop B am KIT!
-
-Lenlab ab der Version 8.2 funktioniert für den LEN Workshop B.
-
-Starten Sie Lenlab, nachdem `uv` installiert ist und wenn Sie Internet haben, mit 
-
-```shell
-uvx --refresh lenlab@latest
-```
-
-Dann lädt `uvx` automatisch Updates herunter.
-
-Wenn Sie nicht weiterkommen, fragen Sie bitte im Ilias und in den Tutorien.
-
 ## Installation (uv)
 
 Starten Sie das Programm "Terminal".
