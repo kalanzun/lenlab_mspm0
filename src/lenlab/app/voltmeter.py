@@ -364,7 +364,7 @@ class VoltmeterWidget(QWidget):
             points.interval = interval
             self.interval.setEnabled(False)
 
-            if not self.polling:  # no very quick stop pending
+            if self.polling:  # no very quick stop pending
                 interval_ms = max(200, interval_25ns // 40_000)
                 self.poll_timer.setInterval(interval_ms)
 
