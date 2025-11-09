@@ -1,8 +1,8 @@
-from importlib import metadata
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from lenlab.controller.csv import CSVWriter
 from lenlab.model.points import Points
 
 
@@ -70,21 +70,19 @@ class AutoSave(QObject):
         if auto_save:
             self.save(buffered=False)
 
+    csv_writer = CSVWriter("voltmeter")
+
     def save_as(self, file_path: Path):
         points = self.points
 
         with file_path.open("w") as file:
-            version = metadata.version("lenlab")
-            file.write(f"Lenlab MSPM0 {version} Voltmeter\n")
-            # TODO: csv file format translate?
-            file.write("Zeit; Kanal_1; Kanal_2\n")
-            for t, ch1, ch2 in zip(
+            self.csv_writer.write_head(file)
+            self.csv_writer.write_data(
+                file,
                 points.get_time(self.save_idx),
                 points.get_values(0),
                 points.get_values(1),
-                strict=True,
-            ):
-                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
+            )
 
         points.unsaved = False
         self.save_idx = points.index
@@ -102,13 +100,12 @@ class AutoSave(QObject):
                 return
 
         with self.file_path.value.open("a") as file:
-            for t, ch1, ch2 in zip(
+            self.csv_writer.write_data(
+                file,
                 points.get_time(self.save_idx),
                 points.get_values(0, self.save_idx),
                 points.get_values(1, self.save_idx),
-                strict=True,
-            ):
-                file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
+            )
 
         points.unsaved = False
         self.save_idx = points.index

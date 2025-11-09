@@ -1,8 +1,9 @@
-from importlib import metadata
 from typing import Self, TextIO
 
 import numpy as np
 from attrs import Factory, frozen
+
+from lenlab.controller.csv import CSVWriter
 
 
 @frozen
@@ -36,12 +37,11 @@ class Waveform:
     def channel_aligned(self, i: int) -> np.ndarray:
         return self.channels[i][self.offset : self.offset + 6001]
 
+    csv_writer = CSVWriter("oscilloscope")
+
     def save_as(self, file: TextIO):
-        version = metadata.version("lenlab")
-        file.write(f"Lenlab MSPM0 {version} Oszilloskop\n")
-        file.write("Zeit; Kanal_1; Kanal_2\n")
         # time is always 6001 points, channels may be empty
-        for t, ch1, ch2 in zip(
-            self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1), strict=False
-        ):
-            file.write(f"{t:f}; {ch1:f}; {ch2:f}\n")
+        self.csv_writer.write_head(file)
+        self.csv_writer.write_data(
+            file, self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1)
+        )

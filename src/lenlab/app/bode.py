@@ -1,4 +1,3 @@
-from importlib import metadata
 from typing import TextIO
 
 import numpy as np
@@ -15,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..controller.csv import CSVWriter
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
@@ -263,12 +263,16 @@ class BodePlotter(QObject):
             self.active = False
             self.lenlab.adc_lock.release()
 
+    csv_writer = CSVWriter("bode_plot", "frequency", "magnitude", "phase", ".0f")
+
     def save_as(self, file: TextIO):
-        version = metadata.version("lenlab")
-        file.write(f"Lenlab MSPM0 {version} Bode\n")
-        file.write("Frequenz; Betrag; Phase\n")
-        for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
-            file.write(f"{m.x():.0f}; {m.y():f}; {p.y():f}\n")
+        self.csv_writer.write_head(file)
+        self.csv_writer.write_data(
+            file,
+            (m.x() for m in self.magnitude.points()),
+            (m.y() for m in self.magnitude.points()),
+            (p.y() for p in self.phase.points()),
+        )
 
 
 class PinAssignment(Message):

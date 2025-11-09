@@ -99,7 +99,7 @@ def test_save_as(auto_save, add_points):
 
     lines = mock_path.get_lines()
     assert len(lines) == 3
-    assert lines[-1] == "0.000000; 1.005469; 1.650000"
+    assert lines[-1] == "0.000000,1.005469,1.650000"
 
 
 def test_auto_save(auto_save, add_points, mock_path):
