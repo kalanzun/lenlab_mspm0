@@ -1,4 +1,4 @@
-from typing import TextIO
+from pathlib import Path
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
@@ -181,9 +181,8 @@ class BodeWidget(QWidget):
         "lenlab_bode.csv",
         "CSV (*.csv)",
     )
-    def on_save_as_clicked(self, file_name: str, file_format: str):
-        with open(file_name, "w") as file:
-            self.bode.save_as(file)
+    def on_save_as_clicked(self, file_path: Path, file_format: str):
+        self.bode.save_as(file_path)
 
 
 class BodePlotter(QObject):
@@ -265,14 +264,13 @@ class BodePlotter(QObject):
 
     csv_writer = CSVWriter("bode_plot", "frequency", "magnitude", "phase", ".0f")
 
-    def save_as(self, file: TextIO):
-        self.csv_writer.write_head(file)
-        self.csv_writer.write_data(
-            file,
-            (m.x() for m in self.magnitude.points()),
-            (m.y() for m in self.magnitude.points()),
-            (p.y() for p in self.phase.points()),
-        )
+    def save_as(self, file_path: Path):
+        with file_path.open("w") as file:
+            write = file.write
+            write(self.csv_writer.head())
+            line_template = self.csv_writer.line_template()
+            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
+                write(line_template % (m.x(), m.y(), p.y()))
 
 
 class PinAssignment(Message):

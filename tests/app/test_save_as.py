@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
@@ -42,9 +44,9 @@ def test_save_as(get_save_file_name, critical):
         "default.filename",
         "Binary (*.bin)",
     )
-    def write(parent, file_name, file_format):
+    def write(parent: object, file_name: Path, file_format: str):
         assert parent is self
-        assert file_name == "default.filename"
+        assert file_name.name == "default.filename"
         assert file_format == "Binary (*.bin)"
 
     write(self)

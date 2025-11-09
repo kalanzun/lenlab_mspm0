@@ -26,8 +26,8 @@ def test_success(programmer):
     programmer.programmer.success.emit(ProgrammingSuccessful())
 
 
-def test_export(programmer, save_file):
-    programmer.on_export_clicked()
+def test_export(programmer, mock_path):
+    programmer.on_export_clicked(file_path=mock_path)
 
-    content = save_file.read_bytes()
+    content = mock_path.read_bytes()
     assert len(content) > 0

@@ -58,11 +58,10 @@ def test_single(spy, oscilloscope):
     assert not oscilloscope.active
 
 
-def test_save_as(oscilloscope, save_file):
-    oscilloscope.on_save_as_clicked()
+def test_save_as(oscilloscope, mock_path):
+    oscilloscope.on_save_as_clicked(file_path=mock_path)
 
-    content = save_file.read_text()
-    assert len(content) > 0
+    assert mock_path.get_line_count() == 2
 
 
 def test_reply(lenlab, spy, oscilloscope):

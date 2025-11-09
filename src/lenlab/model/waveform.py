@@ -1,4 +1,5 @@
-from typing import Self, TextIO
+from pathlib import Path
+from typing import Self
 
 import numpy as np
 from attrs import Factory, frozen
@@ -39,9 +40,13 @@ class Waveform:
 
     csv_writer = CSVWriter("oscilloscope")
 
-    def save_as(self, file: TextIO):
-        # time is always 6001 points, channels may be empty
-        self.csv_writer.write_head(file)
-        self.csv_writer.write_data(
-            file, self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1)
-        )
+    def save_as(self, file_path: Path):
+        with file_path.open("w") as file:
+            write = file.write
+            write(self.csv_writer.head())
+            line_template = self.csv_writer.line_template()
+            # time is always 6001 points, channels may be empty
+            for t, ch1, ch2 in zip(
+                self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1), strict=False
+            ):
+                write(line_template % (t, ch1, ch2))

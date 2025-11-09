@@ -119,7 +119,7 @@ class VoltmeterChart(QWidget):
         self.x_axis.setMax(4.0)
         self.x_axis.setTitleText(str(self.x_label).format(self.unit_labels[1]))
 
-    def save_image(self, file_name, file_format, points):
+    def save_image(self, file_path: Path, file_format: str, points: Points):
         fig, ax = plt.subplots(figsize=[12.8, 9.6], dpi=150)
 
         if points.index:
@@ -150,7 +150,7 @@ class VoltmeterChart(QWidget):
 
             ax.legend()
 
-        fig.savefig(file_name, format=file_format[:3].lower())
+        fig.savefig(file_path, format=file_format[:3].lower())
 
 
 class VoltmeterWidget(QWidget):
@@ -391,8 +391,8 @@ class VoltmeterWidget(QWidget):
         "lenlab_volt.csv",
         "CSV (*.csv)",
     )
-    def on_save_as_clicked(self, file_name: str, file_format: str):
-        self.auto_save.save_as(Path(file_name))
+    def on_save_as_clicked(self, file_path: Path, file_format: str):
+        self.auto_save.save_as(file_path)
 
     @Slot()
     @SaveAs(
@@ -400,5 +400,5 @@ class VoltmeterWidget(QWidget):
         "lenlab_volt.svg",
         "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
     )
-    def on_save_image_clicked(self, file_name: str, file_format: str):
-        self.chart.save_image(file_name, file_format, self.auto_save.points)
+    def on_save_image_clicked(self, file_path: Path, file_format: str):
+        self.chart.save_image(file_path, file_format, self.auto_save.points)

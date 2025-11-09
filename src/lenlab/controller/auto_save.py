@@ -76,13 +76,16 @@ class AutoSave(QObject):
         points = self.points
 
         with file_path.open("w") as file:
-            self.csv_writer.write_head(file)
-            self.csv_writer.write_data(
-                file,
+            write = file.write
+            write(self.csv_writer.head())
+            line_template = self.csv_writer.line_template()
+            for t, ch1, ch2 in zip(
                 points.get_time(self.save_idx),
                 points.get_values(0),
                 points.get_values(1),
-            )
+                strict=True,
+            ):
+                write(line_template % (t, ch1, ch2))
 
         points.unsaved = False
         self.save_idx = points.index
@@ -100,12 +103,15 @@ class AutoSave(QObject):
                 return
 
         with self.file_path.value.open("a") as file:
-            self.csv_writer.write_data(
-                file,
+            write = file.write
+            line_template = self.csv_writer.line_template()
+            for t, ch1, ch2 in zip(
                 points.get_time(self.save_idx),
                 points.get_values(0, self.save_idx),
                 points.get_values(1, self.save_idx),
-            )
+                strict=True,
+            ):
+                write(line_template % (t, ch1, ch2))
 
         points.unsaved = False
         self.save_idx = points.index

@@ -77,19 +77,18 @@ def test_reply(unlocked, bode, waveform):
     bode.bode.on_bode(waveform)
 
 
-def test_save_as(unlocked, bode, save_file, waveform):
+def test_save_as(unlocked, bode, waveform, mock_path):
     bode.on_start_clicked()
     assert bode.bode.active is True
 
     bode.bode.on_bode(waveform)
 
-    bode.on_save_as_clicked()
+    bode.on_save_as_clicked(file_path=mock_path)
 
-    content = save_file.read_text()
-    assert len(content) > 0
+    assert mock_path.get_line_count() == 3
 
 
-def test_finish(spy, bode, save_file, waveform):
+def test_finish(spy, bode, waveform):
     bode.on_start_clicked()
     assert bode.bode.active is True
 

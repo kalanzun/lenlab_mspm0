@@ -1,5 +1,3 @@
-from io import StringIO
-
 import numpy as np
 import pytest
 
@@ -49,7 +47,6 @@ def test_channel_aligned(waveform, index):
     assert value_0 == 88
 
 
-def test_save_as(waveform):
-    file = StringIO()
-    waveform.save_as(file)
-    assert len(file.getvalue().splitlines()) == 2 + 6001
+def test_save_as(waveform, mock_path):
+    waveform.save_as(mock_path)
+    assert mock_path.get_line_count() == 2 + 6001

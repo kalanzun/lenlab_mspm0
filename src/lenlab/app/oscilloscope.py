@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, Signal, Slot
@@ -207,6 +208,5 @@ class OscilloscopeWidget(QWidget):
         "lenlab_osci.csv",
         "CSV (*.csv)",
     )
-    def on_save_as_clicked(self, file_name: str, file_format: str):
-        with open(file_name, "w") as file:
-            self.waveform.save_as(file)
+    def on_save_as_clicked(self, file_path: Path, file_format: str):
+        self.waveform.save_as(file_path)

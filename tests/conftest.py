@@ -1,11 +1,13 @@
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
+from attrs import define
 from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
-from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6.QtWidgets import QApplication
 
 
 def pytest_addoption(parser):
@@ -80,31 +82,51 @@ def output():
     return output
 
 
-class SaveFile:
-    def __init__(self, base_path):
-        self.base_path = base_path
-        self.cancel = False
+@define
+class MockFileObject:
+    value: str | bytes
 
-    def __call__(self, parent, title, file_name, file_format):
-        if self.cancel:
-            return "", ""
+    def write(self, value: str | bytes):
+        assert type(value) is type(self.value)
+        self.value += value
 
-        self.file_path = self.base_path / file_name
-        return str(self.file_path), file_format
 
-    def read_text(self):
-        return self.file_path.read_text(encoding="utf-8")
+@define
+class MockPath:
+    name: str = "data.csv"
+    mock_file_object: MockFileObject | None = None
 
-    def read_bytes(self):
-        return self.file_path.read_bytes()
+    @contextmanager
+    def open(self, mode):
+        assert mode in {"w", "wb", "a", "ab"}
+
+        if mode == "w":
+            self.mock_file_object = MockFileObject("")
+        elif mode == "wb":
+            self.mock_file_object = MockFileObject(b"")
+
+        yield self.mock_file_object
+
+    def write_bytes(self, value: bytes):
+        self.mock_file_object = MockFileObject(value)
+
+    def write_text(self, value: str):
+        self.mock_file_object = MockFileObject(value)
+
+    def read_bytes(self) -> bytes:
+        assert isinstance(self.mock_file_object.value, bytes)
+        return self.mock_file_object.value
+
+    def read_text(self) -> str:
+        assert isinstance(self.mock_file_object.value, str)
+        return self.mock_file_object.value
+
+    def get_line_count(self) -> int:
+        assert isinstance(self.mock_file_object.value, str)
+        return self.mock_file_object.value.count("\n")
 
 
 @pytest.fixture()
-def save_file(monkeypatch, output):
-    save_file = SaveFile(output)
-    monkeypatch.setattr(
-        QFileDialog,
-        "getSaveFileName",
-        save_file,
-    )
-    return save_file
+def mock_path():
+    mock_path = MockPath()
+    return mock_path
