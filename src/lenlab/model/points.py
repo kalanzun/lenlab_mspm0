@@ -80,10 +80,11 @@ class Points(Plot):
 
     def get_plot_time(self, time_unit: float) -> np.ndarray:
         batch_size = self.get_batch_size()
+        length = self.index // batch_size
         return np.linspace(
             0.0,
-            self.index * self.interval / time_unit,
-            self.index // batch_size,
+            length * batch_size * self.interval / time_unit,
+            length,
             endpoint=False,
             dtype=np.double,
         )
