@@ -31,7 +31,7 @@ class BodeChart(QWidget):
 
     x_label = Translate("frequency [Hz]", "Frequenz [Hz]")
     m_label = Translate("magnitude [dB]", "Betrag [dB]")
-    p_label = Translate("phase [deg]", "Phase [Grad]")
+    p_label = Translate("phase [°]", "Phase [°]")
 
     def __init__(self, channels: list[QLineSeries]):
         super().__init__()
