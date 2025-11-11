@@ -2,8 +2,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from lenlab.controller.csv import CSVWriter
-from lenlab.model.points import Points
+from ..model.points import Points
+from .csv import CSVWriter
 
 
 class Flag(QObject):

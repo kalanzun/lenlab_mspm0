@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from PySide6.QtCore import Signal, Slot
@@ -16,8 +15,6 @@ from .chart import Chart
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
 from .signal import SignalWidget
-
-logger = logging.getLogger(__name__)
 
 
 class OscilloscopeChart(Chart):

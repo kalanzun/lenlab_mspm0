@@ -1,6 +1,6 @@
 from attrs import frozen
 
-from lenlab.language import Language
+from .language import Language
 
 
 def tr(english: str, german: str) -> str:

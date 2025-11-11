@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta
 from pathlib import Path
 
@@ -22,8 +21,6 @@ from ..translate import Translate, tr
 from .chart import Chart
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
-
-logger = logging.getLogger(__name__)
 
 
 class VoltmeterWidget(QWidget):

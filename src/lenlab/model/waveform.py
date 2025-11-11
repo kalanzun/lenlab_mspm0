@@ -4,8 +4,7 @@ from typing import Self
 import numpy as np
 from attrs import Factory, frozen
 
-from lenlab.controller.csv import CSVWriter
-
+from ..controller.csv import CSVWriter
 from .plot import Plot
 
 

@@ -2,10 +2,10 @@ import logging
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
-from lenlab.launchpad.discovery import Discovery
-from lenlab.launchpad.terminal import Terminal
-from lenlab.message import Message
-from lenlab.queued import QueuedCall
+from ..launchpad.discovery import Discovery
+from ..launchpad.terminal import Terminal
+from ..message import Message
+from ..queued import QueuedCall
 
 logger = logging.getLogger(__name__)
 

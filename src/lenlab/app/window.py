@@ -2,13 +2,12 @@ from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
-from lenlab.app.oscilloscope import OscilloscopeWidget
-
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
 from ..translate import tr
 from .bode import BodeWidget
 from .figure import LaunchpadWidget
+from .oscilloscope import OscilloscopeWidget
 from .poster import PosterWidget
 from .programmer import ProgrammerWidget
 from .voltmeter import VoltmeterWidget

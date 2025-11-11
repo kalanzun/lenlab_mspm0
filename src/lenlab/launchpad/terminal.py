@@ -4,8 +4,7 @@ from typing import Self
 from PySide6.QtCore import QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
-from lenlab.message import Message
-
+from ..message import Message
 from .port_info import PortInfo
 
 logger = logging.getLogger(__name__)
