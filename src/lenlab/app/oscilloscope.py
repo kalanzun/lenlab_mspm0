@@ -1,9 +1,7 @@
 import logging
 from pathlib import Path
 
-from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
-from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtGui import QPainter
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
@@ -14,6 +12,7 @@ from PySide6.QtWidgets import (
 from ..controller.lenlab import Lenlab
 from ..model.waveform import Waveform
 from ..translate import Translate, tr
+from .chart import Chart
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
 from .signal import SignalWidget
@@ -21,59 +20,13 @@ from .signal import SignalWidget
 logger = logging.getLogger(__name__)
 
 
-class OscilloscopeChart(QWidget):
-    labels = (
-        Translate("Channel 1 (ADC 0, PA 24)", "Kanal 1 (ADC 0, PA 24)"),
-        Translate("Channel 2 (ADC 1, PA 17)", "Kanal 2 (ADC 1, PA 17)"),
-    )
+class OscilloscopeChart(Chart):
+    time_unit = 1e-3
 
-    x_label = Translate("time [ms]", "Zeit [ms]")
-    y_label = Translate("voltage [V]", "Spannung [V]")
+    x_range = (-1.5, 1.5)
+    y_range = (-2.0, 2.0)
 
-    def __init__(self):
-        super().__init__()
-
-        self.chart_view = QChartView()
-        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.chart = self.chart_view.chart()
-        # chart.setTheme(QChart.ChartTheme.ChartThemeLight)  # default, grid lines faint
-        # chart.setTheme(QChart.ChartTheme.ChartThemeDark)  # odd gradient
-        # chart.setTheme(QChart.ChartTheme.ChartThemeBlueNcs)  # grid lines faint
-        self.chart.setTheme(
-            QChart.ChartTheme.ChartThemeQt
-        )  # light and dark green, stronger grid lines
-
-        self.x_axis = QValueAxis()
-        self.x_axis.setRange(-1.5, 1.5)
-        self.x_axis.setTickCount(7)
-        self.x_axis.setLabelFormat("%g")
-        self.x_axis.setTitleText(str(self.x_label))
-        self.chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
-
-        self.y_axis = QValueAxis()
-        self.y_axis.setRange(-2.0, 2.0)
-        self.y_axis.setTickCount(5)
-        self.y_axis.setLabelFormat("%g")
-        self.y_axis.setTitleText(str(self.y_label))
-        self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
-
-        self.channels = [QLineSeries() for _ in self.labels]
-        for channel, label in zip(self.channels, self.labels, strict=True):
-            channel.setName(str(label))
-            self.chart.addSeries(channel)
-            channel.attachAxis(self.x_axis)
-            channel.attachAxis(self.y_axis)
-
-        layout = QHBoxLayout()
-        layout.addWidget(self.chart_view)
-        self.setLayout(layout)
-
-    def plot(self, waveform: Waveform):
-        time_ms = waveform.time_aligned() * 1e3
-        for i, channel in enumerate(self.channels):
-            channel.replaceNp(time_ms, waveform.channel_aligned(i))
-
-        self.x_axis.setRange(-3e6 * waveform.time_step, 3e6 * waveform.time_step)
+    x_tick_count = 7
 
 
 class OscilloscopeWidget(QWidget):

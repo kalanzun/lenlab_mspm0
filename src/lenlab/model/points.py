@@ -1,9 +1,11 @@
 import numpy as np
 from attrs import define, field
 
+from .plot import Plot
+
 
 @define
-class Points:
+class Points(Plot):
     interval: float = 0.0  # seconds
 
     channels: list[np.ndarray] = field()  # volt
@@ -58,11 +60,29 @@ class Points:
         else:
             return int(60 / self.interval)  # minutes
 
-    def get_plot_time(self, unit: float = 1.0) -> np.ndarray:
+    def get_plot_time_unit(self) -> float:
+        current_time = self.get_current_time()
+        if current_time <= 2.0 * 60.0:  # 2 minutes
+            return 1.0  # seconds
+        elif current_time <= 2 * 60.0 * 60.0:  # 2 hours
+            return 60.0  # minutes
+        else:
+            return 3600.0  # hours
+
+    def get_plot_time_range(self) -> tuple[float, float]:
+        current_time = self.get_current_time() / self.get_plot_time_unit()
+        limits = [4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0, 120.0]
+        for x in limits:
+            if x >= current_time:
+                return 0.0, x
+
+        return 0.0, limits[-1]
+
+    def get_plot_time(self, time_unit: float) -> np.ndarray:
         batch_size = self.get_batch_size()
         return np.linspace(
             0.0,
-            self.index * self.interval / unit,
+            self.index * self.interval / time_unit,
             self.index // batch_size,
             endpoint=False,
             dtype=np.double,

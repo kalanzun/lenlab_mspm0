@@ -40,7 +40,7 @@ def test_parse_reply(length, reply, rising, falling):
     current_time = (length - 1) * points.interval
     assert points.get_current_time() == current_time
     assert np.allclose(
-        points.get_plot_time(),
+        points.get_plot_time(1.0),
         np.linspace(0, current_time, length, endpoint=True, dtype=np.double),
     )
     assert np.allclose(points.get_plot_values(channel=0), rising)
@@ -57,7 +57,7 @@ def test_append_reply(length, reply, rising, falling):
     assert current_time < 2 * 60 * 60
     assert points.get_current_time() == current_time
     assert np.allclose(
-        points.get_plot_time(),
+        points.get_plot_time(1.0),
         np.linspace(0, current_time, 2 * length, endpoint=True, dtype=np.double),
     )
     assert np.allclose(points.get_plot_values(channel=0)[:length], rising)
@@ -109,7 +109,7 @@ def test_compression(length, reply):
 
     # it should batch to seconds after two minutes
     compressed = int(length * points.interval)
-    assert points.get_plot_time().shape == (compressed,)
+    assert points.get_plot_time(1.0).shape == (compressed,)
     assert points.get_plot_values(channel=0).shape == (compressed,)
     assert points.get_plot_values(channel=1).shape == (compressed,)
 
@@ -134,6 +134,6 @@ def test_huge_compression(length, reply):
 
     # it should batch to minutes after two hours
     compressed = int(100 * length * points.interval) // 60
-    assert points.get_plot_time().shape == (compressed,)
+    assert points.get_plot_time(1.0).shape == (compressed,)
     assert points.get_plot_values(channel=0).shape == (compressed,)
     assert points.get_plot_values(channel=1).shape == (compressed,)

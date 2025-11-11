@@ -31,16 +31,16 @@ def test_parse_reply(waveform):
     assert waveform.time_step == 1e-6
 
 
-def test_time_aligned(waveform):
-    time = waveform.time_aligned()
+def test_get_plot_time(waveform):
+    time = waveform.get_plot_time(1.0)
     assert time.shape == (6001,)
     assert time[0] == -3e-3
     assert time[-1] == 3e-3
 
 
 @pytest.mark.parametrize("index", [0, 1])
-def test_channel_aligned(waveform, index):
-    channel = waveform.channel_aligned(index)
+def test_get_plot_values(waveform, index):
+    channel = waveform.get_plot_values(index)
     assert channel.shape == (6001,)
 
     value_0 = int(round((float(channel[0]) + 1.65) / 3.3 * 4096))

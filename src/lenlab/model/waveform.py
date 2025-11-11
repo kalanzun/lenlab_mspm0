@@ -6,9 +6,11 @@ from attrs import Factory, frozen
 
 from lenlab.controller.csv import CSVWriter
 
+from .plot import Plot
+
 
 @frozen
-class Waveform:
+class Waveform(Plot):
     length: int = 0
     offset: int = 0
     time_step: float = 0.0
@@ -32,11 +34,18 @@ class Waveform:
 
         return cls(length, offset, time_step, channels)
 
-    def time_aligned(self) -> np.ndarray:
-        return np.linspace(-3e3, 3e3, 6001, endpoint=True) * self.time_step
+    def get_plot_time_unit(self) -> float:
+        return 1e-3
 
-    def channel_aligned(self, i: int) -> np.ndarray:
-        return self.channels[i][self.offset : self.offset + 6001]
+    def get_plot_time_range(self) -> tuple[float, float]:
+        # in ms
+        return -3e3 * 1e3 * self.time_step, 3e3 * 1e3 * self.time_step
+
+    def get_plot_time(self, time_unit: float) -> np.ndarray:
+        return np.arange(-3000, 3001, dtype=np.double) * (self.time_step / time_unit)
+
+    def get_plot_values(self, channel: int) -> np.ndarray:
+        return self.channels[channel][self.offset : self.offset + 6001]
 
     csv_writer = CSVWriter("oscilloscope")
 
@@ -47,6 +56,9 @@ class Waveform:
             line_template = self.csv_writer.line_template()
             # time is always 6001 points, channels may be empty
             for t, ch1, ch2 in zip(
-                self.time_aligned(), self.channel_aligned(0), self.channel_aligned(1), strict=False
+                self.get_plot_time(1.0),
+                self.get_plot_values(0),
+                self.get_plot_values(1),
+                strict=False,
             ):
                 write(line_template % (t, ch1, ch2))
