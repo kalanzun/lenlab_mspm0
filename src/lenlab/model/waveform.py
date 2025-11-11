@@ -15,6 +15,8 @@ class Waveform(Plot):
     time_step: float = 0.0
     channels: tuple[np.ndarray, np.ndarray] = Factory(lambda: (np.ndarray((0,)), np.ndarray((0,))))
 
+    plot_value_range = -2.0, 2.0
+
     @classmethod
     def parse_reply(cls, reply: bytes) -> Self:
         sampling_interval_25ns = int.from_bytes(reply[4:6], byteorder="little")

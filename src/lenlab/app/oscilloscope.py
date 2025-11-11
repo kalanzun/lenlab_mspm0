@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..controller.image import save_image
 from ..controller.lenlab import Lenlab
 from ..model.waveform import Waveform
 from ..translate import Translate, tr
@@ -105,6 +106,11 @@ class OscilloscopeWidget(QWidget):
         self.lenlab.adc_lock.locked.connect(button.setDisabled)
         sidebar_layout.addWidget(button)
 
+        button = QPushButton(tr("Save image", "Bild speichern"))
+        button.clicked.connect(self.on_save_image_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
+        sidebar_layout.addWidget(button)
+
         sidebar_layout.addStretch(1)
 
         main_layout = QHBoxLayout()
@@ -160,3 +166,12 @@ class OscilloscopeWidget(QWidget):
     )
     def on_save_as_clicked(self, file_path: Path, file_format: str):
         self.waveform.save_as(file_path)
+
+    @Slot()
+    @SaveAs(
+        tr("Save Oscilloscope Image", "Oszilloskop-Bild speichern"),
+        "lenlab_osci.svg",
+        "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
+    )
+    def on_save_image_clicked(self, file_path: Path, file_format: str):
+        save_image(self.waveform, file_path, file_format)

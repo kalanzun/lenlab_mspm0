@@ -4,6 +4,8 @@ from attrs import define
 
 @define
 class Plot:
+    plot_value_range = 0.0, 4.0
+
     def get_plot_time_unit(self) -> float:
         raise NotImplementedError()
 

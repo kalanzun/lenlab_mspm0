@@ -28,7 +28,7 @@ def save_image(plot: Plot, file_path: Path, file_format: str):
     time_unit = plot.get_plot_time_unit()
 
     ax.set_xlim(*plot.get_plot_time_range())
-    ax.set_ylim(0.0, 4.0)
+    ax.set_ylim(*plot.plot_value_range)
 
     ax.set_xlabel(str(x_label).format(time_labels[time_unit]))
     ax.set_ylabel(str(y_label))
