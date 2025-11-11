@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..controller.auto_save import AutoSave, Flag
+from ..controller.image import save_image
 from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
 from ..model.points import Points
@@ -271,4 +272,4 @@ class VoltmeterWidget(QWidget):
         "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
     )
     def on_save_image_clicked(self, file_path: Path, file_format: str):
-        self.chart.save_image(file_path, file_format, self.auto_save.points)
+        save_image(self.auto_save.points, file_path, file_format)
