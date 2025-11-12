@@ -15,7 +15,7 @@ def auto_save():
 @pytest.fixture()
 def add_points(auto_save):
     def add_points(n: int = 1):
-        payload = b"\xe0\x04\x00\x08" * n
+        payload = b"\xd9\x04\xff\x07" * n
         reply = protocol.pack(b"v", b"\x00\x00\x00\x00", 4 * n) + payload
         auto_save.points.parse_reply(reply)
 
@@ -63,12 +63,12 @@ def test_save_as(auto_save, add_points, mock_path):
     assert content.startswith("Lenlab")
 
     assert mock_path.get_line_count() == 3
-    assert content.endswith("0.000000,1.005469,1.650000\n")
+    assert content.endswith("0.000,1.000073,1.649597\n")
 
 
 def test_auto_save(auto_save, add_points, auto_save_path):
     add_points(5)
-    auto_save.save()
+    auto_save.save_update()
     assert not auto_save.points.unsaved
 
     assert auto_save_path.get_line_count() == 2 + 5
@@ -76,7 +76,7 @@ def test_auto_save(auto_save, add_points, auto_save_path):
 
 def test_auto_save_batches(auto_save, add_points, auto_save_path):
     add_points(3)
-    auto_save.save()
+    auto_save.save_update()
     assert auto_save.points.unsaved
 
     assert auto_save_path.get_line_count() == 2
@@ -84,7 +84,7 @@ def test_auto_save_batches(auto_save, add_points, auto_save_path):
 
 def test_auto_save_everything(auto_save, add_points, auto_save_path):
     add_points(12)
-    auto_save.save()
+    auto_save.save_update()
     assert not auto_save.points.unsaved
 
     assert auto_save_path.get_line_count() == 2 + 12
@@ -93,7 +93,7 @@ def test_auto_save_everything(auto_save, add_points, auto_save_path):
 def test_auto_save_twice(auto_save, add_points, auto_save_path):
     for i in range(2):
         add_points(5)
-        auto_save.save()
+        auto_save.save_update()
         assert not auto_save.points.unsaved
 
         assert auto_save_path.get_line_count() == 2 + (i + 1) * 5

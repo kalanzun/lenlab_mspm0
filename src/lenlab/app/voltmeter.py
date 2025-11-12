@@ -17,9 +17,10 @@ from ..controller.auto_save import AutoSave, Flag
 from ..controller.image import save_image
 from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
+from ..model.chart import Chart
 from ..model.points import Points
 from ..translate import Translate, tr
-from .chart import Chart
+from .chart import ChartWidget
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
 
@@ -46,7 +47,7 @@ class VoltmeterWidget(QWidget):
 
         chart_layout = QVBoxLayout()
 
-        self.chart = Chart()
+        self.chart = ChartWidget(Chart())
         chart_layout.addWidget(self.chart, 1)
 
         sidebar_layout = QVBoxLayout()
@@ -153,10 +154,22 @@ class VoltmeterWidget(QWidget):
         for field in self.fields:
             field.setText("")
 
-    def plot(self, points: Points):
-        self.auto_save.save(buffered=True)
-        self.chart.plot(points)
-        self.time_field.setText(self.format_time(points.get_current_time(), points.interval < 1.0))
+    @staticmethod
+    def format_time(time: float, show_ms: bool = True) -> str:
+        td = timedelta(seconds=time)
+        if td.microseconds:
+            return str(td)[:-4]
+        elif show_ms:
+            return f"{td}.00"
+        else:
+            return str(td)
+
+    def draw(self, points: Points):
+        self.auto_save.save_update(buffered=True)
+        if points.chart_updated:
+            self.chart.draw(points.create_chart())
+
+        self.time_field.setText(self.format_time(points.get_last_time(), points.interval < 1.0))
         for i, field in enumerate(self.fields):
             if field.isEnabled():
                 field.setText(f"{points.get_last_value(i):.3f} V")
@@ -214,16 +227,6 @@ class VoltmeterWidget(QWidget):
     def on_poll_timeout(self):
         self.lenlab.send_command(command(b"x", int(bool(self.polling))))
 
-    @staticmethod
-    def format_time(time: float, show_ms: bool = True) -> str:
-        td = timedelta(seconds=time)
-        if td.microseconds:
-            return str(td)[:-4]
-        elif show_ms:
-            return f"{td}.00"
-        else:
-            return str(td)
-
     @Slot(bytes)
     def on_reply(self, reply):
         points = self.auto_save.points
@@ -247,14 +250,14 @@ class VoltmeterWidget(QWidget):
 
             if length:
                 points.parse_reply(reply)
-                self.plot(points)
+                self.draw(points)
 
             if polling:  # continue
                 self.poll_timer.start()
             else:  # stop
                 self.lenlab.adc_lock.release()
                 self.started.set(False)
-                self.auto_save.save(buffered=False)
+                self.auto_save.save_update(buffered=False)
 
     @Slot()
     @SaveAs(
@@ -272,4 +275,5 @@ class VoltmeterWidget(QWidget):
         "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
     )
     def on_save_image_clicked(self, file_path: Path, file_format: str):
-        save_image(self.auto_save.points, file_path, file_format)
+        chart = self.auto_save.points.create_chart()
+        save_image(chart, file_path, file_format)

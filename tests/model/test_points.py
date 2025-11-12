@@ -17,7 +17,7 @@ def reply(length):
 
     payload = np.empty((2 * length,), np.dtype("<u2"))
     payload[::2] = np.arange(0, length) * amplitude  # channel 1
-    payload[1::2] = 4096 - payload[::2]  # channel 2
+    payload[1::2] = 4095 - payload[::2]  # channel 2
 
     interval_25ns = 1000 * 40_000  # 1 s
     return pack(b"v", arg=interval_25ns.to_bytes(4, "little"), length=length) + payload.tobytes()
@@ -25,12 +25,14 @@ def reply(length):
 
 @pytest.fixture
 def rising(length):
-    return np.linspace(0, 3.3, length, endpoint=False)
+    stop = 3.3 / 4095 * 4092
+    return np.linspace(0, stop, length, endpoint=True)
 
 
 @pytest.fixture
 def falling(length):
-    return np.linspace(3.3, 0, length, endpoint=False)
+    stop = 3.3 / 4095 * 3
+    return np.linspace(3.3, stop, length, endpoint=True)
 
 
 def test_parse_reply(length, reply, rising, falling):
@@ -38,13 +40,13 @@ def test_parse_reply(length, reply, rising, falling):
     points.parse_reply(reply)
 
     current_time = (length - 1) * points.interval
-    assert points.get_current_time() == current_time
-    assert np.allclose(
-        points.get_plot_time(1.0),
-        np.linspace(0, current_time, length, endpoint=True, dtype=np.double),
-    )
-    assert np.allclose(points.get_plot_values(channel=0), rising)
-    assert np.allclose(points.get_plot_values(channel=1), falling)
+    assert points.get_last_time() == current_time
+    assert round(points.get_last_value(0), 2) == 3.3
+    assert round(points.get_last_value(1), 2) == 0.0
+
+    chart = points.create_chart()
+    assert np.allclose(chart.channels[0], rising)
+    assert np.allclose(chart.channels[1], falling)
 
 
 def test_append_reply(length, reply, rising, falling):
@@ -55,15 +57,15 @@ def test_append_reply(length, reply, rising, falling):
     current_time = 2 * length * points.interval - 1.0
     # still under two hours
     assert current_time < 2 * 60 * 60
-    assert points.get_current_time() == current_time
-    assert np.allclose(
-        points.get_plot_time(1.0),
-        np.linspace(0, current_time, 2 * length, endpoint=True, dtype=np.double),
-    )
-    assert np.allclose(points.get_plot_values(channel=0)[:length], rising)
-    assert np.allclose(points.get_plot_values(channel=1)[:length], falling)
-    assert np.allclose(points.get_plot_values(channel=0)[length:], rising)
-    assert np.allclose(points.get_plot_values(channel=1)[length:], falling)
+    assert points.get_last_time() == current_time
+    assert round(points.get_last_value(0), 2) == 3.3
+    assert round(points.get_last_value(1), 2) == 0.0
+
+    chart = points.create_chart()
+    assert np.allclose(chart.channels[0][:length], rising)
+    assert np.allclose(chart.channels[1][:length], falling)
+    assert np.allclose(chart.channels[0][length:], rising)
+    assert np.allclose(chart.channels[1][length:], falling)
 
 
 def test_numpy_mean():
@@ -108,10 +110,11 @@ def test_compression(length, reply):
     points.parse_reply(reply)
 
     # it should batch to seconds after two minutes
+    chart = points.create_chart()
     compressed = int(length * points.interval)
-    assert points.get_plot_time(1.0).shape == (compressed,)
-    assert points.get_plot_values(channel=0).shape == (compressed,)
-    assert points.get_plot_values(channel=1).shape == (compressed,)
+    assert chart.x.shape == (compressed,)
+    assert chart.channels[0].shape == (compressed,)
+    assert chart.channels[1].shape == (compressed,)
 
 
 def test_padding(length, reply):
@@ -133,7 +136,8 @@ def test_huge_compression(length, reply):
         points.parse_reply(reply)
 
     # it should batch to minutes after two hours
+    chart = points.create_chart()
     compressed = int(100 * length * points.interval) // 60
-    assert points.get_plot_time(1.0).shape == (compressed,)
-    assert points.get_plot_values(channel=0).shape == (compressed,)
-    assert points.get_plot_values(channel=1).shape == (compressed,)
+    assert chart.x.shape == (compressed,)
+    assert chart.channels[0].shape == (compressed,)
+    assert chart.channels[1].shape == (compressed,)

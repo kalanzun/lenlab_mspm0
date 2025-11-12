@@ -1,3 +1,5 @@
+from io import StringIO
+
 import numpy as np
 import pytest
 
@@ -31,22 +33,26 @@ def test_parse_reply(waveform):
     assert waveform.time_step == 1e-6
 
 
-def test_get_plot_time(waveform):
-    time = waveform.get_plot_time(1.0)
-    assert time.shape == (6001,)
-    assert time[0] == -3e-3
-    assert time[-1] == 3e-3
+def test_chart_x(waveform):
+    chart = waveform.create_chart()
+
+    assert chart.x.shape == (6001,)
+    assert chart.x[0] == -3.0
+    assert chart.x[-1] == 3.0
 
 
 @pytest.mark.parametrize("index", [0, 1])
-def test_get_plot_values(waveform, index):
-    channel = waveform.get_plot_values(index)
+def test_chart_y(waveform, index):
+    chart = waveform.create_chart()
+    channel = chart.channels[index]
     assert channel.shape == (6001,)
 
-    value_0 = int(round((float(channel[0]) + 1.65) / 3.3 * 4096))
+    value_0 = int(round((float(channel[0]) + 1.65) / 3.3 * 4095))
     assert value_0 == 88
 
 
-def test_save_as(waveform, mock_path):
-    waveform.save_as(mock_path)
-    assert mock_path.get_line_count() == 2 + 6001
+def test_save_as(waveform):
+    file = StringIO()
+    waveform.save_as(file)
+    content = file.getvalue()
+    assert content.count("\n") == 2 + 6001

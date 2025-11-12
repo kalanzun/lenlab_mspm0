@@ -1,21 +1,25 @@
-from pathlib import Path
-from typing import Self
+from typing import Self, TextIO
 
 import numpy as np
-from attrs import Factory, frozen
+from attrs import frozen
 
 from ..controller.csv import CSVWriter
-from .plot import Plot
+from .chart import Chart
 
 
 @frozen
-class Waveform(Plot):
+class WaveformChart(Chart):
+    x_unit: float = 1e-3
+    x_range: tuple[float, float] = -15e-3, 15e-3
+    y_range: tuple[float, float] = -2.0, 2.0
+
+
+@frozen
+class Waveform:
     length: int = 0
     offset: int = 0
     time_step: float = 0.0
-    channels: tuple[np.ndarray, np.ndarray] = Factory(lambda: (np.ndarray((0,)), np.ndarray((0,))))
-
-    plot_value_range = -2.0, 2.0
+    channels: list[np.ndarray] | None = None
 
     @classmethod
     def parse_reply(cls, reply: bytes) -> Self:
@@ -29,37 +33,32 @@ class Waveform(Plot):
         # payload = payload >> 4
 
         # 12 bit unsigned integer
-        data = payload.astype(np.float64) / 4096 * 3.3 - 1.65  # 12 bit ADC
+        data = payload.astype(np.float64) / 4095 * 3.3 - 1.65  # 12 bit ADC
         length = data.shape[0] // 2  # 2 channels
-        channels = (data[:length], data[length:])
+        channels = [data[:length], data[length:]]
 
         return cls(length, offset, time_step, channels)
 
-    def get_plot_time_unit(self) -> float:
-        return 1e-3
+    def create_chart(self) -> WaveformChart:
+        n_points = 6001
+        x_unit = 1e-3  # ms
 
-    def get_plot_time_range(self) -> tuple[float, float]:
-        # in ms
-        return -3e3 * 1e3 * self.time_step, 3e3 * 1e3 * self.time_step
+        channels = [values[self.offset : self.offset + n_points] for values in self.channels]
 
-    def get_plot_time(self, time_unit: float) -> np.ndarray:
-        return np.arange(-3000, 3001, dtype=np.double) * (self.time_step / time_unit)
+        half = n_points // 2
+        x = np.arange(-half, half + 1) * self.time_step / x_unit
 
-    def get_plot_values(self, channel: int) -> np.ndarray:
-        return self.channels[channel][self.offset : self.offset + 6001]
+        return WaveformChart(x=x, channels=channels, x_unit=x_unit, x_range=(x[0], x[-1]))
 
     csv_writer = CSVWriter("oscilloscope")
 
-    def save_as(self, file_path: Path):
-        with file_path.open("w") as file:
-            write = file.write
-            write(self.csv_writer.head())
+    def save_as(self, file: TextIO):
+        write = file.write
+        write(self.csv_writer.head())
+
+        if self.length:
+            chart = self.create_chart()
             line_template = self.csv_writer.line_template()
             # time is always 6001 points, channels may be empty
-            for t, ch1, ch2 in zip(
-                self.get_plot_time(1.0),
-                self.get_plot_values(0),
-                self.get_plot_values(1),
-                strict=False,
-            ):
-                write(line_template % (t, ch1, ch2))
+            for x, ch1, ch2 in chart.rows():
+                write(line_template % (x, ch1, ch2))

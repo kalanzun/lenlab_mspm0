@@ -11,7 +11,7 @@ class CSVWriter:
     ch1: str = "channel1"
     ch2: str = "channel2"
 
-    x_format: str = ".6f"
+    x_format: str = ".3f"
     ch1_format: str = ".6f"
     ch2_format: str = ".6f"
 

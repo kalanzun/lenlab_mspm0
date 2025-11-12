@@ -2,44 +2,24 @@ from pathlib import Path
 
 from matplotlib import pyplot as plt
 
-from ..model.plot import Plot
-from ..translate import Translate
+from ..model.chart import Chart
 
 
-labels = (
-    Translate("Channel 1", "Kanal 1"),
-    Translate("Channel 2", "Kanal 2"),
-)
-
-x_label = Translate("time [{0}]", "Zeit [{0}]")
-y_label = Translate("voltage [V]", "Spannung [V]")
-
-time_labels = {
-    1e-3: "ms",
-    1.0: "s",
-    60.0: "min",
-    3600.0: "h",
-}
-
-
-def save_image(plot: Plot, file_path: Path, file_format: str):
+def save_image(chart: Chart, file_path: Path, file_format: str):
     fig, ax = plt.subplots(figsize=[12.8, 9.6], dpi=150)
 
-    time_unit = plot.get_plot_time_unit()
+    ax.set_xlim(*chart.x_range)
+    ax.set_ylim(*chart.y_range)
 
-    ax.set_xlim(*plot.get_plot_time_range())
-    ax.set_ylim(*plot.plot_value_range)
-
-    ax.set_xlabel(str(x_label).format(time_labels[time_unit]))
-    ax.set_ylabel(str(y_label))
+    ax.set_xlabel(chart.get_x_label())
+    ax.set_ylabel(chart.get_y_label())
 
     ax.grid()
 
-    time = plot.get_plot_time(time_unit)
-    for i, label in enumerate(labels):
+    for label, values in zip(chart.channel_labels, chart.channels, strict=True):
         ax.plot(
-            time,
-            plot.get_plot_values(i),
+            chart.x,
+            values,
             label=label,
         )
 

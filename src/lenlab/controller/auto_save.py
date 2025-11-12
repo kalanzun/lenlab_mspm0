@@ -3,7 +3,6 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot
 
 from ..model.points import Points
-from .csv import CSVWriter
 
 
 class Flag(QObject):
@@ -46,12 +45,10 @@ class PathProperty(QObject):
 
 class AutoSave(QObject):
     points: Points
-    save_idx: int
 
     def __init__(self):
         super().__init__()
         self.points = Points()
-        self.save_idx = 0
 
         self.auto_save = Flag()
         self.auto_save.changed.connect(self.on_auto_save_changed)
@@ -60,7 +57,6 @@ class AutoSave(QObject):
 
     def clear(self):
         self.points.clear()
-        self.save_idx = 0
 
         self.auto_save.set(False)
         self.file_path.set(None)
@@ -68,50 +64,22 @@ class AutoSave(QObject):
     @Slot(bool)
     def on_auto_save_changed(self, auto_save: bool):
         if auto_save:
-            self.save(buffered=False)
-
-    csv_writer = CSVWriter("voltmeter")
+            self.save_update(buffered=False)
 
     def save_as(self, file_path: Path):
-        points = self.points
-
         with file_path.open("w") as file:
-            write = file.write
-            write(self.csv_writer.head())
-            line_template = self.csv_writer.line_template()
-            for t, ch1, ch2 in zip(
-                points.get_time(self.save_idx),
-                points.get_values(0),
-                points.get_values(1),
-                strict=True,
-            ):
-                write(line_template % (t, ch1, ch2))
+            self.points.save_as(file)
 
-        points.unsaved = False
-        self.save_idx = points.index
         self.file_path.set(file_path)
 
-    def save(self, buffered: bool = True):
-        points = self.points
-
-        if not points.unsaved or not self.auto_save or not self.file_path:
+    def save_update(self, buffered: bool = True):
+        if not self.auto_save or not self.file_path or not self.points.unsaved:
             return
 
         if buffered:
-            n = int(5.0 / points.interval)
-            if points.index < self.save_idx + n:
+            n = int(5.0 / self.points.interval)
+            if self.points.index < self.points.save_idx + n:
                 return
 
         with self.file_path.value.open("a") as file:
-            write = file.write
-            line_template = self.csv_writer.line_template()
-            for t, ch1, ch2 in zip(
-                points.get_time(self.save_idx),
-                points.get_values(0, self.save_idx),
-                points.get_values(1, self.save_idx),
-                strict=True,
-            ):
-                write(line_template % (t, ch1, ch2))
-
-        points.unsaved = False
-        self.save_idx = points.index
+            self.points.save_update(file)

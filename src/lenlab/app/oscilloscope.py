@@ -10,21 +10,12 @@ from PySide6.QtWidgets import (
 
 from ..controller.image import save_image
 from ..controller.lenlab import Lenlab
-from ..model.waveform import Waveform
+from ..model.waveform import Waveform, WaveformChart
 from ..translate import Translate, tr
-from .chart import Chart
+from .chart import ChartWidget
 from .checkbox import BoolCheckBox
 from .save_as import SaveAs
 from .signal import SignalWidget
-
-
-class OscilloscopeChart(Chart):
-    time_unit = 1e-3
-
-    x_range = (-1.5, 1.5)
-    y_range = (-2.0, 2.0)
-
-    x_tick_count = 7
 
 
 class OscilloscopeWidget(QWidget):
@@ -44,7 +35,7 @@ class OscilloscopeWidget(QWidget):
 
         chart_layout = QVBoxLayout()
 
-        self.chart = OscilloscopeChart()
+        self.chart = ChartWidget(WaveformChart())
         chart_layout.addWidget(self.chart, 1)
 
         self.signal = SignalWidget(lenlab)
@@ -150,7 +141,7 @@ class OscilloscopeWidget(QWidget):
             self.lenlab.adc_lock.release()
 
         self.waveform = Waveform.parse_reply(reply)
-        self.chart.plot(self.waveform)
+        self.chart.draw(self.waveform.create_chart())
 
         if reply.startswith(b"La") and self.active:
             self.active = self.acquire()
@@ -165,7 +156,8 @@ class OscilloscopeWidget(QWidget):
         "CSV (*.csv)",
     )
     def on_save_as_clicked(self, file_path: Path, file_format: str):
-        self.waveform.save_as(file_path)
+        with file_path.open("w") as file:
+            self.waveform.save_as(file)
 
     @Slot()
     @SaveAs(
@@ -174,4 +166,4 @@ class OscilloscopeWidget(QWidget):
         "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
     )
     def on_save_image_clicked(self, file_path: Path, file_format: str):
-        save_image(self.waveform, file_path, file_format)
+        save_image(self.waveform.create_chart(), file_path, file_format)
