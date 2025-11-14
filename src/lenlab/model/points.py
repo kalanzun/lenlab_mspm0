@@ -3,7 +3,7 @@ from typing import TextIO
 import numpy as np
 from attrs import Factory, define
 
-from ..controller.csv import CSVWriter
+from ..controller.csv import CSVTemplate
 from .chart import Chart
 
 
@@ -125,16 +125,13 @@ class Points:
             strict=True,
         )
 
-    csv_writer = CSVWriter("voltmeter")
+    csv_template = CSVTemplate("voltmeter")
 
     def save_as(self, file: TextIO):
-        write = file.write
-        write(self.csv_writer.head())
+        file.write(self.csv_template.head())
 
         if self.unsaved:
-            line_template = self.csv_writer.line_template()
-            for t, ch1, ch2 in self.rows():
-                write(line_template % (t, ch1, ch2))
+            self.csv_template.write_rows(file.write, self.rows())
 
             self.unsaved = False
             self.save_idx = self.index
@@ -143,10 +140,7 @@ class Points:
         if not self.unsaved:
             return
 
-        write = file.write
-        line_template = self.csv_writer.line_template()
-        for t, ch1, ch2 in self.rows(self.save_idx):
-            write(line_template % (t, ch1, ch2))
+        self.csv_template.write_rows(file.write, self.rows(self.save_idx))
 
         self.unsaved = False
         self.save_idx = self.index

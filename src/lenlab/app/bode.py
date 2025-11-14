@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TextIO
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
@@ -14,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..controller.csv import CSVWriter
+from ..controller.csv import CSVTemplate
 from ..controller.lenlab import Lenlab
 from ..controller.signal import sine_table
 from ..launchpad.protocol import command
@@ -182,7 +183,8 @@ class BodeWidget(QWidget):
         "CSV (*.csv)",
     )
     def on_save_as_clicked(self, file_path: Path, file_format: str):
-        self.bode.save_as(file_path)
+        with file_path.open("w") as file:
+            self.bode.save_as(file)
 
 
 class BodePlotter(QObject):
@@ -262,15 +264,17 @@ class BodePlotter(QObject):
             self.active = False
             self.lenlab.adc_lock.release()
 
-    csv_writer = CSVWriter("bode_plot", "frequency", "magnitude", "phase", ".0f")
+    def rows(self):
+        return (
+            (m.x(), m.y(), p.y())
+            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True)
+        )
 
-    def save_as(self, file_path: Path):
-        with file_path.open("w") as file:
-            write = file.write
-            write(self.csv_writer.head())
-            line_template = self.csv_writer.line_template()
-            for m, p in zip(self.magnitude.points(), self.phase.points(), strict=True):
-                write(line_template % (m.x(), m.y(), p.y()))
+    csv_template = CSVTemplate("bode_plot", "frequency", "magnitude", "phase", ".0f")
+
+    def save_as(self, file: TextIO):
+        file.write(self.csv_template.head())
+        self.csv_template.write_rows(file.write, self.rows())
 
 
 class PinAssignment(Message):

@@ -3,7 +3,7 @@ from typing import Self, TextIO
 import numpy as np
 from attrs import frozen
 
-from ..controller.csv import CSVWriter
+from ..controller.csv import CSVTemplate
 from .chart import Chart
 
 
@@ -50,15 +50,11 @@ class Waveform:
 
         return WaveformChart(x=x, channels=channels, x_unit=x_unit, x_range=(x[0], x[-1]))
 
-    csv_writer = CSVWriter("oscilloscope")
+    csv_template = CSVTemplate("oscilloscope")
 
     def save_as(self, file: TextIO):
-        write = file.write
-        write(self.csv_writer.head())
+        file.write(self.csv_template.head())
 
         if self.length:
             chart = self.create_chart()
-            line_template = self.csv_writer.line_template()
-            # time is always 6001 points, channels may be empty
-            for x, ch1, ch2 in chart.rows():
-                write(line_template % (x, ch1, ch2))
+            self.csv_template.write_rows(file.write, chart.rows())
