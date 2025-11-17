@@ -33,8 +33,8 @@ class Lock(QObject):
 class Lenlab(QObject):
     ready = Signal(bool)
     reply = Signal(bytes)
-    terminal_write = Signal(bytes)
-    terminal_error = Signal(Message)
+    write = Signal(bytes)
+    error = Signal(Message)
 
     default_probe_timeout = 600
     default_reply_timeout = 600
@@ -51,6 +51,7 @@ class Lenlab(QObject):
 
         self.discovery = Discovery(port_name, probe_timeout)
         self.discovery.ready.connect(self.on_terminal_ready)
+        self.discovery.error.connect(self.error)
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
@@ -67,8 +68,7 @@ class Lenlab(QObject):
         # do not take ownership
         terminal.reply.connect(self.on_reply)
         terminal.error.connect(self.on_terminal_error)
-        self.terminal_write.connect(terminal.write)
-        self.terminal_error.connect(terminal.error)
+        self.write.connect(terminal.write)
 
         self.lock.release()
         # self.dac_lock.release()
@@ -86,7 +86,7 @@ class Lenlab(QObject):
     def send_command(self, command: bytes):
         if self.lock.acquire():
             self.timer.start(self.reply_timeout)
-            self.terminal_write.emit(command)
+            self.write.emit(command)
 
     @Slot(bytes)
     def on_reply(self, reply):
@@ -99,7 +99,7 @@ class Lenlab(QObject):
     @Slot()
     def on_timeout(self):
         # a timeout may mean a broken connection and stuck buffers
-        self.terminal_error.emit(NoReply())
+        self.error.emit(NoReply())
 
 
 class NoReply(Message):

@@ -16,7 +16,7 @@ def lenlab():
 def spy(lenlab):
     lenlab.lock.release()
     lenlab.adc_lock.release()
-    return Spy(lenlab.terminal_write)
+    return Spy(lenlab.write)
 
 
 @pytest.fixture()

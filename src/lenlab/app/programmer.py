@@ -127,14 +127,3 @@ class Introduction(Message):
     Die Tasten klicken hörbar. Die rote LED an der Unterkante ist aus.
     Sie haben jetzt 10 Sekunden, um hier in der App auf Programmieren zu klicken.
     """
-
-
-class ExportError(Message):
-    english = """Error exporting the firmware
-    
-    {0}
-    """
-    german = """Fehler beim Exportieren der Firmware
-    
-    {0}
-    """

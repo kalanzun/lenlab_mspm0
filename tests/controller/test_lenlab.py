@@ -68,7 +68,7 @@ def test_on_bsl_reply(lenlab):
 
 
 def test_on_timeout(lenlab):
-    spy = Spy(lenlab.terminal_error)
+    spy = Spy(lenlab.error)
     lenlab.timer.timeout.emit()
 
     assert isinstance(spy.get_single_arg(), NoReply)
@@ -77,7 +77,7 @@ def test_on_timeout(lenlab):
 def test_send_command(lenlab):
     lenlab.lock.release()
 
-    spy = Spy(lenlab.terminal_write)
+    spy = Spy(lenlab.write)
 
     lenlab.send_command(b"Lk\x08\x00nock, knock!")
     assert spy.get_single_arg() == b"Lk\x08\x00nock, knock!"

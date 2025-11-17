@@ -26,6 +26,8 @@ class MainWindow(QMainWindow):
         self.status_poster.button.setHidden(False)
         self.status_poster.button.clicked.connect(self.lenlab.discovery.retry)
         self.status_poster.setHidden(True)
+        self.lenlab.error.connect(self.status_poster.set_error)
+        self.lenlab.ready.connect(self.status_poster.setHidden)
         layout.addWidget(self.status_poster)
 
         self.tabs = [
@@ -71,10 +73,6 @@ class MainWindow(QMainWindow):
 
         # title
         self.setWindowTitle("Lenlab")
-
-        # discovery
-        self.lenlab.discovery.error.connect(self.status_poster.set_error)
-        self.lenlab.discovery.ready.connect(self.status_poster.hide)
 
     @Slot()
     def save_report(self):

@@ -132,6 +132,7 @@ class Discovery(QObject):
         for terminal in self.terminals:
             terminal.error.connect(self.stop)
             terminal.error.connect(self.on_terminal_error)
+            terminal.error.connect(self.error)
 
             # on_error handles the error message and cleanup
             if not terminal.open():
@@ -147,8 +148,8 @@ class Discovery(QObject):
         for probe in self.probes:
             probe.select.connect(self.stop)
             probe.select.connect(self.select_terminal)
-            probe.ready.connect(self.ready.emit)
-            probe.error.connect(self.error.emit)
+            probe.ready.connect(self.ready)
+            probe.error.connect(self.error)
             probe.start()
 
     @Slot()
@@ -161,14 +162,13 @@ class Discovery(QObject):
 
     @Slot(Message)
     def on_terminal_error(self, error):
-        terminal = cast(Terminal, self.sender())
+        terminal = cast(Terminal, cast(QObject, self.sender()))
 
         logger.info(f"close on error {terminal.port_name}")
         terminal.close()
         terminal.deleteLater()
 
         self.terminals = [t for t in self.terminals if t is not terminal]
-        self.error.emit(error)
 
     @Slot(Terminal)
     def select_terminal(self, terminal):

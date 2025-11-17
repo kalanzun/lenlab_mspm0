@@ -24,7 +24,7 @@ def unlocked(lenlab):
 
 @pytest.fixture()
 def spy(unlocked):
-    return Spy(unlocked.terminal_write)
+    return Spy(unlocked.write)
 
 
 @pytest.fixture()
