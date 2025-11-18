@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Qt, Signal
 class QueuedCall(QObject):
     trigger = Signal()
 
-    def __init__(self, parent: QObject, slot: Callable[[], None]):
+    def __init__(self, parent: QObject, slot: Callable):
         super().__init__(parent)
 
         self.trigger.connect(slot, Qt.ConnectionType.QueuedConnection)

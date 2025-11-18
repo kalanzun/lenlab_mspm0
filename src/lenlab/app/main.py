@@ -1,17 +1,25 @@
 import argparse
 import logging
+import signal
 import sys
 from importlib import metadata
 from traceback import format_exception, format_exception_only
 
 from attrs import frozen
-from PySide6.QtCore import QLibraryInfo, QLocale, QSysInfo, QTranslator
-from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtCore import (
+    QLibraryInfo,
+    QLocale,
+    QSysInfo,
+    QTimer,
+    QTranslator,
+)
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
 from ..language import Language
 from ..message import Message
+from ..queued import QueuedCall
 from ..translate import tr
 from .window import MainWindow
 
@@ -20,7 +28,11 @@ logger = logging.getLogger(__name__)
 
 @frozen
 class ExceptionHandler:
-    parent: QWidget
+    window: MainWindow
+
+    def install(self):
+        sys.excepthook = self
+        return self
 
     def __call__(self, exc, value, tb):
         text = "".join(format_exception_only(exc, value)).strip()
@@ -28,7 +40,7 @@ class ExceptionHandler:
 
         logger.error(details)
 
-        msg = QMessageBox(self.parent)
+        msg = QMessageBox(self.window)
         msg.setWindowTitle(tr("Error", "Fehler"))
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText(text)
@@ -48,6 +60,26 @@ class ErrorReport(Message):
     aus dem Hauptmenü mit (Lenlab -> Fehlerbericht speichern).
     Der Fehlerbericht enthält die Fehlerinformationen und etwas Kontext.  
     """
+
+
+@frozen
+class InterruptHandler:
+    window: MainWindow
+
+    def install(self):
+        # Keyboard interrupt handler
+        signal.signal(signal.SIGINT, self)
+
+        # Python processes the interrupt signal only when Qt calls into Python
+        poll = QTimer(self.window)
+        poll.timeout.connect(lambda: None)
+        poll.start(100)
+
+        return self
+
+    def __call__(self, num, frame):
+        logger.info("keyboard interrupt")
+        QueuedCall(self.window, self.window.close)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -102,6 +134,9 @@ def main(argv: list[str] | None = None) -> None:
     window.show()
 
     # Exception Handler
-    sys.excepthook = ExceptionHandler(window)
+    ExceptionHandler(window).install()
+
+    # Keyboard interrupt handler
+    InterruptHandler(window).install()
 
     app.exec()
