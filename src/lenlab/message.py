@@ -19,3 +19,10 @@ class Message(Exception):
         head, body = template.split("\n", 1)
         body = dedent(body)
         return "\n".join((head, body)).format(*self.args)
+
+    def one_line(self):
+        template = getattr(self, Language.language).strip() + "\n"
+        head, body = template.split("\n", 1)
+        body = dedent(body)
+        body = body.replace("\n", " ")
+        return " ".join((head, body)).format(*self.args)

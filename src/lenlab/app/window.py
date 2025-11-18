@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
 
         menu = menu_bar.addMenu("&Lenlab")
 
-        self.report_action = QAction(tr("Save Error Report", "Fehlerbericht speichern"), self)
+        self.report_action = QAction(tr("Save error report", "Fehlerbericht speichern"), self)
         self.report_action.triggered.connect(self.save_report)
         menu.addAction(self.report_action)
 
@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
     def save_report(self):
         file_name, file_format = QFileDialog.getSaveFileName(
             self,
-            tr("Save Error Report", "Fehlerbericht speichern"),
+            tr("Save error report", "Fehlerbericht speichern"),
             self.report.file_name,
             self.report.file_format,
         )

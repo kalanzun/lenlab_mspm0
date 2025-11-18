@@ -3,7 +3,7 @@ from functools import wraps
 from pathlib import Path
 
 from attrs import frozen
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QFileDialog, QWidget
 
 
 @frozen
@@ -32,13 +32,6 @@ class SaveAs:
 
                 file_path = Path(file_name)
 
-            try:
-                method(parent, file_path, file_format)
-
-            except AssertionError:  # pass through assertion errors for testing
-                raise
-
-            except Exception as e:  # display other errors
-                QMessageBox.critical(parent, self.title, str(e))
+            method(parent, file_path, file_format)
 
         return wrapper

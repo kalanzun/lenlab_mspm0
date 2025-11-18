@@ -2,16 +2,52 @@ import argparse
 import logging
 import sys
 from importlib import metadata
+from traceback import format_exception, format_exception_only
 
+from attrs import frozen
 from PySide6.QtCore import QLibraryInfo, QLocale, QSysInfo, QTranslator
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
 from ..language import Language
+from ..message import Message
+from ..translate import tr
 from .window import MainWindow
 
 logger = logging.getLogger(__name__)
+
+
+@frozen
+class ExceptionHandler:
+    parent: QWidget
+
+    def __call__(self, exc, value, tb):
+        text = "".join(format_exception_only(exc, value)).strip()
+        details = "".join(format_exception(exc, value, tb)).strip()
+
+        logger.error(details)
+
+        msg = QMessageBox(self.parent)
+        msg.setWindowTitle(tr("Error", "Fehler"))
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setText(text)
+        msg.setInformativeText(ErrorReport().one_line())
+        msg.setDetailedText(details)
+        msg.addButton(QMessageBox.StandardButton.Ok)
+        msg.show()
+
+
+class ErrorReport(Message):
+    english = """An error occurred. If you want to ask about it or report it,
+    please attach the error report from the main menu (Lenlab -> Save error report).
+    The error report contains the error information and some context.
+    """
+    german = """Ein Fehler ist aufgetreten.
+    Wenn Sie nachfragen oder den Fehler berichten möchten, schicken Sie bitten den Fehlerbericht
+    aus dem Hauptmenü mit (Lenlab -> Fehlerbericht speichern).
+    Der Fehlerbericht enthält die Fehlerinformationen und etwas Kontext.  
+    """
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -64,5 +100,8 @@ def main(argv: list[str] | None = None) -> None:
 
     window = MainWindow(lenlab, report, rules=sys.platform == "linux")
     window.show()
+
+    # Exception Handler
+    sys.excepthook = ExceptionHandler(window)
 
     app.exec()
