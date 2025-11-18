@@ -97,6 +97,9 @@ class Points:
         batch_size = self.chart_batch_size
         n_points = self.chart_n_points
 
+        if n_points == 0:
+            return Chart()
+
         if batch_size > 1:
             channels = [self.compress(values, n_points, batch_size) for values in self.channels]
         else:

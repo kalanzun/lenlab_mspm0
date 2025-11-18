@@ -276,4 +276,5 @@ class VoltmeterWidget(QWidget):
     )
     def on_save_image_clicked(self, file_path: Path, file_format: str):
         chart = self.auto_save.points.create_chart()
-        save_image(chart, file_path, file_format)
+        channel_enabled = [channel.isVisible() for channel in self.chart.channels]
+        save_image(chart, channel_enabled, file_path, file_format)

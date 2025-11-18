@@ -10,7 +10,7 @@ from .chart import Chart
 @frozen
 class WaveformChart(Chart):
     x_unit: float = 1e-3
-    x_range: tuple[float, float] = -15e-3, 15e-3
+    x_range: tuple[float, float] = -15, 15
     y_range: tuple[float, float] = -2.0, 2.0
 
 
@@ -42,6 +42,9 @@ class Waveform:
     def create_chart(self) -> WaveformChart:
         n_points = 6001
         x_unit = 1e-3  # ms
+
+        if self.channels is None:
+            return WaveformChart()
 
         channels = [values[self.offset : self.offset + n_points] for values in self.channels]
 

@@ -166,4 +166,6 @@ class OscilloscopeWidget(QWidget):
         "SVG (*.svg);;PNG (*.png);;PDF (*.pdf)",
     )
     def on_save_image_clicked(self, file_path: Path, file_format: str):
-        save_image(self.waveform.create_chart(), file_path, file_format)
+        chart = self.waveform.create_chart()
+        channel_enabled = [channel.isVisible() for channel in self.chart.channels]
+        save_image(chart, channel_enabled, file_path, file_format)

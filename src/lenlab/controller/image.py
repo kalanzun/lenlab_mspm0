@@ -1,3 +1,4 @@
+from itertools import count
 from pathlib import Path
 
 from matplotlib import pyplot as plt
@@ -5,7 +6,7 @@ from matplotlib import pyplot as plt
 from ..model.chart import Chart
 
 
-def save_image(chart: Chart, file_path: Path, file_format: str):
+def save_image(chart: Chart, channel_enabled: list[bool], file_path: Path, file_format: str):
     fig, ax = plt.subplots(figsize=[12.8, 9.6], dpi=150)
 
     ax.set_xlim(*chart.x_range)
@@ -16,13 +17,20 @@ def save_image(chart: Chart, file_path: Path, file_format: str):
 
     ax.grid()
 
-    for label, values in zip(chart.channel_labels, chart.channels, strict=True):
-        ax.plot(
-            chart.x,
-            values,
-            label=label,
+    if chart.channels is not None:
+        iterator = zip(
+            chart.channel_labels, chart.channels, channel_enabled, count(), strict=False
         )
+        for label, values, enabled, i in iterator:
+            if enabled:
+                ax.plot(
+                    chart.x,
+                    values,
+                    f"C{i}",  # index in the color cycle
+                    label=label,
+                )
 
-    ax.legend()
+        if any(channel_enabled):
+            ax.legend()
 
     fig.savefig(file_path, format=file_format[:3].lower())
