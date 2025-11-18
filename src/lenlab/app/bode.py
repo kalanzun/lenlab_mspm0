@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import TextIO
 
 import numpy as np
@@ -177,12 +176,16 @@ class BodeWidget(QWidget):
         self.bode.start(step, amplitude)
 
     @Slot()
-    @SaveAs(
-        tr("Save Bode Plot", "Bode-Plot speichern"),
-        "lenlab_bode.csv",
-        "CSV (*.csv)",
-    )
-    def on_save_as_clicked(self, file_path: Path, file_format: str):
+    def on_save_as_clicked(self):
+        file_path, file_format = SaveAs.get_file_path(
+            self,
+            tr("Save bode plot", "Bode-Plot speichern"),
+            "lenlab_bode.csv",
+            ["CSV (*.csv)"],
+        )
+        if file_path is None:
+            return
+
         with file_path.open("w") as file:
             self.bode.save_as(file)
 

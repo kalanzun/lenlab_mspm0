@@ -1,5 +1,4 @@
 from importlib import resources
-from pathlib import Path
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
@@ -100,12 +99,16 @@ class ProgrammerWidget(QWidget):
         self.poster.set_error(error)
 
     @Slot()
-    @SaveAs(
-        tr("Export Firmware", "Firmware exportieren"),
-        "lenlab_fw.bin",
-        "Binary (*.bin)",
-    )
-    def on_export_clicked(self, file_path: Path, file_format: str):
+    def on_export_clicked(self):
+        file_path, file_format = SaveAs.get_file_path(
+            self,
+            tr("Export firmware", "Firmware exportieren"),
+            "lenlab_fw.bin",
+            ["Binary (*.bin)"],
+        )
+        if file_path is None:
+            return
+
         firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
         file_path.write_bytes(firmware)
 
