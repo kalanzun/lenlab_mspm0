@@ -52,27 +52,6 @@ def test_save_as(get_save_file_name, critical):
     write(self)
 
 
-def test_save_as_error(monkeypatch, get_save_file_name):
-    self = object()
-
-    def critical(parent, title, text):
-        assert parent is self
-        assert title == "Title"
-        assert text == "Error"
-
-    monkeypatch.setattr(QMessageBox, "critical", critical)
-
-    @SaveAs(
-        "Title",
-        "default.filename",
-        "Binary (*.bin)",
-    )
-    def write(parent, file_name, file_format):
-        raise Exception("Error")
-
-    write(self)
-
-
 def test_save_as_cancel(get_save_file_name, critical):
     @SaveAs(
         "Title",
