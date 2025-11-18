@@ -1,6 +1,7 @@
+from matplotlib.colors import TABLEAU_COLORS
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QWidget,
@@ -14,6 +15,11 @@ class ChartWidget(QWidget):
     labels = (
         Translate("Channel 1 (ADC 0, PA 24)", "Kanal 1 (ADC 0, PA 24)"),
         Translate("Channel 2 (ADC 1, PA 17)", "Kanal 2 (ADC 1, PA 17)"),
+    )
+
+    colors = (
+        TABLEAU_COLORS["tab:blue"],
+        TABLEAU_COLORS["tab:orange"],
     )
 
     def __init__(self, template: Chart):
@@ -46,7 +52,8 @@ class ChartWidget(QWidget):
         self.chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
 
         self.channels = [QLineSeries() for _ in self.labels]
-        for channel, label in zip(self.channels, self.labels, strict=True):
+        for channel, label, color in zip(self.channels, self.labels, self.colors, strict=True):
+            channel.setPen(QPen(QColor.fromString(color)))
             channel.setName(str(label))
             self.chart.addSeries(channel)
             channel.attachAxis(self.x_axis)
