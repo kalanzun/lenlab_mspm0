@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
@@ -10,6 +10,7 @@ from .figure import LaunchpadWidget
 from .oscilloscope import OscilloscopeWidget
 from .poster import PosterWidget
 from .programmer import ProgrammerWidget
+from .save_as import SaveAs
 from .voltmeter import VoltmeterWidget
 
 
@@ -76,15 +77,17 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def save_report(self):
-        file_name, file_format = QFileDialog.getSaveFileName(
+        file_path, file_format = SaveAs.get_file_path(
             self,
             tr("Save error report", "Fehlerbericht speichern"),
             self.report.file_name,
-            self.report.file_format,
+            [self.report.file_format],
         )
-        if file_name:
-            with open(file_name, "w", encoding="utf-8") as file:
-                self.report.save_as(file)
+        if file_path is None:
+            return
+
+        with file_path.open("w", encoding="utf-8") as file:
+            self.report.save_as(file)
 
     @Slot()
     def install_rules(self):
