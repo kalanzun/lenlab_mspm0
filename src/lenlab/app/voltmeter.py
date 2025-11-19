@@ -1,4 +1,5 @@
 from datetime import timedelta
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtWidgets import (
@@ -260,28 +261,24 @@ class VoltmeterWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        file_path, file_format = SaveAs.get_file_path(
+        SaveAs(
             self,
             tr("Save voltmeter data", "Voltmeter-Daten speichern"),
             "lenlab_volt.csv",
-            ["CSV (*.csv)"],
-        )
-        if file_path is None:
-            return
-
-        self.auto_save.save_as(file_path)
+            self.auto_save.save_as,
+        ).show()
 
     @Slot()
     def on_save_image_clicked(self):
-        file_path, file_format = SaveAs.get_file_path(
+        SaveAs(
             self,
             tr("Save voltmeter image", "Voltmeter-Bild speichern"),
             "lenlab_volt.svg",
-            ["SVG (*.svg)", "PNG (*.png)", "PDF (*.pdf)"],
-        )
-        if file_path is None:
-            return
+            self.on_save_image,
+        ).show()
 
+    @Slot(Path)
+    def on_save_image(self, file_path: Path):
         chart = self.auto_save.points.create_chart()
         channel_enabled = [channel.isVisible() for channel in self.chart.channels]
-        save_image(chart, channel_enabled, file_path, file_format)
+        save_image(file_path, chart, channel_enabled)

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
@@ -58,7 +60,7 @@ class MainWindow(QMainWindow):
         menu = menu_bar.addMenu("&Lenlab")
 
         self.report_action = QAction(tr("Save error report", "Fehlerbericht speichern"), self)
-        self.report_action.triggered.connect(self.save_report)
+        self.report_action.triggered.connect(self.save_report_triggered)
         menu.addAction(self.report_action)
 
         if rules:
@@ -76,16 +78,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Lenlab")
 
     @Slot()
-    def save_report(self):
-        file_path, file_format = SaveAs.get_file_path(
+    def save_report_triggered(self):
+        SaveAs(
             self,
             tr("Save error report", "Fehlerbericht speichern"),
             self.report.file_name,
-            [self.report.file_format],
-        )
-        if file_path is None:
-            return
+            self.save_report,
+        ).show()
 
+    @Slot(Path)
+    def save_report(self, file_path: Path):
         with file_path.open("w", encoding="utf-8") as file:
             self.report.save_as(file)
 

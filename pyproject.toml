@@ -59,6 +59,8 @@ select = [
     "B",  # flake8-bugbear
     "SIM",  # flake8-simplify
     "I",  # isort
+    "PTH",  # pathlib
+    "PLW1514",  # open without encoding
 ]
 
 [tool.coverage.report]

@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from ..model.chart import Chart
 
 
-def save_image(chart: Chart, channel_enabled: list[bool], file_path: Path, file_format: str):
+def save_image(file_path: Path, chart: Chart, channel_enabled: list[bool]):
     fig, ax = plt.subplots(figsize=[12.8, 9.6], dpi=150)
 
     ax.set_xlim(*chart.x_range)
@@ -33,4 +33,4 @@ def save_image(chart: Chart, channel_enabled: list[bool], file_path: Path, file_
         if any(channel_enabled):
             ax.legend()
 
-    fig.savefig(file_path, format=file_format[:3].lower())
+    fig.savefig(file_path)

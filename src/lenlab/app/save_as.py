@@ -1,22 +1,26 @@
+from collections.abc import Callable
 from pathlib import Path
 
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 
-class SaveAs:
-    @staticmethod
-    def get_file_path(
-        parent: QWidget | None, title: str, default_file_name: str, file_formats: list[str]
-    ) -> tuple[Path | None, str | None]:
-        file_name, file_format = QFileDialog.getSaveFileName(
-            parent,
-            title,
-            default_file_name,
-            ";;".join(file_formats),
-        )
+class SaveAs(QFileDialog):
+    save_as = Signal(Path)
 
-        if not file_name:  # the dialog was canceled
-            return None, None
+    def __init__(self, parent: QWidget, title: str, default_file_name: str, on_save_as: Callable):
+        super().__init__(parent)
 
-        file_path = Path(file_name)
-        return file_path, file_format
+        self.setModal(True)
+        self.setFileMode(QFileDialog.FileMode.AnyFile)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        self.setWindowTitle(title)
+        self.selectFile(default_file_name)
+        self.setDefaultSuffix(default_file_name.split(".")[-1])
+        self.fileSelected.connect(self.on_file_selected)
+
+        self.save_as.connect(on_save_as)
+
+    @Slot()
+    def on_file_selected(self, file_name):
+        self.save_as.emit(Path(file_name))

@@ -19,7 +19,7 @@ def pk_write(path: Path, content: str) -> None:
 
 
 def check_rules() -> bool:
-    return rules_path.exists() and rules_path.read_text() == rules_content
+    return rules_path.exists() and rules_path.read_text(encoding="utf-8") == rules_content
 
 
 def install_rules() -> None:

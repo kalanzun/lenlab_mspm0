@@ -66,8 +66,9 @@ class AutoSave(QObject):
         if auto_save:
             self.save_update(buffered=False)
 
+    @Slot(Path)
     def save_as(self, file_path: Path):
-        with file_path.open("w") as file:
+        with file_path.open("w", encoding="utf-8") as file:
             self.points.save_as(file)
 
         self.file_path.set(file_path)
@@ -81,5 +82,6 @@ class AutoSave(QObject):
             if self.points.index < self.points.save_idx + n:
                 return
 
-        with self.file_path.value.open("a") as file:
+        file_path: Path = self.file_path.value
+        with file_path.open("a", encoding="utf-8") as file:
             self.points.save_update(file)

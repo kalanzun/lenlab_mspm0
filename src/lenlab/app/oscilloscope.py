@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -149,29 +151,29 @@ class OscilloscopeWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        file_path, file_format = SaveAs.get_file_path(
+        SaveAs(
             self,
             tr("Save oscilloscope data", "Oszilloskop-Daten speichern"),
             "lenlab_osci.csv",
-            ["CSV (*.csv)"],
-        )
-        if file_path is None:
-            return
+            self.on_save_as,
+        ).show()
 
-        with file_path.open("w") as file:
+    @Slot()
+    def on_save_as(self, file_path: Path):
+        with file_path.open("w", encoding="utf-8") as file:
             self.waveform.save_as(file)
 
     @Slot()
     def on_save_image_clicked(self):
-        file_path, file_format = SaveAs.get_file_path(
+        SaveAs(
             self,
             tr("Save oscilloscope image", "Oszilloskop-Bild speichern"),
             "lenlab_osci.svg",
-            ["SVG (*.svg)", "PNG (*.png)", "PDF (*.pdf)"],
-        )
-        if file_path is None:
-            return
+            self.on_save_image,
+        ).show()
 
+    @Slot(Path)
+    def on_save_image(self, file_path: Path):
         chart = self.waveform.create_chart()
         channel_enabled = [channel.isVisible() for channel in self.chart.channels]
-        save_image(chart, channel_enabled, file_path, file_format)
+        save_image(file_path, chart, channel_enabled)
