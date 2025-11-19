@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import TextIO
 
 import numpy as np
+from matplotlib.colors import TABLEAU_COLORS
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
 from PySide6.QtCore import QObject, Qt, Slot
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -28,6 +29,11 @@ class BodeChart(QWidget):
     labels = (
         Translate("Magnitude", "Betrag"),
         Translate("Phase", "Phase"),
+    )
+
+    colors = (
+        TABLEAU_COLORS["tab:blue"],
+        TABLEAU_COLORS["tab:orange"],
     )
 
     x_label = Translate("frequency [Hz]", "Frequenz [Hz]")
@@ -72,8 +78,11 @@ class BodeChart(QWidget):
         self.chart.addAxis(self.p_axis, Qt.AlignmentFlag.AlignRight)
 
         axes = [self.m_axis, self.p_axis]
-        for channel, label, axis in zip(self.channels, self.labels, axes, strict=True):
+        for channel, label, color, axis in zip(
+            self.channels, self.labels, self.colors, axes, strict=True
+        ):
             channel.setName(str(label))
+            channel.setPen(QPen(QColor.fromString(color)))
             self.chart.addSeries(channel)
             channel.attachAxis(self.x_axis)
             channel.attachAxis(axis)
