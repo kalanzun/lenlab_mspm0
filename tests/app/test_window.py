@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-from PySide6.QtWidgets import QFileDialog
 
 from lenlab.app.window import MainWindow
 from lenlab.controller.lenlab import Lenlab
@@ -18,16 +17,10 @@ def test_main_window(window):
     assert window
 
 
-def test_report(window, monkeypatch, tmp_path):
-    tmp_file = tmp_path / "report.txt"
-    monkeypatch.setattr(
-        QFileDialog,
-        "getSaveFileName",
-        lambda parent, title, file_name, file_format: (tmp_file, file_format),
-    )
+def test_report(window, mock_save_as):
     window.report_action.trigger()
     # it's empty without logging
-    assert tmp_file.exists()
+    assert mock_save_as.mock_file_object is not None
 
 
 def test_rules(window, monkeypatch):

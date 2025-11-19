@@ -99,8 +99,9 @@ class MockPath:
     mock_file_object: MockFileObject | None = None
 
     @contextmanager
-    def open(self, mode):
+    def open(self, mode, *, encoding):
         assert mode in {"w", "wb", "a", "ab"}
+        assert encoding == "utf-8"
 
         if mode == "w":
             self.mock_file_object = MockFileObject("")
@@ -136,10 +137,8 @@ def mock_path():
 
 @pytest.fixture()
 def mock_save_as(monkeypatch, mock_path):
-    def mock_get_file_path(
-        parent: None, title: str, default_file_name: str, file_formats: list[str]
-    ):
-        return mock_path, file_formats[0]
+    def mock_show(self):
+        self.save_as.emit(mock_path)
 
-    monkeypatch.setattr(SaveAs, "get_file_path", mock_get_file_path)
+    monkeypatch.setattr(SaveAs, "show", mock_show)
     return mock_path
