@@ -151,28 +151,24 @@ class OscilloscopeWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        SaveAs(
-            self,
-            tr("Save oscilloscope data", "Oszilloskop-Daten speichern"),
-            "lenlab_osci.csv",
-            self.on_save_as,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save oscilloscope data", "Oszilloskop-Daten speichern"))
+        dialog.set_default_file_name("lenlab_osci.csv")
+        dialog.on_save_as = self.on_save_as
+        dialog.show()
 
-    @Slot()
     def on_save_as(self, file_path: Path):
         with file_path.open("w", encoding="utf-8") as file:
             self.waveform.save_as(file)
 
     @Slot()
     def on_save_image_clicked(self):
-        SaveAs(
-            self,
-            tr("Save oscilloscope image", "Oszilloskop-Bild speichern"),
-            "lenlab_osci.svg",
-            self.on_save_image,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save oscilloscope image", "Oszilloskop-Bild speichern"))
+        dialog.set_default_file_name("lenlab_osci.svg")
+        dialog.on_save_as = self.on_save_image
+        dialog.show()
 
-    @Slot(Path)
     def on_save_image(self, file_path: Path):
         chart = self.waveform.create_chart()
         channel_enabled = [channel.isVisible() for channel in self.chart.channels]

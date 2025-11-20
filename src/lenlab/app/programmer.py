@@ -101,15 +101,14 @@ class ProgrammerWidget(QWidget):
 
     @Slot()
     def on_export_clicked(self):
-        SaveAs(
-            self,
-            tr("Export firmware", "Firmware exportieren"),
-            "lenlab_fw.bin",
-            self.on_export,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Export firmware", "Firmware exportieren"))
+        dialog.set_default_file_name("lenlab_fw.bin")
+        dialog.on_save_as = self.on_export
+        dialog.show()
 
-    @Slot(Path)
-    def on_export(self, file_path: Path):
+    @staticmethod
+    def on_export(file_path: Path):
         firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
         file_path.write_bytes(firmware)
 

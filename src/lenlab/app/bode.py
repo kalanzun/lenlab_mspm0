@@ -187,14 +187,12 @@ class BodeWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        SaveAs(
-            self,
-            tr("Save bode plot", "Bode-Plot speichern"),
-            "lenlab_bode.csv",
-            self.on_save_as,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save bode plot", "Bode-Plot speichern"))
+        dialog.set_default_file_name("lenlab_bode.csv")
+        dialog.on_save_as = self.on_save_as
+        dialog.show()
 
-    @Slot(Path)
     def on_save_as(self, file_path: Path):
         with file_path.open("w", encoding="utf-8") as file:
             self.bode.save_as(file)

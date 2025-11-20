@@ -2,12 +2,12 @@ from datetime import timedelta
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -22,7 +22,25 @@ from ..model.points import Points
 from ..translate import Translate, tr
 from .chart import ChartWidget
 from .checkbox import BoolCheckBox
-from .save_as import SaveAs
+from .save_as import SaveAs, UnsavedData
+
+
+class VoltmeterSaveAs(SaveAs):
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+
+        self.setWindowTitle(tr("Save voltmeter data", "Voltmeter-Daten speichern"))
+        self.set_default_file_name("lenlab_volt.csv")
+
+
+class VoltmeterUnsavedData(UnsavedData):
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+
+        self.setWindowTitle(tr("Unsaved voltmeter data", "Ungespeicherte Voltmeter-Daten"))
+        self.setInformativeText(
+            tr("The voltmeter has unsaved data.", "Das Voltmeter hat ungespeicherte Daten.")
+        )
 
 
 class VoltmeterWidget(QWidget):
@@ -147,6 +165,9 @@ class VoltmeterWidget(QWidget):
         self.lenlab.reply.connect(self.on_reply)
 
     def clear(self):
+        if not self.auto_save.points.index:
+            return
+
         self.auto_save.clear()
         self.chart.clear()
         self.interval.setEnabled(True)
@@ -200,28 +221,42 @@ class VoltmeterWidget(QWidget):
             return
 
         if self.auto_save.points.unsaved:
-            dialog = QMessageBox(self)
-            dialog.setWindowTitle("Lenlab")
-            dialog.setText(
-                tr("The voltmeter has unsaved data.", "Das Voltmeter hat ungespeicherte Daten.")
-            )
-            dialog.setInformativeText(
-                tr("Do you want to save the data?", "Möchten Sie die Daten speichern?")
-            )
-            dialog.setStandardButtons(
-                QMessageBox.StandardButton.Save
-                | QMessageBox.StandardButton.Discard
-                | QMessageBox.StandardButton.Cancel
-            )
-            result = dialog.exec()
-            if result == QMessageBox.StandardButton.Save:
-                if not self.on_save_as_clicked():
-                    return
-            elif result == QMessageBox.StandardButton.Cancel:
-                return
-
-        if self.auto_save.points.index:
+            dialog = VoltmeterUnsavedData(self)
+            dialog.on_save = self.on_save_as_and_discard
+            dialog.on_discard = self.clear
+            dialog.show()
+        else:
             self.clear()
+
+    def on_save_as_and_discard(self):
+        dialog = VoltmeterSaveAs(self)
+        dialog.on_save_as = self.auto_save.save_as
+        dialog.on_success = self.clear
+        dialog.show()
+
+    def on_close_event(self, event: QCloseEvent):
+        if self.polling or self.auto_save.points.unsaved:
+            event.ignore()
+
+            dialog = VoltmeterUnsavedData(self)
+            # TODO The voltmeter is still running or has unsaved data
+            dialog.on_save = self.on_save_as_and_close
+            dialog.on_discard = self.on_discard_and_close
+            dialog.show()
+
+    def on_discard_and_close(self):
+        self.on_stop_clicked()
+
+        self.auto_save.points.unsaved = False
+        self.lenlab.close.emit()
+
+    def on_save_as_and_close(self):
+        self.on_stop_clicked()
+
+        dialog = VoltmeterSaveAs(self)
+        dialog.on_save_as = self.auto_save.save_as
+        dialog.on_success = self.lenlab.close.emit
+        dialog.show()
 
     @Slot()
     def on_poll_timeout(self):
@@ -261,23 +296,18 @@ class VoltmeterWidget(QWidget):
 
     @Slot()
     def on_save_as_clicked(self):
-        SaveAs(
-            self,
-            tr("Save voltmeter data", "Voltmeter-Daten speichern"),
-            "lenlab_volt.csv",
-            self.auto_save.save_as,
-        ).show()
+        dialog = VoltmeterSaveAs(self)
+        dialog.on_save_as = self.auto_save.save_as
+        dialog.show()
 
     @Slot()
     def on_save_image_clicked(self):
-        SaveAs(
-            self,
-            tr("Save voltmeter image", "Voltmeter-Bild speichern"),
-            "lenlab_volt.svg",
-            self.on_save_image,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save voltmeter image", "Voltmeter-Bild speichern"))
+        dialog.set_default_file_name("lenlab_volt.svg")
+        dialog.on_save_as = self.on_save_image
+        dialog.show()
 
-    @Slot(Path)
     def on_save_image(self, file_path: Path):
         chart = self.auto_save.points.create_chart()
         channel_enabled = [channel.isVisible() for channel in self.chart.channels]

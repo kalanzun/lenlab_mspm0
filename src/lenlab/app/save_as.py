@@ -1,26 +1,63 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import Signal, Slot
-from PySide6.QtWidgets import QFileDialog, QWidget
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
+
+from ..translate import tr
 
 
 class SaveAs(QFileDialog):
-    save_as = Signal(Path)
+    on_save_as: Callable | None = None
+    on_success: Callable | None = None
 
-    def __init__(self, parent: QWidget, title: str, default_file_name: str, on_save_as: Callable):
+    def set_default_file_name(self, default_file_name: str):
+        self.selectFile(default_file_name)
+        self.setDefaultSuffix(default_file_name.split(".")[-1])
+
+    def __init__(self, parent: QWidget):
         super().__init__(parent)
 
         self.setModal(True)
         self.setFileMode(QFileDialog.FileMode.AnyFile)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-        self.setWindowTitle(title)
-        self.selectFile(default_file_name)
-        self.setDefaultSuffix(default_file_name.split(".")[-1])
         self.fileSelected.connect(self.on_file_selected)
 
-        self.save_as.connect(on_save_as)
-
-    @Slot()
+    @Slot(str)
     def on_file_selected(self, file_name):
-        self.save_as.emit(Path(file_name))
+        if self.on_save_as is not None:
+            file_path = Path(file_name)
+            self.on_save_as(file_path)
+
+        if self.on_success is not None:
+            self.on_success()
+
+
+class UnsavedData(QMessageBox):
+    on_cancel: Callable | None = None
+    on_save: Callable | None = None
+    on_discard: Callable | None = None
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+
+        self.setModal(True)
+        self.setText(tr("Do you want to save the data?", "Möchten Sie die Daten speichern?"))
+        self.setIcon(QMessageBox.Icon.Question)
+        self.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Save
+        )
+        self.addButton(tr("Discard", "Verwerfen"), QMessageBox.ButtonRole.DestructiveRole)
+        self.finished.connect(self.on_finished)
+
+    @Slot(int)
+    def on_finished(self, result: int):
+        if result == QMessageBox.StandardButton.Cancel:
+            if self.on_cancel is not None:
+                self.on_cancel()
+        elif result == QMessageBox.StandardButton.Save:
+            if self.on_save is not None:
+                self.on_save()
+        else:  # discard
+            if self.on_discard is not None:
+                self.on_discard()

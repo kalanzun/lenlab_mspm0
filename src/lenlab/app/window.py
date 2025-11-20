@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Slot
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 
 from ..controller.lenlab import Lenlab
@@ -22,6 +22,8 @@ class MainWindow(QMainWindow):
         self.lenlab = lenlab
         self.report = report
 
+        self.lenlab.close.connect(self.close)
+
         # widget
         layout = QVBoxLayout()
 
@@ -36,10 +38,12 @@ class MainWindow(QMainWindow):
         self.tabs = [
             LaunchpadWidget(),
             ProgrammerWidget(lenlab.discovery),
-            VoltmeterWidget(lenlab),
+            volt := VoltmeterWidget(lenlab),
             osci := OscilloscopeWidget(lenlab),
             bode := BodeWidget(lenlab),
         ]
+
+        self.voltmeter = volt
 
         osci.bode.connect(bode.bode.on_bode)
 
@@ -79,14 +83,12 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def save_report_triggered(self):
-        SaveAs(
-            self,
-            tr("Save error report", "Fehlerbericht speichern"),
-            self.report.file_name,
-            self.save_report,
-        ).show()
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save error report", "Fehlerbericht speichern"))
+        dialog.set_default_file_name(self.report.file_name)
+        dialog.on_save_as = self.save_report
+        dialog.show()
 
-    @Slot(Path)
     def save_report(self, file_path: Path):
         with file_path.open("w", encoding="utf-8") as file:
             self.report.save_as(file)
@@ -96,3 +98,6 @@ class MainWindow(QMainWindow):
         from ..launchpad import rules
 
         rules.install_rules()
+
+    def closeEvent(self, event: QCloseEvent):
+        self.voltmeter.on_close_event(event)

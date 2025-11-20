@@ -36,6 +36,8 @@ class Lenlab(QObject):
     write = Signal(bytes)
     error = Signal(Message)
 
+    close = Signal()
+
     default_probe_timeout = 600
     default_reply_timeout = 600
 
