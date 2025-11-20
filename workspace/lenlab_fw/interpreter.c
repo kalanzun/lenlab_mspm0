@@ -36,6 +36,7 @@ void interpreter_handleCommand(void)
         DL_GPIO_togglePins(GPIO_LEDS_B_PORT, GPIO_LEDS_B_LED_GREEN_PIN);
         switch (cmd->code) {
         case 'k': // knock
+            DL_Timer_stopCounter(MAIN_TIMER_INST); // stop any measurement
             terminal_sendReply('k', ARG_STR("nock"));
             break;
 
