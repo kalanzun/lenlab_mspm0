@@ -181,8 +181,8 @@ TIMER2.timerMode                   = "PERIODIC";
 TIMER2.timerPeriod                 = "1 us";
 TIMER2.event1PublisherChannel      = 1;
 TIMER2.event2PublisherChannel      = 2;
-TIMER2.event1ControllerInterruptEn = ["ZERO_EVENT"];
-TIMER2.event2ControllerInterruptEn = ["ZERO_EVENT"];
+TIMER2.event1ControllerInterruptEn = ["LOAD_EVENT"];
+TIMER2.event2ControllerInterruptEn = ["LOAD_EVENT"];
 TIMER2.peripheral.$assign          = "TIMG12";
 
 UART1.$name                             = "TERMINAL_UART";
