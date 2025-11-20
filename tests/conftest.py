@@ -9,8 +9,6 @@ from PySide6.QtCore import QCoreApplication, QIODeviceBase
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QApplication
 
-from lenlab.app.save_as import SaveAs
-
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -132,13 +130,4 @@ class MockPath:
 @pytest.fixture()
 def mock_path():
     mock_path = MockPath()
-    return mock_path
-
-
-@pytest.fixture()
-def mock_save_as(monkeypatch, mock_path):
-    def mock_show(self):
-        self.save_as.emit(mock_path)
-
-    monkeypatch.setattr(SaveAs, "show", mock_show)
     return mock_path

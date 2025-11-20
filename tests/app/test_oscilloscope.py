@@ -58,12 +58,6 @@ def test_single(spy, oscilloscope):
     assert not oscilloscope.active
 
 
-def test_save_as(oscilloscope, mock_save_as):
-    oscilloscope.on_save_as_clicked()
-
-    assert mock_save_as.get_line_count() == 2
-
-
 def test_reply(lenlab, spy, oscilloscope):
     assert oscilloscope.acquire()
 

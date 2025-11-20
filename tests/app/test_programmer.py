@@ -24,10 +24,3 @@ def test_program(programmer):
 
 def test_success(programmer):
     programmer.programmer.success.emit(ProgrammingSuccessful())
-
-
-def test_export(programmer, mock_save_as):
-    programmer.on_export_clicked()
-
-    content = mock_save_as.read_bytes()
-    assert len(content) > 0

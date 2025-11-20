@@ -18,6 +18,7 @@ from ..controller.auto_save import AutoSave, Flag
 from ..controller.image import save_image
 from ..controller.lenlab import Lenlab
 from ..launchpad.protocol import command
+from ..message import Message
 from ..model.chart import Chart
 from ..model.points import Points
 from ..translate import Translate, tr
@@ -251,9 +252,11 @@ class VoltmeterWidget(QWidget):
     def create_unsaved_data_dialog(self) -> UnsavedData:
         dialog = UnsavedData(self)
         dialog.setWindowTitle(tr("Unsaved voltmeter data", "Ungespeicherte Voltmeter-Daten"))
-        dialog.setInformativeText(
-            tr("The voltmeter has unsaved data.", "Das Voltmeter hat ungespeicherte Daten.")
-        )
+        if self.started:
+            dialog.setText(RunningAndUnsavedMessage().long_form())
+        else:
+            dialog.setText(UnsavedMessage().long_form())
+
         return dialog
 
     @Slot()
@@ -316,3 +319,19 @@ class VoltmeterWidget(QWidget):
         dialog.on_save_as = self.auto_save.save_as
         dialog.on_success = self.lenlab.close.emit
         dialog.show()
+
+
+class RunningAndUnsavedMessage(Message):
+    english = """The voltmeter is still running or has unsaved data.
+    Do you want to stop the measurement and save the data?"""
+
+    german = """Das Voltmeter läuft noch oder hat ungespeicherte Daten.
+    Möchten Sie die Messung beenden und die Daten speichern?"""
+
+
+class UnsavedMessage(Message):
+    english = """The voltmeter has unsaved data.
+    Do you want to save the data?"""
+
+    german = """Das Voltmeter hat ungespeicherte Daten.
+    Möchten Sie die Daten speichern?"""

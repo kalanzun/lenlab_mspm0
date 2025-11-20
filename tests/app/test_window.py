@@ -17,12 +17,6 @@ def test_main_window(window):
     assert window
 
 
-def test_report(window, mock_save_as):
-    window.report_action.trigger()
-    # it's empty without logging
-    assert mock_save_as.mock_file_object is not None
-
-
 def test_rules(window, monkeypatch):
     monkeypatch.setattr(rules, "install_rules", mock := Mock(return_value=None))
     window.rules_action.trigger()

@@ -42,7 +42,6 @@ class UnsavedData(QMessageBox):
         super().__init__(parent)
 
         self.setModal(True)
-        self.setText(tr("Do you want to save the data?", "Möchten Sie die Daten speichern?"))
         self.setIcon(QMessageBox.Icon.Question)
         self.setStandardButtons(
             QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Save
