@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
 from ..controller.lenlab import Lenlab
 from ..controller.report import Report
 from ..translate import tr
+from .about import About
 from .bode import BodeWidget
 from .figure import LaunchpadWidget
 from .oscilloscope import OscilloscopeWidget
@@ -41,6 +42,7 @@ class MainWindow(QMainWindow):
             volt := VoltmeterWidget(lenlab),
             osci := OscilloscopeWidget(lenlab),
             bode := BodeWidget(lenlab),
+            About(),
         ]
 
         self.voltmeter = volt
