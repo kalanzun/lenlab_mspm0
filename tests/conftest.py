@@ -97,9 +97,10 @@ class MockPath:
     mock_file_object: MockFileObject | None = None
 
     @contextmanager
-    def open(self, mode, *, encoding):
+    def open(self, mode, *, encoding, newline):
         assert mode in {"w", "wb", "a", "ab"}
         assert encoding == "utf-8"
+        assert newline == "\n"
 
         if mode == "w":
             self.mock_file_object = MockFileObject("")

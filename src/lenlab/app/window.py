@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
         dialog.show()
 
     def save_report(self, file_path: Path):
-        with file_path.open("w", encoding="utf-8") as file:
+        with file_path.open("w", encoding="utf-8", newline="\n") as file:
             self.report.save_as(file)
 
     @Slot()
