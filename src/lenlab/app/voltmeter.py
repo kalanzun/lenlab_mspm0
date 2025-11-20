@@ -148,6 +148,7 @@ class VoltmeterWidget(QWidget):
 
         self.setLayout(main_layout)
 
+        self.lenlab.ready.connect(self.on_ready)
         self.lenlab.reply.connect(self.on_reply)
 
     def clear(self):
@@ -180,6 +181,11 @@ class VoltmeterWidget(QWidget):
         for i, field in enumerate(self.fields):
             if field.isEnabled():
                 field.setText(f"{points.get_last_value(i):.3f} V")
+
+    @Slot(bool)
+    def on_ready(self, ready: bool):
+        self.started.set(False)
+        self.polling.set(False)
 
     @Slot()
     def on_start_clicked(self):
