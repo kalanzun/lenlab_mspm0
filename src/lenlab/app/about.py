@@ -2,8 +2,8 @@ from importlib import metadata
 
 from PySide6.QtWidgets import QTextBrowser, QVBoxLayout, QWidget
 
-from lenlab.message import Message
-from lenlab.translate import Translate
+from ..message import Message
+from ..translate import Translate
 
 
 class About(QWidget):
