@@ -33,7 +33,7 @@ class VoltmeterWidget(QWidget):
     title = Translate("Voltmeter", "Voltmeter")
 
     # TODO convert to seconds
-    intervals = [20, 50, 100, 200, 500, 1000, 2000, 5000]
+    intervals = [20, 50, 100, 200, 500, 1000, 2000]
 
     def __init__(self, lenlab: Lenlab):
         super().__init__()
@@ -60,7 +60,7 @@ class VoltmeterWidget(QWidget):
         self.interval = QComboBox()
         for interval in self.intervals:
             self.interval.addItem(f"{interval} ms")
-        self.interval.setCurrentIndex(self.intervals.index(1000))
+        self.interval.setCurrentIndex(self.intervals.index(200))
 
         layout = QHBoxLayout()
 
