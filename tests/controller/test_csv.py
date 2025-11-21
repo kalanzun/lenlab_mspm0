@@ -97,7 +97,7 @@ def test_for_loop_mod(tmp_file: Path, example: np.ndarray):
 
 
 def test_for_loop_mod_local(tmp_file: Path, example: np.ndarray):
-    # this one is fast, slightly slower than join write
+    # this one is fast
     with RuntimeProbe() as probe, tmp_file.open("w", encoding="utf-8") as file:
         write = file.write
         tpl = "{%.6f}\n"

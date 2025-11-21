@@ -11,7 +11,10 @@ class SaveAs(QFileDialog):
     on_save_as: Callable | None = None
     on_success: Callable | None = None
 
+    default_file_name: str | None = None
+
     def set_default_file_name(self, default_file_name: str):
+        self.default_file_name = default_file_name
         self.selectFile(default_file_name)
         self.setDefaultSuffix(default_file_name.split(".")[-1])
 

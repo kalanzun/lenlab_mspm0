@@ -5,9 +5,13 @@ from pathlib import Path
 
 import pytest
 from attrs import define
-from PySide6.QtCore import QCoreApplication, QIODeviceBase
+from PySide6.QtCore import QCoreApplication, QIODeviceBase, QObject, Signal, Slot
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QApplication
+
+from lenlab.app.save_as import SaveAs
+from lenlab.controller.lenlab import Lenlab
+from lenlab.message import Message
 
 
 def pytest_addoption(parser):
@@ -132,3 +136,46 @@ class MockPath:
 def mock_path():
     mock_path = MockPath()
     return mock_path
+
+
+@pytest.fixture()
+def lenlab():
+    lenlab = Lenlab()
+    return lenlab
+
+
+class MockTerminal(QObject):
+    reply = Signal(bytes)
+    error = Signal(Message)
+
+    def __init__(self):
+        super().__init__()
+        self.commands = list()
+
+    @Slot(bytes)
+    def write(self, packet: bytes):
+        self.commands.append(packet)
+
+    def get_single_command(self):
+        assert len(self.commands) == 1
+        return self.commands[0]
+
+
+@pytest.fixture()
+def terminal(lenlab):
+    terminal = MockTerminal()
+    lenlab.on_terminal_ready(terminal)
+    return terminal
+
+
+@pytest.fixture()
+def save_as_output(qt_widgets, monkeypatch, output):
+    result = dict()
+
+    def show(self: SaveAs):
+        result["file_path"] = output / self.default_file_name
+        self.on_save_as(result["file_path"])
+
+    monkeypatch.setattr(SaveAs, "show", show)
+
+    return result

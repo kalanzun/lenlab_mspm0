@@ -24,3 +24,9 @@ def test_program(programmer):
 
 def test_success(programmer):
     programmer.programmer.success.emit(ProgrammingSuccessful())
+
+
+def test_export(programmer, save_as_output):
+    programmer.on_export_clicked()
+    content = save_as_output["file_path"].read_bytes()
+    assert content
