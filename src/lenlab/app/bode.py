@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import TextIO
 
 import numpy as np
+from matplotlib import pyplot as plt
 from matplotlib.colors import TABLEAU_COLORS
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
 from PySide6.QtCore import QObject, Qt, Slot
@@ -154,14 +155,15 @@ class BodeWidget(QWidget):
         sidebar_layout.addLayout(layout)
 
         # save as
-        layout = QHBoxLayout()
-
         button = QPushButton(tr("Save as", "Speichern unter"))
         button.clicked.connect(self.on_save_as_clicked)
         self.lenlab.adc_lock.locked.connect(button.setDisabled)
-        layout.addWidget(button)
+        sidebar_layout.addWidget(button)
 
-        sidebar_layout.addLayout(layout)
+        button = QPushButton(tr("Save image", "Bild speichern"))
+        button.clicked.connect(self.on_save_image_clicked)
+        self.lenlab.adc_lock.locked.connect(button.setDisabled)
+        sidebar_layout.addWidget(button)
 
         # pin assignment
 
@@ -196,6 +198,14 @@ class BodeWidget(QWidget):
     def on_save_as(self, file_path: Path):
         with file_path.open("w", encoding="utf-8", newline="\n") as file:
             self.bode.save_as(file)
+
+    @Slot()
+    def on_save_image_clicked(self):
+        dialog = SaveAs(self)
+        dialog.setWindowTitle(tr("Save bode plot (image)", "Bode-Plot (Bild) speichern"))
+        dialog.set_default_file_name("lenlab_bode.svg")
+        dialog.on_save_as = self.bode.save_image
+        dialog.show()
 
 
 class BodePlotter(QObject):
@@ -286,6 +296,35 @@ class BodePlotter(QObject):
     def save_as(self, file: TextIO):
         file.write(self.csv_template.head())
         self.csv_template.write_rows(file.write, self.rows())
+
+    def save_image(self, file_path: Path):
+        fig, ax = plt.subplots(figsize=[12.8, 9.6], dpi=150)
+
+        ax1 = ax.twinx()
+
+        ax.set_xlim(1e2, 1e4)
+        ax.set_ylim(-50, 10)
+        ax1.set_ylim(-360, 180)
+        ax1.set_yticks(list(range(-360, 181, 90)))
+
+        ax.set_xlabel(str(BodeChart.x_label))
+        ax.set_ylabel(str(BodeChart.m_label))
+        ax1.set_ylabel(str(BodeChart.p_label))
+
+        f = [m.x() for m in self.magnitude.points()]
+        m = [m.y() for m in self.magnitude.points()]
+        p = [p.y() for p in self.phase.points()]
+
+        ax.minorticks_on()
+        ax.grid()
+        ax.grid(which="minor")
+        lines = ax.semilogx(f, m, "C0", label=str(BodeChart.labels[0])) + ax1.semilogx(
+            f, p, "C1", label=str(BodeChart.labels[1])
+        )
+
+        ax.legend(lines, [x.get_label() for x in lines])
+
+        fig.savefig(file_path)
 
 
 class PinAssignment(Message):
