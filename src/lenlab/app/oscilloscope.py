@@ -3,6 +3,8 @@ from pathlib import Path
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
+    QLineEdit,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -83,6 +85,14 @@ class OscilloscopeWidget(QWidget):
 
         sidebar_layout.addLayout(layout)
 
+        # sampling rate
+        label = QLabel(tr("Sampling rate", "Abtastrate"))
+        sidebar_layout.addWidget(label)
+
+        self.rate_field = QLineEdit()
+        self.rate_field.setReadOnly(True)
+        sidebar_layout.addWidget(self.rate_field)
+
         # channels
         checkboxes = [BoolCheckBox(label) for label in self.chart.labels]
 
@@ -132,6 +142,15 @@ class OscilloscopeWidget(QWidget):
     def on_single_clicked(self):
         self.acquire()
 
+    @staticmethod
+    def format_rate(value: int) -> str:
+        if value >= 1_000_000:
+            return f"{value // 1_000_000} MHz"
+        elif value >= 1_000:
+            return f"{value // 1_000} kHz"
+        else:
+            return f"{value} kHz"
+
     @Slot(bytes)
     def on_reply(self, reply):
         if not (reply.startswith(b"La") or reply.startswith(b"Lb")):
@@ -142,6 +161,7 @@ class OscilloscopeWidget(QWidget):
 
         self.waveform = Waveform.parse_reply(reply)
         self.chart.draw(self.waveform.create_chart())
+        self.rate_field.setText(self.format_rate(int(1 / self.waveform.time_step)))
 
         if reply.startswith(b"La") and self.active:
             self.active = self.acquire()
