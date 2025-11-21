@@ -1,9 +1,11 @@
-from importlib import metadata
+from importlib import metadata, resources
 
 from PySide6.QtWidgets import QTextBrowser, QVBoxLayout, QWidget
 
+import lenlab
+
 from ..message import Message
-from ..translate import Translate
+from ..translate import Translate, tr
 
 
 class About(QWidget):
@@ -16,7 +18,12 @@ class About(QWidget):
 
         self.message = QTextBrowser(self)
         self.message.setOpenExternalLinks(True)
-        self.message.setMarkdown(AboutMessage().long_form())
+
+        about = AboutMessage().long_form()
+        file_path = resources.files(lenlab) / tr("datasheet.md", "datenblatt.md")
+        datasheet = file_path.read_text(encoding="utf-8")
+        self.message.setMarkdown(about + datasheet)
+
         layout.addWidget(self.message)
 
         self.setLayout(layout)
@@ -28,6 +35,7 @@ class AboutMessage(Message):
     - Version: {metadata.version("lenlab")}
     - Homepage: https://github.com/kalanzun/lenlab_mspm0
     - Author: Christoph Simon
+    
     
     ## Help
     
@@ -45,6 +53,7 @@ class AboutMessage(Message):
     - Version: {metadata.version("lenlab")}
     - Homepage: https://github.com/kalanzun/lenlab_mspm0
     - Autor: Christoph Simon
+    
     
     ## Hilfe
     
