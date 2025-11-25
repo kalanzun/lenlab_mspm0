@@ -36,7 +36,6 @@ class AboutMessage(Message):
     - Homepage: https://github.com/kalanzun/lenlab_mspm0
     - Author: Christoph Simon
     
-    
     ## Help
     
     In case of questions or problems, please contact your fellow students and tutors in ILIAS.
@@ -46,6 +45,20 @@ class AboutMessage(Message):
     Describe the problem including the steps, which lead to the problem.
     Save the error report in the main menu (Lenlab -> Save error report)
     and attach the file.
+    
+    ## TI UniFlash Launchpad / LITO-board programmer
+    
+    TI offers a software package "UniFlash" to program Launchpads and LITO-boards:
+     
+    - Install https://www.ti.com/tool/UNIFLASH
+    - Start Lenlab and export the firmware binary
+      - Click on "Export firmware" in the Programmer
+        and save the firmware binary
+    - Start UniFlash. Select the exported firmware binary as "Flash Image"
+    - Run "Load Image"
+      - On success, it writes in the "Console":
+        "\\[SUCCESS\\] Program Load completed successfully."
+    - Restart Lenlab or click on "Retry"  
     """
 
     german = f"""# Lenlab
@@ -53,7 +66,6 @@ class AboutMessage(Message):
     - Version: {metadata.version("lenlab")}
     - Homepage: https://github.com/kalanzun/lenlab_mspm0
     - Autor: Christoph Simon
-    
     
     ## Hilfe
     
@@ -65,4 +77,18 @@ class AboutMessage(Message):
     Beschreiben Sie das Problem einschließlich der Schritte, die zu dem Problem geführt haben.
     Speichern Sie bitte den Fehlerbericht im Hauptmenü (Lenlab -> Fehlerbericht speichern)
     und fügen Sie die Datei als Anlage hinzu.
+    
+    ## TI UniFlash Launchpad / LITO-Board Programmierer
+    
+    TI bietet ein Softwarepaket "UniFlash" an um Launchpads und LITO-Boards zu programmieren:
+    
+    - Installieren Sie https://www.ti.com/tool/UNIFLASH
+    - Starten Sie Lenlab und exportieren Sie das Firmware-Binary
+      - Klicken Sie im Programmierer auf "Firmware exportieren"
+        und Speichern Sie das Firmware-Binary
+    - Starten Sie UniFlash. Wählen Sie als "Flash Image" das exportierte Firmware-Binary
+    - Führen Sie "Load Image" aus
+      - Bei Erfolg schreibt es in die "Console":
+        "\\[SUCCESS\\] Program Load completed successfully."
+    - Starten Sie Lenlab neu oder klicken Sie auf "Neuer Versuch"
     """

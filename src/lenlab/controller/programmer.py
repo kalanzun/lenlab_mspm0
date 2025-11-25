@@ -76,9 +76,7 @@ class ProgrammingSuccessful(Message):
 
 
 class ProgrammingFailed(Message):
-    link = """[https://pypi.org/project/lenlab/](https://pypi.org/project/lenlab/)"""
-
-    english = f"""Programming failed
+    english = """Programming failed
 
     Maybe the "Bootstrap Loader" did not start?
     Please try the reset procedure (buttons S1 + RESET) once more.
@@ -86,9 +84,9 @@ class ProgrammingFailed(Message):
 
     If programming still does not work, you can try to power off the launchpad
     (unplug USB connection and plug it back in) and click retry on the Launchpad error message.
-    Otherwise, you can try TI UniFlash (Manual {link})"""
+    Otherwise, you can try TI UniFlash ([Instructions](about))"""
 
-    german = f"""Programmieren fehlgeschlagen
+    german = """Programmieren fehlgeschlagen
 
     Vielleicht startete der "Bootstrap Loader" nicht?
     Versuchen Sie die Reset-Prozedur (Tasten S1 + RESET) noch einmal.
@@ -97,7 +95,7 @@ class ProgrammingFailed(Message):
     Wenn das Programmieren trotzdem nicht funktioniert können Sie das Launchpad stromlos schalten
     (USB-Verbindung ausstecken und wieder anstecken)
     und auf neuen Versuch in der Launchpad-Fehlermeldung klicken.
-    Ansonsten können Sie TI UniFlash ausprobieren (Anleitung {link})"""
+    Ansonsten können Sie TI UniFlash ([Anleitung](about)) ausprobieren"""
 
 
 class NoTerminalAvailable(Message):

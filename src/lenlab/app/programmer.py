@@ -1,13 +1,13 @@
 from importlib import resources
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QLabel,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -26,6 +26,8 @@ from .save_as import SaveAs
 class ProgrammerWidget(QWidget):
     title = Translate("Programmer", "Programmierer")
 
+    about = Signal()
+
     def __init__(self, discovery: Discovery):
         super().__init__()
         self.programmer = Programmer(discovery)
@@ -35,10 +37,10 @@ class ProgrammerWidget(QWidget):
 
         program_layout = QVBoxLayout()
 
-        introduction = QLabel(self)
-        introduction.setTextFormat(Qt.TextFormat.MarkdownText)
-        introduction.setWordWrap(True)
-        introduction.setText("### " + Introduction().long_form())
+        introduction = QTextBrowser(self)
+        introduction.setMarkdown("### " + Introduction().long_form())
+        introduction.setOpenLinks(False)
+        introduction.anchorClicked.connect(self.on_link_activated)
         program_layout.addWidget(introduction)
 
         self.program_button = QPushButton(tr("Program", "Programmieren"))
@@ -54,6 +56,7 @@ class ProgrammerWidget(QWidget):
 
         self.poster = PosterWidget()
         self.poster.setHidden(True)
+        self.poster.text_widget.linkActivated.connect(self.on_link_activated)
         program_layout.addWidget(self.poster)
 
         button = QPushButton(tr("Export Firmware", "Firmware exportieren"))
@@ -112,9 +115,17 @@ class ProgrammerWidget(QWidget):
         firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
         file_path.write_bytes(firmware)
 
+    @Slot(str)
+    def on_link_activated(self, link: str):
+        self.about.emit()
+
 
 class Introduction(Message):
-    english = """Please start the "Bootstrap Loader" on the Launchpad first:
+    english = """Programmer for the red Launchpad LP-MSPM0G3507.
+    
+    Please use TI UniFlash ([Instructions](about)) for the black MSP-LITO-G3507 instead.
+    
+    ### Please start the "Bootstrap Loader" on the Launchpad first:
 
     Press and hold the button S1 next to the green LED and press the button Reset
     next to the USB plug. Let the button S1 go shortly after (min. 100 ms).
@@ -122,7 +133,11 @@ class Introduction(Message):
     The buttons click audibly. The red LED at the lower edge is off.
     You have now 10 seconds to click on Program here in the app.
     """
-    german = """Bitte starten Sie zuerst den "Bootstrap Loader" auf dem Launchpad:
+    german = """Programmierer für das rote Launchpad LP-MSPM0G3507.
+    
+    Bitte verwenden Sie TI UniFlash ([Anleitung](about)) für das schwarze MSP-LITO-G3507.
+    
+    ### Bitte starten Sie zuerst den "Bootstrap Loader" auf dem Launchpad:
 
     Halten Sie die Taste S1 neben der grünen LED gedrückt und drücken Sie auf die Taste Reset
     neben dem USB-Stecker. Lassen Sie die Taste S1 kurz danach wieder los (min. 100 ms).

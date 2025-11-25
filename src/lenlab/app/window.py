@@ -38,11 +38,11 @@ class MainWindow(QMainWindow):
 
         self.tabs = [
             LaunchpadWidget(),
-            ProgrammerWidget(lenlab.discovery),
+            prog := ProgrammerWidget(lenlab.discovery),
             volt := VoltmeterWidget(lenlab),
             osci := OscilloscopeWidget(lenlab),
             bode := BodeWidget(lenlab),
-            About(),
+            about := About(),
         ]
 
         self.voltmeter = volt
@@ -52,6 +52,8 @@ class MainWindow(QMainWindow):
         tab_widget = QTabWidget()
         for tab in self.tabs:
             tab_widget.addTab(tab, str(tab.title))
+
+        prog.about.connect(lambda: tab_widget.setCurrentWidget(about))
 
         layout.addWidget(tab_widget, 1)
 
