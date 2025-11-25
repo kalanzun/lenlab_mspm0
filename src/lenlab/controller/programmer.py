@@ -22,13 +22,34 @@ class Programmer(QObject):
     def __init__(self, discovery: Discovery):
         super().__init__()
 
+        self.autostart = False
         self.discovery = discovery
+        self.discovery.available.connect(self.on_discovery_available)
+        self.discovery.error.connect(self.on_discovery_error)
 
     def start(self):
-        if not self.discovery.terminals:
+        if self.discovery.terminals:
+            self.program()
+
+        else:
+            self.autostart = True
+            self.discovery.probe_enabled = False
+            self.discovery.find()
+
+    @Slot()
+    def on_discovery_available(self):
+        if self.autostart:
+            self.autostart = False
+            self.program()
+
+    @Slot(Message)
+    def on_discovery_error(self, message: Message):
+        if self.autostart:
+            self.autostart = False
             self.message.emit(NoTerminalAvailable())
             self.error.emit(ProgrammingFailed())
 
+    def program(self):
         firmware = (resources.files(lenlab) / "lenlab_fw.bin").read_bytes()
 
         self.bootstrap_loaders = [

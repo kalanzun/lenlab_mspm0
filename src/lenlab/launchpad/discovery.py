@@ -61,6 +61,7 @@ class Discovery(QObject):
     def __init__(self, port_name: str = "", probe_timeout: int = 600):
         super().__init__()
         self.port_name = port_name
+        self.probe_enabled = True
         self.probe_timeout = probe_timeout
         logger.info(f"set probe timeout to {probe_timeout} ms")
 
@@ -73,16 +74,26 @@ class Discovery(QObject):
         self.timer.timeout.connect(self.stop)
         self.timer.timeout.connect(self.on_timeout)
 
-        self.available.connect(self.log_available)
-        self.error.connect(logger.error)
-        self.ready.connect(self.log_ready)
+        self.available.connect(self.on_available)
+        self.error.connect(self.on_error)
+        self.ready.connect(self.on_ready)
 
     @Slot()
-    def log_available(self):
+    def on_available(self):
+        if not self.probe_enabled:
+            self.probe_enabled = True
+
         logger.info(f"available {', '.join(t.port_name for t in self.terminals)}")
 
+    @Slot(Message)
+    def on_error(self, error: Message):
+        if not self.probe_enabled:
+            self.probe_enabled = True
+
+        logger.error(error)
+
     @Slot(Terminal)
-    def log_ready(self, terminal):
+    def on_ready(self, terminal):
         logger.info(f"terminal {terminal.port_name} ready")
 
     @Slot()
@@ -138,8 +149,10 @@ class Discovery(QObject):
             if not terminal.open():
                 return
 
+        if self.probe_enabled:
+            QueuedCall(self, self.probe)
+
         self.available.emit()
-        QueuedCall(self, self.probe)
 
     @Slot()
     def probe(self):
@@ -161,7 +174,7 @@ class Discovery(QObject):
         self.probes = []
 
     @Slot(Message)
-    def on_terminal_error(self, error):
+    def on_terminal_error(self, error: Message):
         terminal = cast(Terminal, cast(QObject, self.sender()))
 
         logger.info(f"close on error {terminal.port_name}")
@@ -171,7 +184,7 @@ class Discovery(QObject):
         self.terminals = [t for t in self.terminals if t is not terminal]
 
     @Slot(Terminal)
-    def select_terminal(self, terminal):
+    def select_terminal(self, terminal: Terminal):
         logger.info(f"select {terminal.port_name}")
 
         for t in self.terminals:
