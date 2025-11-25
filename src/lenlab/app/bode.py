@@ -89,6 +89,7 @@ class BodeChart(QWidget):
             channel.attachAxis(axis)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 

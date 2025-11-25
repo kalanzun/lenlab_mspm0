@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         osci.bode.connect(bode.bode.on_bode)
 
         tab_widget = QTabWidget()
+        # tab_widget.setDocumentMode(True)  # no frame around pages
         for tab in self.tabs:
             tab_widget.addTab(tab, str(tab.title))
 

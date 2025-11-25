@@ -3,6 +3,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QPlainTextEdit,
     QProgressBar,
@@ -38,6 +39,7 @@ class ProgrammerWidget(QWidget):
         program_layout = QVBoxLayout()
 
         introduction = QTextBrowser(self)
+        introduction.setFrameShape(QFrame.Shape.NoFrame)
         introduction.setMarkdown("### " + Introduction().long_form())
         introduction.setOpenLinks(False)
         introduction.anchorClicked.connect(self.on_link_activated)

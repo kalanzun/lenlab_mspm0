@@ -1,6 +1,6 @@
 from importlib import metadata, resources
 
-from PySide6.QtWidgets import QTextBrowser, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QTextBrowser, QVBoxLayout, QWidget
 
 import lenlab
 
@@ -15,9 +15,11 @@ class About(QWidget):
         super().__init__()
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.message = QTextBrowser(self)
         self.message.setOpenExternalLinks(True)
+        self.message.setFrameShape(QFrame.Shape.NoFrame)
 
         about = AboutMessage().long_form()
         file_path = resources.files(lenlab) / tr("datasheet.md", "datenblatt.md")

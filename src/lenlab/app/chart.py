@@ -60,6 +60,7 @@ class ChartWidget(QWidget):
             channel.attachAxis(self.y_axis)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.chart_view)
         self.setLayout(layout)
 
