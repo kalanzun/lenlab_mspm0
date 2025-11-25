@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from PySide6.QtCharts import QChart, QLineSeries
+from matplotlib.colors import TABLEAU_COLORS
 from PySide6.QtCore import QPoint, QPointF, QRect, QSize
 from PySide6.QtGui import QColor, QPainter, QPen, Qt
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
@@ -13,21 +13,16 @@ from .poster import PosterWidget
 white = QColor(0xF0, 0xF0, 0xF0)
 black = QColor(0x10, 0x10, 0x10)
 
+adc0 = QColor.fromString(TABLEAU_COLORS["tab:blue"])
+adc1 = QColor.fromString(TABLEAU_COLORS["tab:orange"])
+dac0 = QColor.fromString(TABLEAU_COLORS["tab:green"])
+
 
 @contextmanager
 def save_and_restore(painter):
     painter.save()
     yield
     painter.restore()
-
-
-def find_chart_colors(n=4):
-    chart = QChart()
-    chart.setTheme(QChart.ChartTheme.ChartThemeQt)  # light and dark green, stronger grid lines
-    for _ in range(n):
-        channel = QLineSeries()
-        chart.addSeries(channel)
-        yield channel.color()
 
 
 class LaunchpadFigure(QWidget):
@@ -207,23 +202,24 @@ class Pin:
 
 class PinAssignmentFigure(QWidget):
     unit = 32
+    scale = 1
 
-    def __init__(self):
-        super().__init__()
+    n = 10
 
-        channel_colors = list(find_chart_colors(4))
+    left_pins = {
+        0: Pin("3V3", white, QColor(0xC0, 0, 0)),
+    }
 
-        self.pins = {
-            1: Pin("3V3", white, QColor(0xC0, 0, 0)),
-            21: Pin("5V", white, QColor(0xC0, 0, 0)),
-            22: Pin("GND", white, black),
-            27: Pin("ADC0", black, channel_colors[0], name="PA 24"),
-            28: Pin("ADC1", black, channel_colors[1], name="PA 17"),
-            30: Pin("DAC", black, channel_colors[2], name="PA 15"),
-        }
+    right_pins = {
+        0: Pin("5V", white, QColor(0xC0, 0, 0)),
+        1: Pin("GND", white, black),
+        6: Pin("ADC0", black, adc0, name="PA 24"),
+        7: Pin("ADC1", black, adc1, name="PA 17"),
+        9: Pin("DAC", black, dac0, name="PA 15"),
+    }
 
     def sizeHint(self):
-        return QSize(12 * self.unit, 12 * self.unit)
+        return QSize(12 * self.unit * self.scale, (self.n + 1) * self.unit * self.scale)
 
     def minimumSizeHint(self):
         return self.sizeHint()
@@ -231,12 +227,13 @@ class PinAssignmentFigure(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.scale(self.scale, self.scale)
 
         font = painter.font()
         font.setPointSize(16)
         painter.setFont(font)
 
-        painter.translate(4.5 * self.unit, 1.5 * self.unit)
+        painter.translate(5.5 * self.unit, self.unit)
         self.draw_pin_header(painter)
 
         painter.setPen(white)
@@ -250,15 +247,18 @@ class PinAssignmentFigure(QWidget):
     def draw_pin_header(self, painter: QPainter):
         painter.setPen(self.palette().toolTipText().color())
         margin = self.unit // 2
-        painter.drawRect(-margin, -margin, self.unit + 2 * margin, 9 * self.unit + 2 * margin)
+        painter.drawRect(
+            -margin, -margin, self.unit + 2 * margin, (self.n - 1) * self.unit + 2 * margin
+        )
 
         painter.setPen(QPen(QColor(0xA0, 0xA0, 0xA0), 16))
-        points = [QPoint(x * self.unit, y * self.unit) for x in range(2) for y in range(10)]
+        points = [QPoint(x * self.unit, y * self.unit) for x in range(2) for y in range(self.n)]
         painter.drawPoints(points)
 
     def draw_labels(self, painter: QPainter, right=False):
-        for i in range(10):
-            pin = self.pins.get(i + (21 if right else 1), None)
+        pins = self.right_pins if right else self.left_pins
+        for i in range(self.n):
+            pin = pins.get(i, None)
             if pin:
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.setBrush(pin.bg)
@@ -282,6 +282,36 @@ class PinAssignmentFigure(QWidget):
         rect.moveCenter(QPoint(x, y))
         # painter.drawRect(rect)
         painter.drawText(rect.bottomLeft(), text)
+
+
+class LitoRightPinAssignmentFigure(PinAssignmentFigure):
+    n = 16
+    scale = 3 / 4
+
+    left_pins = {
+        0: Pin("GND", white, black),
+        1: Pin("GND", white, black),
+        8: Pin("ADC0", black, adc0, name="PA 24"),
+    }
+
+    right_pins = {
+        0: Pin("3V3", white, QColor(0xC0, 0, 0)),
+        14: Pin("ADC1", black, adc1, name="PA 17"),
+        15: Pin("DAC", black, dac0, name="PA 15"),
+    }
+
+
+class LitoLeftPinAssignmentFigure(PinAssignmentFigure):
+    n = 16
+    scale = 3 / 4
+
+    left_pins = {
+        0: Pin("3V3", white, QColor(0xC0, 0, 0)),
+    }
+
+    right_pins = {
+        0: Pin("GND", white, black),
+    }
 
 
 class LaunchpadWidget(QWidget):
@@ -318,16 +348,44 @@ class LaunchpadWidget(QWidget):
         self.setLayout(layout)
 
 
+class LitoWidget(QWidget):
+    title = "Lito"
+
+    def __init__(self):
+        super().__init__()
+
+        poster = PosterWidget()
+        # do not call show before setLayout
+        poster.set_message(MaximumPinVoltage())
+        poster.set_symbol(symbols.dye(symbols.electric_bolt_48px, symbols.red))
+
+        pins = QHBoxLayout()
+        pins.addWidget(LitoLeftPinAssignmentFigure())
+        pins.addWidget(LitoRightPinAssignmentFigure())
+        pins.addStretch()
+
+        layout = QVBoxLayout()
+        layout.addWidget(poster)
+        layout.addLayout(pins)
+        layout.addStretch()
+
+        self.setLayout(layout)
+
+
 class MaximumPinVoltage(Message):
     english = """Maximum pin voltage: 3.3 V
 
     Never directly connect a pin to 5 V or the solar cell.
+    
     The voltage might damage the microcontroller.
+    
     Use a voltage divider circuit.
     """
     german = """Maximalspannung an den Pins: 3.3 V
 
     Verbinden Sie einen Pin niemals direkt mit 5 V oder der Solarzelle.
+    
     Die Spannung könnte den Mikrocontroller beschädigen.
+    
     Verwenden Sie eine Spannungsteiler-Schaltung.
     """

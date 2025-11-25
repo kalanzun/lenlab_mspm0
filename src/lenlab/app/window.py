@@ -9,7 +9,7 @@ from ..controller.report import Report
 from ..translate import tr
 from .about import About
 from .bode import BodeWidget
-from .figure import LaunchpadWidget
+from .figure import LaunchpadWidget, LitoWidget
 from .oscilloscope import OscilloscopeWidget
 from .poster import PosterWidget
 from .programmer import ProgrammerWidget
@@ -38,6 +38,7 @@ class MainWindow(QMainWindow):
 
         self.tabs = [
             LaunchpadWidget(),
+            LitoWidget(),
             prog := ProgrammerWidget(lenlab.discovery),
             volt := VoltmeterWidget(lenlab),
             osci := OscilloscopeWidget(lenlab),
