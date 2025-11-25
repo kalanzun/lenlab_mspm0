@@ -20,7 +20,7 @@ def test_start(voltmeter, terminal):
 def test_save_as(voltmeter, terminal, save_as_output):
     voltmeter.on_save_as_clicked()
     content = save_as_output["file_path"].read_text(encoding="utf-8")
-    assert content.startswith("Lenlab_MSPM0,8.5,voltmeter\ntime,channel1,channel2\n")
+    assert content.startswith("Lenlab_MSPM0,8.6,voltmeter\ntime,channel1,channel2\n")
 
 
 def test_save_image(voltmeter, terminal, save_as_output):

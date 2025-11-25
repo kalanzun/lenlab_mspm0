@@ -69,4 +69,4 @@ def test_save_as(bode, terminal, waveform, save_as_output):
 
     bode.on_save_as_clicked()
     content = save_as_output["file_path"].read_text(encoding="utf-8")
-    assert content.startswith("Lenlab_MSPM0,8.5,bode_plot\nfrequency,magnitude,phase\n10000")
+    assert content.startswith("Lenlab_MSPM0,8.6,bode_plot\nfrequency,magnitude,phase\n10000")

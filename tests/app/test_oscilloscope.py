@@ -103,7 +103,7 @@ def test_save_as(oscilloscope, terminal, save_as_output):
     terminal.reply.emit(example_reply())
     oscilloscope.on_save_as_clicked()
     content = save_as_output["file_path"].read_text(encoding="utf-8")
-    assert content.startswith("Lenlab_MSPM0,8.5,oscilloscope\ntime,channel1,channel2\n-3.000")
+    assert content.startswith("Lenlab_MSPM0,8.6,oscilloscope\ntime,channel1,channel2\n-3.000")
 
 
 def test_save_image(oscilloscope, terminal, save_as_output):
