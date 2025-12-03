@@ -172,10 +172,10 @@ def terminal(lenlab):
 def save_as_output(qt_widgets, monkeypatch, output):
     result = dict()
 
-    def show(self: SaveAs):
+    def open_(self: SaveAs):
         result["file_path"] = output / self.default_file_name
         self.on_save_as(result["file_path"])
 
-    monkeypatch.setattr(SaveAs, "show", show)
+    monkeypatch.setattr(SaveAs, "open", open_)
 
     return result

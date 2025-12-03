@@ -21,7 +21,9 @@ class SaveAs(QFileDialog):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
 
-        self.setModal(True)
+        # self.setModal(True)
+        # setModal(True) and show() does not work on Mac (the dialog stays invisible)
+        # calling open() instead of show() works fine on Mac, Linux, and Windows
         self.setFileMode(QFileDialog.FileMode.AnyFile)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         self.fileSelected.connect(self.on_file_selected)

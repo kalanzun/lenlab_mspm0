@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         dialog.setWindowTitle(tr("Save error report", "Fehlerbericht speichern"))
         dialog.set_default_file_name(self.report.file_name)
         dialog.on_save_as = self.save_report
-        dialog.show()
+        dialog.open()
 
     def save_report(self, file_path: Path):
         with file_path.open("w", encoding="utf-8", newline="\n") as file:

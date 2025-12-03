@@ -269,7 +269,7 @@ class VoltmeterWidget(QWidget):
     def on_save_as_clicked(self):
         dialog = self.create_save_as_dialog()
         dialog.on_save_as = self.auto_save.save_as
-        dialog.show()
+        dialog.open()
 
     @Slot()
     def on_save_image_clicked(self):
@@ -277,7 +277,7 @@ class VoltmeterWidget(QWidget):
         dialog.setWindowTitle(tr("Save voltmeter image", "Voltmeter-Bild speichern"))
         dialog.set_default_file_name("lenlab_volt.svg")
         dialog.on_save_as = self.on_save_image
-        dialog.show()
+        dialog.open()
 
     def on_save_image(self, file_path: Path):
         chart = self.auto_save.points.create_chart()
@@ -293,7 +293,7 @@ class VoltmeterWidget(QWidget):
             dialog = self.create_unsaved_data_dialog()
             dialog.on_save = self.on_save_as_and_discard
             dialog.on_discard = self.clear
-            dialog.show()
+            dialog.open()
         else:
             self.clear()
 
@@ -301,7 +301,7 @@ class VoltmeterWidget(QWidget):
         dialog = self.create_save_as_dialog()
         dialog.on_save_as = self.auto_save.save_as
         dialog.on_success = self.clear
-        dialog.show()
+        dialog.open()
 
     def on_close_event(self, event: QCloseEvent):
         if self.polling or self.auto_save.points.unsaved:
@@ -310,7 +310,7 @@ class VoltmeterWidget(QWidget):
             dialog = self.create_unsaved_data_dialog()
             dialog.on_save = self.on_save_as_and_close
             dialog.on_discard = self.on_discard_and_close
-            dialog.show()
+            dialog.open()
 
     def on_discard_and_close(self):
         self.on_stop_clicked()
@@ -324,7 +324,7 @@ class VoltmeterWidget(QWidget):
         dialog = self.create_save_as_dialog()
         dialog.on_save_as = self.auto_save.save_as
         dialog.on_success = self.lenlab.close.emit
-        dialog.show()
+        dialog.open()
 
 
 class RunningAndUnsavedMessage(Message):

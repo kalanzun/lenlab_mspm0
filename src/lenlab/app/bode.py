@@ -194,7 +194,7 @@ class BodeWidget(QWidget):
         dialog.setWindowTitle(tr("Save bode plot", "Bode-Plot speichern"))
         dialog.set_default_file_name("lenlab_bode.csv")
         dialog.on_save_as = self.on_save_as
-        dialog.show()
+        dialog.open()
 
     def on_save_as(self, file_path: Path):
         with file_path.open("w", encoding="utf-8", newline="\n") as file:
@@ -206,7 +206,7 @@ class BodeWidget(QWidget):
         dialog.setWindowTitle(tr("Save bode plot (image)", "Bode-Plot (Bild) speichern"))
         dialog.set_default_file_name("lenlab_bode.svg")
         dialog.on_save_as = self.bode.save_image
-        dialog.show()
+        dialog.open()
 
 
 class BodePlotter(QObject):

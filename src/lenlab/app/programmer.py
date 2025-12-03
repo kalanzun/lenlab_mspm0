@@ -110,7 +110,7 @@ class ProgrammerWidget(QWidget):
         dialog.setWindowTitle(tr("Export firmware", "Firmware exportieren"))
         dialog.set_default_file_name("lenlab_fw.bin")
         dialog.on_save_as = self.on_export
-        dialog.show()
+        dialog.open()
 
     @staticmethod
     def on_export(file_path: Path):

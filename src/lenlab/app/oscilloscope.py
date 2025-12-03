@@ -175,7 +175,7 @@ class OscilloscopeWidget(QWidget):
         dialog.setWindowTitle(tr("Save oscilloscope data", "Oszilloskop-Daten speichern"))
         dialog.set_default_file_name("lenlab_osci.csv")
         dialog.on_save_as = self.on_save_as
-        dialog.show()
+        dialog.open()
 
     def on_save_as(self, file_path: Path):
         with file_path.open("w", encoding="utf-8", newline="\n") as file:
@@ -187,7 +187,7 @@ class OscilloscopeWidget(QWidget):
         dialog.setWindowTitle(tr("Save oscilloscope image", "Oszilloskop-Bild speichern"))
         dialog.set_default_file_name("lenlab_osci.svg")
         dialog.on_save_as = self.on_save_image
-        dialog.show()
+        dialog.open()
 
     def on_save_image(self, file_path: Path):
         chart = self.waveform.create_chart()
